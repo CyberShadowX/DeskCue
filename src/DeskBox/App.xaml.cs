@@ -2069,9 +2069,26 @@ public partial class App : Application
     {
         Log($"[Lifecycle] Recovery signal received: {reason}");
         _diagnosticsService?.RecordLifecycleEvent(reason);
+        // S6 instrumentation (silent freeze after explorer restart): the
+        // topology-recovery storm re-parents and re-positions every widget.
+        // Verbose carries the timing breakdown; the default-level line fires
+        // only when the storm ran long enough to read as a freeze, so field
+        // logs surface the S6 signature without verbose enabled.
+        long recoveryStart = System.Diagnostics.Stopwatch.GetTimestamp();
         WidgetLayerService.InvalidateDesktopIconViewCache();
         _displayAreaWatcher?.RefreshNow();
         RequestDisplayTopologyRestore("lifecycle-" + reason);
+        double topologyMs =
+            System.Diagnostics.Stopwatch.GetElapsedTime(recoveryStart).TotalMilliseconds;
+        App.LogVerbose(
+            $"[Lifecycle] Recovery topology phase reason={reason} " +
+            $"tookMs={topologyMs:F0}");
+        if (topologyMs > 2000)
+        {
+            Log(
+                $"[Lifecycle] Recovery storm ran {topologyMs:F0}ms for " +
+                $"{reason}; if the app felt frozen here, capture a dump (S6).");
+        }
 
         bool requiresExternalRecovery =
             reason.Contains("resume", StringComparison.OrdinalIgnoreCase) ||

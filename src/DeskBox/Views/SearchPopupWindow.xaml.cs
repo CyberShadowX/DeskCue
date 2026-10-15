@@ -164,7 +164,7 @@ public sealed partial class SearchPopupWindow : Window
             _themeService.AppearanceChanged += OnThemeServiceAppearanceChanged;
         Activated += OnWindowActivated;
         Closed += OnWindowClosed;
-        _popupCloseWatcherProc = PopupCloseWatcherSubclassProc;
+        _popupCloseWatcherProc = CallbackDepth.WrapSubclassProc(PopupCloseWatcherSubclassProc);
         _isPopupCloseWatcherInstalled = Win32Helper.SetWindowSubclass(
             _hwnd,
             _popupCloseWatcherProc,
