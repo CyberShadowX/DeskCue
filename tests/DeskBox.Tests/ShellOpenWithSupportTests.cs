@@ -17,12 +17,14 @@ public sealed class ShellOpenWithSupportTests
     [InlineData("C:\\tools\\run.bat", false)]
     [InlineData("C:\\tools\\legacy.scr", false)]
     [InlineData("C:\\tools\\old.com", false)]
+    [InlineData("C:\\Users\\me\\Desktop\\应用.lnk", false)]
+    [InlineData("C:\\Favorites\\站点.url", false)]
     [InlineData("C:\\docs\\notes.txt", true)]
     [InlineData("C:\\docs\\photo.JPG", true)]
     [InlineData("C:\\docs\\archive.zip", true)]
-    [InlineData("C:\\", false)]
+    [InlineData("C:\\docs\\LICENSE", true)]
     [InlineData("", false)]
-    public void SupportsOpenWith_HidesExecutableTypes(string path, bool expected)
+    public void SupportsOpenWith_HidesExecutablesAndShortcuts(string path, bool expected)
     {
         Assert.Equal(expected, ShellOpenWithHelper.SupportsOpenWith(path));
     }

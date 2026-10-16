@@ -191,17 +191,23 @@ public static class ShellOpenWithHelper
     }
 
     /// <summary>
-    /// Whether the type can meaningfully be opened with another app: the
-    /// Windows Open With dialog refuses executable file types outright
-    /// (their recommended-handler list is empty and "choose another app"
-    /// fails), so the whole Open With entry is hidden for them, matching
-    /// Explorer.
+    /// Whether the type can meaningfully be opened with another app:
+    /// executables (the Open With dialog refuses them outright) and
+    /// shortcuts (.lnk/.url — Explorer opens the target instead) are
+    /// hidden, matching Explorer. Extension-less files DO offer Open With
+    /// natively (picking a handler is the point), so only these families
+    /// are filtered.
     /// </summary>
     public static bool SupportsOpenWith(string filePath)
     {
-        string? extension = Path.GetExtension(filePath);
-        return !string.IsNullOrEmpty(extension) &&
-            !ElevatedFileLauncher.ExecutableExtensions.Contains(extension);
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return false;
+        }
+
+        string extension = Path.GetExtension(filePath);
+        return !ElevatedFileLauncher.ExecutableExtensions.Contains(extension) &&
+            !ShortcutHelper.IsShortcutPath(filePath);
     }
 
     /// <summary>
