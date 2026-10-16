@@ -1093,7 +1093,13 @@ public sealed partial class FileSurfaceContent :
             };
             Root.Children.Add(anchor);
             flyout.Closed += (_, _) => Root.Children.Remove(anchor);
-            flyout.ShowAt(anchor);
+            // Bottom of a zero-size anchor = the menu's top-left at the
+            // click point, so the icon is half-covered like the native
+            // menu. Without an explicit mode the engine centers the menu
+            // on the anchor and swallows the icon whole.
+            flyout.ShowAt(
+                anchor,
+                new FlyoutShowOptions { Placement = FlyoutPlacementMode.Bottom });
         }
         catch
         {
