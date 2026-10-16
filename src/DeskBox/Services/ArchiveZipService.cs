@@ -5,10 +5,20 @@ using DeskBox.Services;
 namespace DeskBox.Services;
 
 /// <summary>
-/// Managed ZIP support for the grid context menu ("Compress to ZIP file" /
+/// Archive formats offered by the grid "Compress to" submenu. 7z has no
+/// BCL writer and would need the LZMA SDK (batch debt pending a go).
+/// </summary>
+public enum ArchiveCompressionFormat
+{
+    Zip,
+    Tar
+}
+
+/// <summary>
+/// Managed archive support for the grid context menu ("Compress to" /
 /// "Extract all"). Runs entirely inside the DeskBox file pipeline, so it
-/// works without any third-party archiver installed. Only .zip is handled;
-/// other archive formats belong to the full system menu.
+/// works without any third-party archiver installed. Only .zip is
+/// extracted; other archive formats belong to the full system menu.
 /// </summary>
 public static class ArchiveZipService
 {
@@ -28,12 +38,14 @@ public static class ArchiveZipService
     }
 
     /// <summary>
-    /// Creates a ZIP archive next to the first source item. Multi-item
-    /// selections are named after the first item, matching Explorer's
-    /// "Compress to ZIP file" behavior.
+    /// Creates an archive in the requested format next to the first source
+    /// item; entries keep their relative paths from the common container.
+    /// Multi-item selections are named after the first item, matching
+    /// Explorer's compress behavior.
     /// </summary>
-    public static Task<string> CompressToZipAsync(
-        IReadOnlyList<string> sourcePaths)
+    public static Task<string> CompressAsync(
+        IReadOnlyList<string> sourcePaths,
+        ArchiveCompressionFormat format)
     {
         if (sourcePaths.Count == 0)
         {
@@ -47,12 +59,31 @@ public static class ArchiveZipService
             Environment.CurrentDirectory;
 
         string baseName = GetCompressionBaseName(sourcePaths);
-        string zipPath = FileService.GetAvailablePath(
-            Path.Combine(container, baseName + ".zip"));
+        string archivePath = FileService.GetAvailablePath(Path.Combine(
+            container,
+            baseName + (format == ArchiveCompressionFormat.Tar
+                ? ".tar"
+                : ".zip")));
 
         return Task.Run(() =>
         {
-            using var stream = new FileStream(
+            if (format == ArchiveCompressionFormat.Tar)
+            {
+                WriteTar(sourcePaths, container, archivePath);
+                return archivePath;
+            }
+
+            WriteZip(sourcePaths, container, archivePath);
+            return archivePath;
+        });
+    }
+
+    private static void WriteZip(
+        IReadOnlyList<string> sourcePaths,
+        string container,
+        string zipPath)
+    {
+        using var stream = new FileStream(
                 zipPath,
                 FileMode.CreateNew,
                 FileAccess.Write,
@@ -94,10 +125,71 @@ public static class ArchiveZipService
                     }
                 }
             }
-
-            return zipPath;
-        });
     }
+
+    private static void WriteTar(
+        IReadOnlyList<string> sourcePaths,
+        string container,
+        string tarPath)
+    {
+        using var stream = new FileStream(
+            tarPath,
+            FileMode.CreateNew,
+            FileAccess.Write,
+            FileShare.None);
+        using var writer = new System.Formats.Tar.TarWriter(stream);
+        foreach (string file in EnumerateFiles(sourcePaths, tarPath))
+        {
+            string relativePath = Path.GetRelativePath(container, file)
+                .Replace('\\', '/');
+            writer.WriteEntry(file, relativePath);
+        }
+    }
+
+    private static IEnumerable<string> EnumerateFiles(
+        IReadOnlyList<string> sourcePaths,
+        string excludeArchivePath)
+    {
+        foreach (string sourcePath in sourcePaths)
+        {
+            string fullPath = Path.GetFullPath(sourcePath);
+            if (File.Exists(fullPath))
+            {
+                if (!string.Equals(
+                        fullPath,
+                        excludeArchivePath,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    yield return fullPath;
+                }
+            }
+            else if (Directory.Exists(fullPath))
+            {
+                foreach (string file in Directory.EnumerateFiles(
+                             fullPath,
+                             "*",
+                             SearchOption.AllDirectories))
+                {
+                    // The archive lands next to the selection, so it would
+                    // otherwise swallow itself when a folder is selected.
+                    if (!string.Equals(
+                            file,
+                            excludeArchivePath,
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        yield return file;
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// ZIP shorthand for <see cref="CompressAsync"/>.
+    /// </summary>
+    public static Task<string> CompressToZipAsync(
+        IReadOnlyList<string> sourcePaths) =>
+        CompressAsync(sourcePaths, ArchiveCompressionFormat.Zip);
 
     /// <summary>
     /// Extracts every entry into a fresh folder named after the archive

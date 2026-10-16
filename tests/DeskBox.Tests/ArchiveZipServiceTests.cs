@@ -154,4 +154,51 @@ public sealed class ArchiveZipServiceTests : IDisposable
         string destination = await ArchiveZipService.ExtractAllAsync(zipPath);
         Assert.True(File.Exists(Path.Combine(destination, "中文文档.txt")));
     }
+
+    [Fact]
+    public async Task Compress_Tar_RoundTrips_FileAndNestedFolder()
+    {
+        string folder = Path.Combine(_root, "pack");
+        Directory.CreateDirectory(Path.Combine(folder, "inner"));
+        await File.WriteAllTextAsync(Path.Combine(folder, "top.txt"), "top");
+        await File.WriteAllTextAsync(
+            Path.Combine(folder, "inner", "deep.txt"),
+            "deep");
+
+        string tarPath = await ArchiveZipService.CompressAsync(
+            [Path.Combine(folder, "top.txt"), folder],
+            ArchiveCompressionFormat.Tar);
+        Assert.EndsWith(".tar", tarPath, StringComparison.Ordinal);
+
+        string extractDir = Path.Combine(_root, "tar-out");
+        using (var fs = new FileStream(tarPath, FileMode.Open, FileAccess.Read))
+        using (var reader = new System.Formats.Tar.TarReader(fs))
+        {
+            while (reader.GetNextEntry() is { } entry)
+            {
+                if (entry.EntryType != System.Formats.Tar.TarEntryType.RegularFile)
+                {
+                    continue;
+                }
+
+                string target = Path.Combine(
+                    extractDir,
+                    entry.Name.Replace('/', Path.DirectorySeparatorChar));
+                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                entry.ExtractToFile(target, overwrite: true);
+            }
+        }
+
+        // Entries are relative to the first source item's directory (the
+        // pack folder itself), matching the ZIP behavior.
+        Assert.Equal(
+            "top",
+            await File.ReadAllTextAsync(Path.Combine(extractDir, "top.txt")));
+        Assert.Equal(
+            "deep",
+            await File.ReadAllTextAsync(Path.Combine(
+                extractDir,
+                "inner",
+                "deep.txt")));
+    }
 }

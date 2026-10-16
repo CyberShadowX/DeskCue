@@ -708,7 +708,8 @@ public sealed partial class FileSurfaceContent
     }
 
     private async Task CompressSelectionAsync(
-        IReadOnlyList<WidgetItem> items)
+        IReadOnlyList<WidgetItem> items,
+        ArchiveCompressionFormat format)
     {
         List<WidgetItem> selection = items
             .Where(item => !string.IsNullOrWhiteSpace(item.Path))
@@ -721,9 +722,10 @@ public sealed partial class FileSurfaceContent
 
         try
         {
-            string zipPath = await ArchiveZipService.CompressToZipAsync(
-                selection.Select(item => item.Path).ToList());
-            _ = zipPath;
+            string archivePath = await ArchiveZipService.CompressAsync(
+                selection.Select(item => item.Path).ToList(),
+                format);
+            _ = archivePath;
             await RunAsync(() => ViewModel.RefreshFolderContentsAsync());
         }
         catch (Exception ex)

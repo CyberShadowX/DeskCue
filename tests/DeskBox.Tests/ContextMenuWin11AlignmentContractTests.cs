@@ -22,7 +22,9 @@ public sealed class ContextMenuWin11AlignmentContractTests
                      "Common.Cut",
                      "Common.Copy",
                      "Common.Rename",
-                     "Widget.CompressToZip",
+                     "Widget.CompressTo",
+                     "Widget.CompressTo.Zip",
+                     "Widget.CompressTo.Tar",
                      "Widget.CopyPath",
                      "Widget.MoveToRecycleBin",
                      "Widget.ShowInExplorer",
@@ -135,7 +137,7 @@ public sealed class ContextMenuWin11AlignmentContractTests
             StringComparison.Ordinal));
         Assert.Contains("Widget.Open", multiStart, StringComparison.Ordinal);
         Assert.Contains(
-            "Widget.CompressToZip",
+            "Widget.CompressTo",
             multiStart,
             StringComparison.Ordinal);
         Assert.Contains(
@@ -237,7 +239,7 @@ public sealed class ContextMenuWin11AlignmentContractTests
         // The row label is built via Localize in the builder; the host
         // supplies the submenu entries including the choose-app tail.
         Assert.Contains(
-            "Localize(\"Widget.OpenWith\")",
+            "\"Widget.OpenWith\"",
             ReadRepositoryFile("src/DeskBox/Controls/FileItemMenuBuilder.cs"),
             StringComparison.Ordinal);
         Assert.Contains(
@@ -274,7 +276,9 @@ public sealed class ContextMenuWin11AlignmentContractTests
             "Widget.OpenWith",
             "Widget.OpenWith.ChooseApp",
             "Widget.ExtractAll",
-            "Widget.CompressToZip",
+            "Widget.CompressTo",
+            "Widget.CompressTo.Zip",
+            "Widget.CompressTo.Tar",
             "Widget.New",
             "Widget.View",
             "Widget.SortBy",

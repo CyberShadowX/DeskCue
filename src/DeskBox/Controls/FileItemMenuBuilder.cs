@@ -1,4 +1,5 @@
 using DeskBox.Models;
+using DeskBox.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -45,7 +46,7 @@ public sealed record FileItemMenuActions(
     Func<WidgetItem, bool>? CanExtractArchive = null,
     Func<WidgetItem, Task>? ExtractArchiveAsync = null,
     Func<IReadOnlyList<WidgetItem>, bool>? CanCompressSelection = null,
-    Func<IReadOnlyList<WidgetItem>, Task>? CompressSelectionAsync = null);
+    Func<IReadOnlyList<WidgetItem>, ArchiveCompressionFormat, Task>? CompressSelectionAsync = null);
 
 /// <summary>
 /// Builds the item context menus in the Windows 11 shape: a compact icon
@@ -329,24 +330,43 @@ public static class FileItemMenuBuilder
             return;
         }
 
-        // A real AppBarButton row with an attached MenuFlyout: the platform
-        // opens it on click and draws the submenu chevron
-        // (AppBarButtonHasFlyoutChevronVisibility is collapsed inside
-        // CommandBarFlyout by default, so the row re-enables it locally).
-        // Hovering the row opens the submenu after a short delay, like the
-        // Windows 11 menu. Nested MenuFlyoutSubItem hosting inside
-        // AppBarElementContainer renders half-width and refuses to dismiss,
-        // which is why the list is its own flyout.
+        AddSubmenuRow(
+            flyout,
+            actions,
+            "Widget.OpenWith",
+            "\uE8AF",
+            payload.Items,
+            payload.Dispose);
+    }
+
+    /// <summary>
+    /// A secondary row with an attached submenu: the platform draws the
+    /// chevron (AppBarButtonHasFlyoutChevronVisibility is collapsed inside
+    /// CommandBarFlyout by default, re-enabled per row) and opens it on
+    /// click; hover opens after a short delay like the Windows 11 menu.
+    /// Picking any entry closes the whole menu round. Nested
+    /// MenuFlyoutSubItem hosting inside AppBarElementContainer renders
+    /// half-width and refuses to dismiss, which is why the list is its own
+    /// flyout.
+    /// </summary>
+    private static void AddSubmenuRow(
+        CommandBarFlyout flyout,
+        FileItemMenuActions actions,
+        string localizationKey,
+        string glyph,
+        IReadOnlyList<MenuFlyoutItemBase> submenuItems,
+        Action? submenuClosed = null)
+    {
         var row = new AppBarButton
         {
-            Label = actions.Localize("Widget.OpenWith"),
-            Icon = new FontIcon { Glyph = "" }
+            Label = actions.Localize(localizationKey),
+            Icon = new FontIcon { Glyph = glyph }
         };
         row.Resources["AppBarButtonHasFlyoutChevronVisibility"] =
             Visibility.Visible;
 
         var menu = new MenuFlyout();
-        foreach (MenuFlyoutItemBase entry in payload.Items)
+        foreach (MenuFlyoutItemBase entry in submenuItems)
         {
             menu.Items.Add(entry);
         }
@@ -355,9 +375,7 @@ public static class FileItemMenuBuilder
         // regularly extends past the widget window.
         menu.ShouldConstrainToRootBounds = false;
 
-        // Picking an app (or the choose-app dialog entry) ends the whole
-        // menu round, not just the submenu.
-        foreach (MenuFlyoutItem entry in payload.Items
+        foreach (MenuFlyoutItem entry in submenuItems
                      .OfType<MenuFlyoutItem>())
         {
             entry.Click += (_, _) => flyout.Hide();
@@ -382,7 +400,7 @@ public static class FileItemMenuBuilder
         {
             hoverTimer.Stop();
             menu.Hide();
-            payload.Dispose();
+            submenuClosed?.Invoke();
         };
         flyout.SecondaryCommands.Add(row);
     }
@@ -411,14 +429,38 @@ public static class FileItemMenuBuilder
             return;
         }
 
-        flyout.SecondaryCommands.Add(CreateRowButton(
+        var zipItem = new MenuFlyoutItem
+        {
+            Text = actions.Localize("Widget.CompressTo.Zip"),
+            Icon = new FontIcon { Glyph = "\uE7F8" }
+        };
+        zipItem.Click += async (_, _) =>
+        {
+            await actions.CompressSelectionAsync(
+                actions.GetSelectedItems(),
+                ArchiveCompressionFormat.Zip);
+        };
+
+        var tarItem = new MenuFlyoutItem
+        {
+            Text = actions.Localize("Widget.CompressTo.Tar"),
+            Icon = new FontIcon { Glyph = "\uE7F8" }
+        };
+        tarItem.Click += async (_, _) =>
+        {
+            await actions.CompressSelectionAsync(
+                actions.GetSelectedItems(),
+                ArchiveCompressionFormat.Tar);
+        };
+
+        // 7z needs the LZMA SDK (no BCL writer) — registered as batch debt
+        // pending a go; the native format dialog has no public API.
+        AddSubmenuRow(
             flyout,
             actions,
-            "Widget.CompressToZip",
+            "Widget.CompressTo",
             "\uE7F8",
-            null,
-            async () => await actions.CompressSelectionAsync(
-                actions.GetSelectedItems())));
+            [zipItem, tarItem]);
     }
 
     private static void AddShowMoreOptionsRow(
