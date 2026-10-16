@@ -132,50 +132,56 @@ internal static class ShellOpenWithInterop
         }
     }
 
+    private const uint OaifAllowRegistration = 0x00000001;
+    private const uint OaifExec = 0x00000004;
+    private const int HResultErrorCancelled = unchecked((int)0x800704C5);
+
     /// <summary>
-    /// Shows the system Open With dialog through the documented
-    /// <c>openas</c> verb.
+    /// Shows the system Open With dialog (SHOpenWithDialog — the documented
+    /// API for exactly this; the <c>openas</c> verb via ShellExecuteEx is
+    /// rejected with access denied from this process, proven by the
+    /// open-with repro harness). Modal on the calling STA thread; user
+    /// cancellation counts as success.
     /// </summary>
     internal static bool TryShowOpenAsDialog(
         IntPtr ownerWindow,
         string filePath)
     {
-        var info = new ShellExecuteInfo
+        var info = new OpenAsInfo
         {
-            Size = (uint)Marshal.SizeOf<ShellExecuteInfo>(),
-            OwnerWindow = ownerWindow,
-            Verb = "openas",
-            FileName = filePath,
-            Show = 1
+            File = filePath,
+            Class = null,
+            Flags = OaifAllowRegistration | OaifExec
         };
-        return ShellExecuteEx(ref info);
+
+        try
+        {
+            SHOpenWithDialog(ownerWindow, ref info);
+            return true;
+        }
+        catch (COMException ex) when (ex.HResult == HResultErrorCancelled)
+        {
+            return true;
+        }
     }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode,
+        PreserveSig = false)]
+    private static extern void SHOpenWithDialog(
+        IntPtr parentWindow,
+        ref OpenAsInfo info);
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    private struct ShellExecuteInfo
+    private struct OpenAsInfo
     {
-        public uint Size;
-        public uint Mask;
-        public IntPtr OwnerWindow;
-        public IntPtr Monitor;
-        public string? Verb;
-        public string? FileName;
-        public string? Parameters;
-        public string? Directory;
-        public int Show;
-        public IntPtr InstApp;
-        public IntPtr IdList;
-        public string? Class;
-        public IntPtr HkeyClass;
-        public uint HotKey;
-        public IntPtr Icon;
-        public IntPtr ProcessHandle;
-    }
+        [MarshalAs(UnmanagedType.LPWStr)]
+        public string File;
 
-    [DllImport("shell32.dll", EntryPoint = "ShellExecuteExW",
-        SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool ShellExecuteEx(ref ShellExecuteInfo info);
+        [MarshalAs(UnmanagedType.LPWStr)]
+        public string? Class;
+
+        public uint Flags;
+    }
 
     [ComImport]
     [Guid("973810ae-9599-4b88-9e4d-6ee98c9552da")]
