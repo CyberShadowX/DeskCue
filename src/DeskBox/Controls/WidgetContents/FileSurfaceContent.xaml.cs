@@ -1068,16 +1068,18 @@ public sealed partial class FileSurfaceContent :
             Root;
         try
         {
-            // Anchor like the native Shell menu: the flyout's top-left at
-            // the right-click point. The CommandBarFlyout placement engine
-            // works on the target element's RECT (MenuFlyout's
-            // show-at-point override does not apply), which parks the menu
-            // a tile-height away from the click. A 0x0 proxy anchored at
-            // the click point gives the engine a point-shaped target; the
-            // Root padding is compensated because child margins lay out in
-            // the padded content box while GetPosition is relative to the
+            // Deterministic manual placement, like the native Shell menu:
+            // cursor point + the containing monitor's work area decide the
+            // menu's top-left (open down-right; flip left/up when the menu
+            // would not fit). The flyout placement engine is bypassed via a
+            // 0x0 proxy anchored at the computed point — Bottom of a
+            // zero-size target lands the menu's top-left exactly there.
+            // Root padding is compensated: child margins lay out in the
+            // padded content box while the transform is relative to the
             // full bounds.
-            Windows.Foundation.Point point = e.GetPosition(Root);
+            Windows.Foundation.Point anchorPoint = ComputeManualMenuAnchor(
+                flyout,
+                e.GetPosition(Root));
             var anchor = new Border
             {
                 Width = 0,
@@ -1085,18 +1087,14 @@ public sealed partial class FileSurfaceContent :
                 HorizontalAlignment = HorizontalAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Top,
                 Margin = new Thickness(
-                    point.X - Root.Padding.Left,
-                    point.Y - Root.Padding.Top,
+                    anchorPoint.X - Root.Padding.Left,
+                    anchorPoint.Y - Root.Padding.Top,
                     0,
                     0),
                 IsHitTestVisible = false
             };
             Root.Children.Add(anchor);
             flyout.Closed += (_, _) => Root.Children.Remove(anchor);
-            // Bottom of a zero-size anchor = the menu's top-left at the
-            // click point, so the icon is half-covered like the native
-            // menu. Without an explicit mode the engine centers the menu
-            // on the anchor and swallows the icon whole.
             flyout.ShowAt(
                 anchor,
                 new FlyoutShowOptions { Placement = FlyoutPlacementMode.Bottom });
@@ -1110,6 +1108,113 @@ public sealed partial class FileSurfaceContent :
             throw;
         }
         e.Handled = true;
+    }
+
+    /// <summary>
+    /// Native-style menu anchor: the click point itself, shifted left/up
+    /// only when the estimated menu would not fit the containing monitor's
+    /// work area. Falls back to the raw click point whenever Win32 geometry
+    /// is unavailable, so placement degrades to the previous behavior
+    /// instead of failing.
+    /// </summary>
+    private Windows.Foundation.Point ComputeManualMenuAnchor(
+        FlyoutBase flyout,
+        Windows.Foundation.Point fallbackPoint)
+    {
+        if (!Win32Helper.GetCursorPos(out Win32Helper.POINT cursor) ||
+            !Win32Helper.GetWindowRect(_hostWindowHandle, out Win32Helper.RECT windowRect))
+        {
+            return fallbackPoint;
+        }
+
+        double scale = Root.XamlRoot?.RasterizationScale ?? 1;
+        if (scale <= 0)
+        {
+            scale = 1;
+        }
+
+        Windows.Foundation.Point rootTopLeft =
+            Root.TransformToVisual(null).TransformPoint(
+                new Windows.Foundation.Point(0, 0));
+        int rootOriginX = windowRect.Left +
+            (int)Math.Round(rootTopLeft.X * scale);
+        int rootOriginY = windowRect.Top +
+            (int)Math.Round(rootTopLeft.Y * scale);
+
+        (int Width, int Height) size = EstimateMenuSize(flyout, scale);
+
+        int x = cursor.X;
+        int y = cursor.Y;
+        if (Win32Helper.GetMonitorWorkAreaInfos()
+                .FirstOrDefault(area =>
+                    cursor.X >= area.Monitor.Left &&
+                    cursor.X < area.Monitor.Right &&
+                    cursor.Y >= area.Monitor.Top &&
+                    cursor.Y < area.Monitor.Bottom)
+            is { WorkArea: { } work })
+        {
+            if (x + size.Width > work.Right)
+            {
+                x = Math.Max(work.Left, cursor.X - size.Width);
+            }
+
+            if (y + size.Height > work.Bottom)
+            {
+                y = Math.Max(work.Top, cursor.Y - size.Height);
+            }
+        }
+
+        return new Windows.Foundation.Point(
+            (x - rootOriginX) / scale,
+            (y - rootOriginY) / scale);
+    }
+
+    /// <summary>
+    /// Physical-pixel menu size estimate, used only for the fit/flip
+    /// decision (row heights are stable; a few pixels of error are
+    /// invisible to the flip outcome).
+    /// </summary>
+    private static (int Width, int Height) EstimateMenuSize(
+        FlyoutBase flyout,
+        double scale)
+    {
+        double width;
+        double height;
+        if (flyout is CommandBarFlyout commandBar)
+        {
+            int rows = commandBar.SecondaryCommands.Count;
+            int separators = commandBar.SecondaryCommands
+                .OfType<AppBarSeparator>()
+                .Count();
+            width = 264;
+            height = 60 + rows * 40 + separators * 9;
+        }
+        else if (flyout is MenuFlyout menu)
+        {
+            int rows = 0;
+            int separators = 0;
+            foreach (MenuFlyoutItemBase item in menu.Items)
+            {
+                if (item is MenuFlyoutSeparator)
+                {
+                    separators++;
+                }
+                else
+                {
+                    rows++;
+                }
+            }
+
+            width = 240;
+            height = 12 + rows * 36 + separators * 9;
+        }
+        else
+        {
+            width = 240;
+            height = 220;
+        }
+
+        return ((int)Math.Ceiling(width * scale), (int)Math.Ceiling(height * scale));
     }
 
     private void Items_DragStarting(
