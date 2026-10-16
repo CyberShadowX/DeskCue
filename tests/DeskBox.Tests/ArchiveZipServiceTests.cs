@@ -152,7 +152,18 @@ public sealed class ArchiveZipServiceTests : IDisposable
         }
 
         string destination = await ArchiveZipService.ExtractAllAsync(zipPath);
-        Assert.True(File.Exists(Path.Combine(destination, "中文文档.txt")));
+        // The fallback decodes entry names with the SYSTEM ANSI code page:
+        // on a zh-CN host that round-trips to the original name, on any
+        // other locale it lands as the ANSI decoding of the raw GBK bytes.
+        // Compute the expected name the same way so the contract holds on
+        // every CI locale.
+        byte[] gbkName = System.Text.Encoding.GetEncoding(936)
+            .GetBytes("中文文档.txt");
+        string expectedName = System.Text.Encoding.GetEncoding(0)
+            .GetString(gbkName);
+        Assert.True(
+            File.Exists(Path.Combine(destination, expectedName)),
+            $"expected '{expectedName}' inside '{destination}'");
     }
 
     [Fact]
