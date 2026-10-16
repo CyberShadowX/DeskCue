@@ -462,14 +462,23 @@ public static class FileItemMenuBuilder
         string localizationKey,
         string glyph,
         string? acceleratorText,
-        Func<Task> onClick) =>
-        CreateAppBarButton(
+        Func<Task> onClick)
+    {
+        AppBarButton button = CreateAppBarButton(
             flyout,
             actions,
             localizationKey,
             glyph,
             acceleratorText,
             onClick);
+        // Overflow rows otherwise size to their label alone, which makes the
+        // menu feel wider than the Windows 11 reference; a uniform floor
+        // keeps the menu compact and consistent. Must stay OFF the primary
+        // strip buttons — wide strip buttons trigger dynamic overflow and
+        // the whole strip collapses into text rows.
+        button.MinWidth = 232;
+        return button;
+    }
 
     private static AppBarButton CreateAppBarButton(
         CommandBarFlyout flyout,
@@ -484,10 +493,6 @@ public static class FileItemMenuBuilder
             Label = actions.Localize(localizationKey),
             Icon = new FontIcon { Glyph = glyph }
         };
-        // Overflow rows otherwise size to their label alone, which makes
-        // the menu feel wider than the Windows 11 reference; a uniform
-        // floor keeps the menu compact and consistent.
-        button.MinWidth = 232;
         if (!string.IsNullOrEmpty(acceleratorText))
         {
             button.KeyboardAcceleratorTextOverride = acceleratorText;
