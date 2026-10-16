@@ -1035,7 +1035,7 @@ public sealed partial class FileSurfaceContent :
             return;
         }
 
-        MenuFlyout flyout = item is WidgetStackItem stack
+        FlyoutBase flyout = item is WidgetStackItem stack
             ? CreateStackFlyout(stack)
             : GetSelectedItems().Count > 1
                 ? CreateMultiSelectionFlyout()
@@ -1068,7 +1068,9 @@ public sealed partial class FileSurfaceContent :
             Root;
         try
         {
-            flyout.ShowAt(target, e.GetPosition(target));
+            flyout.ShowAt(
+                target,
+                new FlyoutShowOptions { Position = e.GetPosition(target) });
         }
         catch
         {

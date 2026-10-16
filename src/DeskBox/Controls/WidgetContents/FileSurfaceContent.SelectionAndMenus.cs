@@ -431,14 +431,14 @@ public sealed partial class FileSurfaceContent
         return null;
     }
 
-    private MenuFlyout CreateItemFlyout(WidgetItem item)
+    private CommandBarFlyout CreateItemFlyout(WidgetItem item)
     {
         return FileItemMenuBuilder.CreateItemFlyout(
             item,
             CreateFileItemMenuActions());
     }
 
-    private MenuFlyout CreateMultiSelectionFlyout()
+    private CommandBarFlyout CreateMultiSelectionFlyout()
     {
         return FileItemMenuBuilder.CreateMultiSelectionFlyout(
             CreateFileItemMenuActions());
@@ -448,6 +448,7 @@ public sealed partial class FileSurfaceContent
     {
         return new FileItemMenuActions(
             CreateMenuItem,
+            T,
             ActivateItemAsync,
             cut => RunAsync(
                 () => CopySelectionToClipboardAsync(cut)),
@@ -500,7 +501,7 @@ public sealed partial class FileSurfaceContent
 
     private MenuFlyoutSubItem? CreateOpenWithSubmenu(
         WidgetItem item,
-        MenuFlyout flyout)
+        FlyoutBase flyout)
     {
         if (item.IsFolder)
         {

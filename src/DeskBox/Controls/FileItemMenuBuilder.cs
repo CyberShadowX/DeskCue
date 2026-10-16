@@ -1,5 +1,8 @@
 using DeskBox.Models;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
 
 namespace DeskBox.Controls;
 
@@ -10,6 +13,7 @@ namespace DeskBox.Controls;
 /// </summary>
 public sealed record FileItemMenuActions(
     Func<string, string, MenuFlyoutItem> CreateMenuItem,
+    Func<string, string> Localize,
     Func<WidgetItem, Task> OpenItemAsync,
     Func<bool, Task> CopySelectionToClipboardAsync,
     Func<WidgetItem, Task> RenameItemAsync,
@@ -28,287 +32,271 @@ public sealed record FileItemMenuActions(
     Func<WidgetItem, Task>? ShowSystemContextMenuAsync = null,
     Func<WidgetItem, bool>? CanRunAsAdministrator = null,
     Func<WidgetItem, Task>? RunAsAdministratorAsync = null,
-    Func<WidgetItem, MenuFlyout, MenuFlyoutSubItem?>? CreateOpenWithSubmenu = null,
+    Func<WidgetItem, FlyoutBase, MenuFlyoutSubItem?>? CreateOpenWithSubmenu = null,
     Func<WidgetItem, bool>? CanExtractArchive = null,
     Func<WidgetItem, Task>? ExtractArchiveAsync = null,
     Func<IReadOnlyList<WidgetItem>, bool>? CanCompressSelection = null,
     Func<IReadOnlyList<WidgetItem>, Task>? CompressSelectionAsync = null);
 
 /// <summary>
-/// Builds the item context menus with Windows 11 ordering: the open family
-/// leads, then the clipboard family, then type-specific archive actions,
-/// then host-unique actions, with Delete, Properties, and the full system
-/// menu escape hatch at the bottom.
+/// Builds the item context menus in the Windows 11 shape: a compact icon
+/// strip on top (cut / copy / rename / delete) with the text rows below
+/// (open family, archive actions, host-unique actions, properties, and the
+/// full system menu escape hatch last). Implemented with CommandBarFlyout;
+/// submenu rows ride in AppBarElementContainer, the documented way to host
+/// MenuFlyoutItem-based submenus in the secondary command list.
 /// </summary>
 public static class FileItemMenuBuilder
 {
-    public static MenuFlyout CreateItemFlyout(
+    public static CommandBarFlyout CreateItemFlyout(
         WidgetItem item,
         FileItemMenuActions actions)
     {
-        var flyout = new MenuFlyout();
+        var flyout = new CommandBarFlyout();
 
-        MenuFlyoutItem open = actions.CreateMenuItem(
-            "Widget.Open",
-            "\uE8E5");
-        open.KeyboardAcceleratorTextOverride = "Enter";
-        open.Click += async (_, _) =>
-        {
-            flyout.Hide();
-            await actions.OpenItemAsync(item);
-        };
-        flyout.Items.Add(open);
+        AddClipboardStrip(flyout, actions, item, includeRename: true);
+        AddDeleteStripButton(flyout, actions);
 
-        AddOpenWithSubmenu(flyout, item, actions);
+        AddOpenRow(flyout, item, actions);
+        AddOpenWithRow(flyout, item, actions);
 
         if (actions.CanRunAsAdministrator?.Invoke(item) == true &&
             actions.RunAsAdministratorAsync is not null)
         {
-            MenuFlyoutItem runAsAdministrator = actions.CreateMenuItem(
+            flyout.SecondaryCommands.Add(CreateRowButton(
+                flyout,
+                actions,
                 "Widget.RunAsAdministrator",
-                "\uE7EF");
-            runAsAdministrator.Click += async (_, _) =>
-            {
-                flyout.Hide();
-                await actions.RunAsAdministratorAsync(item);
-            };
-            flyout.Items.Add(runAsAdministrator);
+                "\uE7EF",
+                null,
+                async () => await actions.RunAsAdministratorAsync!(item)));
         }
 
         if (actions.CanExtractArchive?.Invoke(item) == true &&
             actions.ExtractArchiveAsync is not null)
         {
-            MenuFlyoutItem extractAll = actions.CreateMenuItem(
+            flyout.SecondaryCommands.Add(CreateRowButton(
+                flyout,
+                actions,
                 "Widget.ExtractAll",
-                "\uE979");
-            extractAll.Click += async (_, _) =>
-            {
-                flyout.Hide();
-                await actions.ExtractArchiveAsync(item);
-            };
-            flyout.Items.Add(extractAll);
+                "\uE979",
+                null,
+                async () => await actions.ExtractArchiveAsync!(item)));
         }
 
-        flyout.Items.Add(new MenuFlyoutSeparator());
+        flyout.SecondaryCommands.Add(new AppBarSeparator());
 
-        MenuFlyoutItem cut = actions.CreateMenuItem(
-            "Common.Cut",
-            "\uE8C6");
-        cut.KeyboardAcceleratorTextOverride = "Ctrl+X";
-        cut.Click += async (_, _) =>
-        {
-            flyout.Hide();
-            await actions.CopySelectionToClipboardAsync(true);
-        };
-        flyout.Items.Add(cut);
+        AddCompressToZipRow(flyout, actions);
 
-        MenuFlyoutItem copy = actions.CreateMenuItem(
-            "Common.Copy",
-            "\uE8C8");
-        copy.KeyboardAcceleratorTextOverride = "Ctrl+C";
-        copy.Click += async (_, _) =>
-        {
-            flyout.Hide();
-            await actions.CopySelectionToClipboardAsync(false);
-        };
-        flyout.Items.Add(copy);
-
-        MenuFlyoutItem rename = actions.CreateMenuItem(
-            "Common.Rename",
-            "\uE8AC");
-        rename.KeyboardAcceleratorTextOverride = "F2";
-        rename.Click += async (_, _) =>
-        {
-            flyout.Hide();
-            await actions.RenameItemAsync(item);
-        };
-        flyout.Items.Add(rename);
-
-        flyout.Items.Add(new MenuFlyoutSeparator());
-
-        AddCompressToZipItem(flyout, actions);
-
-        MenuFlyoutItem copyPath = actions.CreateMenuItem(
+        flyout.SecondaryCommands.Add(CreateRowButton(
+            flyout,
+            actions,
             "Widget.CopyPath",
-            "\uE8C8");
-        copyPath.KeyboardAcceleratorTextOverride = "Ctrl+Shift+C";
-        copyPath.Click += (_, _) =>
-        {
-            flyout.Hide();
-            actions.CopySelectedPathsToClipboard();
-        };
-        flyout.Items.Add(copyPath);
+            "\uE8C8",
+            "Ctrl+Shift+C",
+            () =>
+            {
+                actions.CopySelectedPathsToClipboard();
+                return Task.CompletedTask;
+            }));
 
         if (actions.CanRemoveFromStack(item))
         {
-            flyout.Items.Add(new MenuFlyoutSeparator());
-            MenuFlyoutItem removeFromStack = actions.CreateMenuItem(
+            flyout.SecondaryCommands.Add(new AppBarSeparator());
+            flyout.SecondaryCommands.Add(CreateRowButton(
+                flyout,
+                actions,
                 "Widget.Stack.RemoveItem",
-                "\uE8FB");
-            removeFromStack.Click += (_, _) =>
-            {
-                flyout.Hide();
-                actions.RemoveFromStack(item);
-            };
-            flyout.Items.Add(removeFromStack);
+                "\uE8FB",
+                null,
+                () =>
+                {
+                    actions.RemoveFromStack(item);
+                    return Task.CompletedTask;
+                }));
         }
 
         if (actions.CanMoveItemsBackToDesktop())
         {
-            flyout.Items.Add(new MenuFlyoutSeparator());
-            MenuFlyoutItem moveBack = actions.CreateMenuItem(
+            flyout.SecondaryCommands.Add(CreateRowButton(
+                flyout,
+                actions,
                 "Widget.MoveBackToDesktop",
-                "\uE74A");
-            moveBack.Click += async (_, _) =>
-            {
-                flyout.Hide();
-                await actions.MoveItemsBackToDesktopAsync(
-                    actions.GetSelectedItems());
-            };
-            flyout.Items.Add(moveBack);
+                "\uE74A",
+                null,
+                async () => await actions.MoveItemsBackToDesktopAsync(
+                    actions.GetSelectedItems())));
         }
 
-        flyout.Items.Add(new MenuFlyoutSeparator());
-        MenuFlyoutItem delete = actions.CreateMenuItem(
-            "Widget.MoveToRecycleBin",
-            "\uE74D");
-        delete.KeyboardAcceleratorTextOverride = "Delete";
-        delete.Click += async (_, _) =>
-        {
-            flyout.Hide();
-            await actions.DeleteItemsAsync(actions.GetSelectedItems());
-        };
-        flyout.Items.Add(delete);
+        flyout.SecondaryCommands.Add(new AppBarSeparator());
 
-        flyout.Items.Add(new MenuFlyoutSeparator());
-
-        MenuFlyoutItem showInExplorer = actions.CreateMenuItem(
+        flyout.SecondaryCommands.Add(CreateRowButton(
+            flyout,
+            actions,
             "Widget.ShowInExplorer",
-            "\uE838");
-        showInExplorer.Click += (_, _) =>
-        {
-            flyout.Hide();
-            actions.ShowInExplorer(item);
-        };
-        flyout.Items.Add(showInExplorer);
+            "\uE838",
+            null,
+            () =>
+            {
+                actions.ShowInExplorer(item);
+                return Task.CompletedTask;
+            }));
 
-        MenuFlyoutItem properties = actions.CreateMenuItem(
+        flyout.SecondaryCommands.Add(CreateRowButton(
+            flyout,
+            actions,
             "Common.Properties",
-            "\uE946");
-        properties.KeyboardAcceleratorTextOverride = "Alt+Enter";
-        properties.Click += (_, _) =>
-        {
-            flyout.Hide();
-            actions.ShowProperties(item);
-        };
-        flyout.Items.Add(properties);
+            "\uE946",
+            "Alt+Enter",
+            () =>
+            {
+                actions.ShowProperties(item);
+                return Task.CompletedTask;
+            }));
 
-        AddShowMoreOptionsItem(flyout, item, actions);
+        AddShowMoreOptionsRow(flyout, item, actions);
 
         return flyout;
     }
 
-    public static MenuFlyout CreateMultiSelectionFlyout(
+    public static CommandBarFlyout CreateMultiSelectionFlyout(
         FileItemMenuActions actions)
     {
-        var flyout = new MenuFlyout();
+        var flyout = new CommandBarFlyout();
 
-        MenuFlyoutItem open = actions.CreateMenuItem(
+        AddClipboardStrip(flyout, actions, null, includeRename: false);
+        AddDeleteStripButton(flyout, actions);
+
+        flyout.SecondaryCommands.Add(CreateRowButton(
+            flyout,
+            actions,
             "Widget.Open",
-            "\uE8E5");
-        open.Click += async (_, _) =>
-        {
-            flyout.Hide();
-            foreach (WidgetItem item in actions.GetSelectedItems())
+            "\uE8E5",
+            null,
+            async () =>
             {
-                await actions.OpenItemAsync(item);
-            }
-        };
-        flyout.Items.Add(open);
+                foreach (WidgetItem item in actions.GetSelectedItems())
+                {
+                    await actions.OpenItemAsync(item);
+                }
+            }));
 
-        AddCompressToZipItem(flyout, actions);
+        AddCompressToZipRow(flyout, actions);
 
-        flyout.Items.Add(new MenuFlyoutSeparator());
+        flyout.SecondaryCommands.Add(new AppBarSeparator());
 
-        MenuFlyoutItem cut = actions.CreateMenuItem(
-            "Common.Cut",
-            "\uE8C6");
-        cut.KeyboardAcceleratorTextOverride = "Ctrl+X";
-        cut.Click += async (_, _) =>
-        {
-            flyout.Hide();
-            await actions.CopySelectionToClipboardAsync(true);
-        };
-        flyout.Items.Add(cut);
-
-        MenuFlyoutItem copy = actions.CreateMenuItem(
-            "Common.Copy",
-            "\uE8C8");
-        copy.KeyboardAcceleratorTextOverride = "Ctrl+C";
-        copy.Click += async (_, _) =>
-        {
-            flyout.Hide();
-            await actions.CopySelectionToClipboardAsync(false);
-        };
-        flyout.Items.Add(copy);
-
-        flyout.Items.Add(new MenuFlyoutSeparator());
-        MenuFlyoutItem copyPath = actions.CreateMenuItem(
+        flyout.SecondaryCommands.Add(CreateRowButton(
+            flyout,
+            actions,
             "Widget.CopyPath",
-            "\uE8C8");
-        copyPath.KeyboardAcceleratorTextOverride = "Ctrl+Shift+C";
-        copyPath.Click += (_, _) =>
-        {
-            flyout.Hide();
-            actions.CopySelectedPathsToClipboard();
-        };
-        flyout.Items.Add(copyPath);
+            "\uE8C8",
+            "Ctrl+Shift+C",
+            () =>
+            {
+                actions.CopySelectedPathsToClipboard();
+                return Task.CompletedTask;
+            }));
 
         if (actions.CanCreateManualStack)
         {
-            MenuFlyoutItem startStack = actions.CreateMenuItem(
+            flyout.SecondaryCommands.Add(CreateRowButton(
+                flyout,
+                actions,
                 "Widget.Stack.Start",
-                "\uE8B7");
-            startStack.Click += (_, _) =>
-            {
-                flyout.Hide();
-                actions.CreateManualStack(actions.GetSelectedItems());
-                actions.ClearSelection();
-            };
-            flyout.Items.Add(startStack);
+                "\uE8B7",
+                null,
+                () =>
+                {
+                    actions.CreateManualStack(actions.GetSelectedItems());
+                    actions.ClearSelection();
+                    return Task.CompletedTask;
+                }));
         }
 
         if (actions.CanMoveItemsBackToDesktop())
         {
-            MenuFlyoutItem moveBack = actions.CreateMenuItem(
+            flyout.SecondaryCommands.Add(CreateRowButton(
+                flyout,
+                actions,
                 "Widget.MoveBackToDesktop",
-                "\uE74A");
-            moveBack.Click += async (_, _) =>
-            {
-                flyout.Hide();
-                await actions.MoveItemsBackToDesktopAsync(
-                    actions.GetSelectedItems());
-            };
-            flyout.Items.Add(moveBack);
+                "\uE74A",
+                null,
+                async () => await actions.MoveItemsBackToDesktopAsync(
+                    actions.GetSelectedItems())));
         }
-
-        flyout.Items.Add(new MenuFlyoutSeparator());
-        MenuFlyoutItem delete = actions.CreateMenuItem(
-            "Widget.MoveToRecycleBin",
-            "\uE74D");
-        delete.KeyboardAcceleratorTextOverride = "Delete";
-        delete.Click += async (_, _) =>
-        {
-            flyout.Hide();
-            await actions.DeleteItemsAsync(actions.GetSelectedItems());
-        };
-        flyout.Items.Add(delete);
 
         return flyout;
     }
 
-    private static void AddOpenWithSubmenu(
-        MenuFlyout flyout,
+    /// <summary>
+    /// The icon strip: cut / copy / rename, matching the Windows 11 command
+    /// order (cut, copy, rename, share, delete — share has no grid
+    /// equivalent). Rename is single-selection only.
+    /// </summary>
+    private static void AddClipboardStrip(
+        CommandBarFlyout flyout,
+        FileItemMenuActions actions,
+        WidgetItem? renameTarget,
+        bool includeRename)
+    {
+        flyout.PrimaryCommands.Add(CreateStripButton(
+            flyout,
+            actions,
+            "Common.Cut",
+            "\uE8C6",
+            "Ctrl+X",
+            async () => await actions.CopySelectionToClipboardAsync(true)));
+
+        flyout.PrimaryCommands.Add(CreateStripButton(
+            flyout,
+            actions,
+            "Common.Copy",
+            "\uE8C8",
+            "Ctrl+C",
+            async () => await actions.CopySelectionToClipboardAsync(false)));
+
+        if (includeRename && renameTarget is not null)
+        {
+            flyout.PrimaryCommands.Add(CreateStripButton(
+                flyout,
+                actions,
+                "Common.Rename",
+                "\uE8AC",
+                "F2",
+                async () => await actions.RenameItemAsync(renameTarget)));
+        }
+    }
+
+    private static void AddDeleteStripButton(
+        CommandBarFlyout flyout,
+        FileItemMenuActions actions)
+    {
+        flyout.PrimaryCommands.Add(CreateStripButton(
+            flyout,
+            actions,
+            "Widget.MoveToRecycleBin",
+            "\uE74D",
+            "Delete",
+            async () => await actions.DeleteItemsAsync(
+                actions.GetSelectedItems())));
+    }
+
+    private static void AddOpenRow(
+        CommandBarFlyout flyout,
+        WidgetItem item,
+        FileItemMenuActions actions)
+    {
+        flyout.SecondaryCommands.Add(CreateRowButton(
+            flyout,
+            actions,
+            "Widget.Open",
+            "\uE8E5",
+            "Enter",
+            async () => await actions.OpenItemAsync(item)));
+    }
+
+    private static void AddOpenWithRow(
+        CommandBarFlyout flyout,
         WidgetItem item,
         FileItemMenuActions actions)
     {
@@ -321,12 +309,13 @@ public static class FileItemMenuBuilder
             actions.CreateOpenWithSubmenu(item, flyout);
         if (submenu is not null)
         {
-            flyout.Items.Add(submenu);
+            flyout.SecondaryCommands.Add(
+                new AppBarElementContainer { Content = submenu });
         }
     }
 
-    private static void AddCompressToZipItem(
-        MenuFlyout flyout,
+    private static void AddCompressToZipRow(
+        CommandBarFlyout flyout,
         FileItemMenuActions actions)
     {
         if (actions.CanCompressSelection?.Invoke(
@@ -336,20 +325,18 @@ public static class FileItemMenuBuilder
             return;
         }
 
-        MenuFlyoutItem compress = actions.CreateMenuItem(
+        flyout.SecondaryCommands.Add(CreateRowButton(
+            flyout,
+            actions,
             "Widget.CompressToZip",
-            "\uE979");
-        compress.Click += async (_, _) =>
-        {
-            flyout.Hide();
-            await actions.CompressSelectionAsync(
-                actions.GetSelectedItems());
-        };
-        flyout.Items.Add(compress);
+            "\uE979",
+            null,
+            async () => await actions.CompressSelectionAsync(
+                actions.GetSelectedItems())));
     }
 
-    private static void AddShowMoreOptionsItem(
-        MenuFlyout flyout,
+    private static void AddShowMoreOptionsRow(
+        CommandBarFlyout flyout,
         WidgetItem item,
         FileItemMenuActions actions)
     {
@@ -358,14 +345,81 @@ public static class FileItemMenuBuilder
             return;
         }
 
-        MenuFlyoutItem showMoreOptions = actions.CreateMenuItem(
+        flyout.SecondaryCommands.Add(CreateRowButton(
+            flyout,
+            actions,
             "Widget.MoreSystemOperations",
-            "\uE712");
-        showMoreOptions.Click += async (_, _) =>
+            "\uE712",
+            null,
+            async () => await actions.ShowSystemContextMenuAsync(item)));
+    }
+
+    private static AppBarButton CreateStripButton(
+        CommandBarFlyout flyout,
+        FileItemMenuActions actions,
+        string localizationKey,
+        string glyph,
+        string? acceleratorText,
+        Func<Task> onClick)
+    {
+        AppBarButton button = CreateAppBarButton(
+            flyout,
+            actions,
+            localizationKey,
+            glyph,
+            acceleratorText,
+            onClick);
+        // The strip renders icon-only, like the Windows 11 menu; the label
+        // doubles as the tooltip.
+        ToolTipService.SetToolTip(
+            button,
+            string.IsNullOrEmpty(acceleratorText)
+                ? actions.Localize(localizationKey)
+                : $"{actions.Localize(localizationKey)} ({acceleratorText})");
+        return button;
+    }
+
+    private static AppBarButton CreateRowButton(
+        CommandBarFlyout flyout,
+        FileItemMenuActions actions,
+        string localizationKey,
+        string glyph,
+        string? acceleratorText,
+        Func<Task> onClick) =>
+        CreateAppBarButton(
+            flyout,
+            actions,
+            localizationKey,
+            glyph,
+            acceleratorText,
+            onClick);
+
+    private static AppBarButton CreateAppBarButton(
+        CommandBarFlyout flyout,
+        FileItemMenuActions actions,
+        string localizationKey,
+        string glyph,
+        string? acceleratorText,
+        Func<Task> onClick)
+    {
+        var button = new AppBarButton
         {
-            flyout.Hide();
-            await actions.ShowSystemContextMenuAsync(item);
+            Label = actions.Localize(localizationKey),
+            Icon = new FontIcon { Glyph = glyph }
         };
-        flyout.Items.Add(showMoreOptions);
+        if (!string.IsNullOrEmpty(acceleratorText))
+        {
+            button.KeyboardAcceleratorTextOverride = acceleratorText;
+        }
+
+        button.Click += async (_, _) =>
+        {
+            // Strip buttons keep the flyout open by default; the Windows 11
+            // menu closes on every command, so hide explicitly (harmless
+            // for secondary rows, which already close).
+            flyout.Hide();
+            await onClick();
+        };
+        return button;
     }
 }

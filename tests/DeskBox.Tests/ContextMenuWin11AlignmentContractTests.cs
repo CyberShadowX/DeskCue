@@ -35,53 +35,84 @@ public sealed class ContextMenuWin11AlignmentContractTests
     }
 
     [Fact]
-    public void ItemMenu_OpenFamilyLeads_PropertiesStayVisible_EscapeHatchLast()
+    public void ItemMenu_Win11Shape_StripOrder_RowOrder_EscapeHatchLast()
     {
         string builder = ReadRepositoryFile(
             "src/DeskBox/Controls/FileItemMenuBuilder.cs");
 
-        // Scope to the single-item flyout: shared helpers live at the end
-        // of the file, so raw IndexOf on key literals would compare across
-        // methods.
+        // CommandBarFlyout shape: the compact strip renders cut / copy /
+        // rename / delete (Windows 11 command order); the secondary rows
+        // lead with the open family and end with the system-menu escape
+        // hatch. Scoped to the single-item builder region; the shared strip
+        // helpers sit after both builders in the file, so their literal
+        // order is pinned separately below.
         int singleStart = builder.IndexOf(
-            "public static MenuFlyout CreateItemFlyout(",
+            "public static CommandBarFlyout CreateItemFlyout(",
             StringComparison.Ordinal);
         int singleEnd = builder.IndexOf(
-            "public static MenuFlyout CreateMultiSelectionFlyout(",
+            "public static CommandBarFlyout CreateMultiSelectionFlyout(",
             StringComparison.Ordinal);
         Assert.True(singleStart >= 0 && singleEnd > singleStart);
         string single = builder[singleStart..singleEnd];
 
-        int openWith = single.IndexOf(
-            "AddOpenWithSubmenu(flyout, item, actions);",
+        int strip = single.IndexOf(
+            "AddClipboardStrip(flyout, actions, item, includeRename: true);",
             StringComparison.Ordinal);
-        int cut = single.IndexOf(
-            "\"Common.Cut\"",
+        int deleteStrip = single.IndexOf(
+            "AddDeleteStripButton(flyout, actions);",
+            StringComparison.Ordinal);
+        int openRow = single.IndexOf(
+            "AddOpenRow(flyout, item, actions);",
+            StringComparison.Ordinal);
+        int openWith = single.IndexOf(
+            "AddOpenWithRow(flyout, item, actions);",
+            StringComparison.Ordinal);
+        int extract = single.IndexOf(
+            "\"Widget.ExtractAll\"",
             StringComparison.Ordinal);
         int compress = single.IndexOf(
-            "AddCompressToZipItem(flyout, actions);",
+            "AddCompressToZipRow(flyout, actions);",
             StringComparison.Ordinal);
         int copyPath = single.IndexOf(
             "\"Widget.CopyPath\"",
-            StringComparison.Ordinal);
-        int delete = single.IndexOf(
-            "\"Widget.MoveToRecycleBin\"",
             StringComparison.Ordinal);
         int properties = single.IndexOf(
             "\"Common.Properties\"",
             StringComparison.Ordinal);
         int moreOptions = single.IndexOf(
-            "AddShowMoreOptionsItem(flyout, item, actions);",
+            "AddShowMoreOptionsRow(flyout, item, actions);",
             StringComparison.Ordinal);
 
-        Assert.True(openWith >= 0 && cut > openWith, "Open with leads");
-        Assert.True(compress > cut && compress < copyPath,
-            "Compress sits between the clipboard family and Copy as path");
-        Assert.True(delete > copyPath, "Delete follows Copy as path");
-        Assert.True(properties > delete,
-            "Properties stays visible after Delete");
+        Assert.True(strip >= 0 && deleteStrip > strip,
+            "The strip leads the menu");
+        Assert.True(openRow > deleteStrip && openWith > openRow,
+            "Open family leads the text rows");
+        Assert.True(extract > openWith, "Extract stays in the open family");
+        Assert.True(compress > extract && compress < copyPath,
+            "Compress sits before Copy as path");
+        Assert.True(properties > copyPath,
+            "Properties stays visible in the rows");
         Assert.True(moreOptions > properties,
-            "Show more options is the last item");
+            "Show more options is the last row");
+
+        // Strip helper literal order: cut / copy / rename, then delete.
+        int cut = builder.IndexOf("\"Common.Cut\"", StringComparison.Ordinal);
+        int copy = builder.IndexOf("\"Common.Copy\"", StringComparison.Ordinal);
+        int rename = builder.IndexOf(
+            "\"Common.Rename\"",
+            StringComparison.Ordinal);
+        int delete = builder.IndexOf(
+            "\"Widget.MoveToRecycleBin\"",
+            StringComparison.Ordinal);
+        Assert.True(cut >= 0 && copy > cut && rename > copy && delete > rename,
+            "Strip order is cut / copy / rename / delete");
+
+        // Submenus ride in AppBarElementContainer (the documented way to
+        // host MenuFlyoutSubItem inside secondary commands).
+        Assert.Contains(
+            "AppBarElementContainer",
+            builder,
+            StringComparison.Ordinal);
     }
 
     [Fact]
