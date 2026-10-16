@@ -1095,6 +1095,7 @@ public sealed partial class FileSurfaceContent :
             };
             Root.Children.Add(anchor);
             flyout.Closed += (_, _) => Root.Children.Remove(anchor);
+            flyout.Opened += CacheMenuSizeOnOpened;
             flyout.ShowAt(
                 anchor,
                 new FlyoutShowOptions { Placement = FlyoutPlacementMode.Bottom });
@@ -1170,24 +1171,47 @@ public sealed partial class FileSurfaceContent :
     }
 
     /// <summary>
-    /// Physical-pixel menu size estimate, used only for the fit/flip
-    /// decision (row heights are stable; a few pixels of error are
-    /// invisible to the flip outcome).
+    /// Measured menu sizes by menu shape (DIPs), refreshed by
+    /// <see cref="CacheMenuSizeOnOpened"/>; the first open of a shape uses
+    /// the estimate below. Only the fit/flip decision consumes the size.
     /// </summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<
+        string,
+        (double Width,
+        double Height)> s_measuredMenuSizes = new();
+
+    private static string MenuShapeKey(FlyoutBase flyout) => flyout switch
+    {
+        CommandBarFlyout bar => $"bar:{bar.SecondaryCommands.Count}",
+        MenuFlyout menu => $"menu:{menu.Items.Count}",
+        _ => "other"
+    };
+
     private static (int Width, int Height) EstimateMenuSize(
         FlyoutBase flyout,
         double scale)
     {
         double width;
         double height;
-        if (flyout is CommandBarFlyout commandBar)
+        if (s_measuredMenuSizes.TryGetValue(
+                MenuShapeKey(flyout),
+                out (double Width, double Height) measured))
         {
-            int rows = commandBar.SecondaryCommands.Count;
+            width = measured.Width;
+            height = measured.Height;
+        }
+        else if (flyout is CommandBarFlyout commandBar)
+        {
+            // Fallback estimate until the first open measures the real
+            // presenter: rows and separators are charged separately
+            // (charging separators full row height overshot the upward
+            // flip by a tile and parked the menu far above the cursor).
             int separators = commandBar.SecondaryCommands
                 .OfType<AppBarSeparator>()
                 .Count();
-            width = 264;
-            height = 60 + rows * 40 + separators * 9;
+            int rows = commandBar.SecondaryCommands.Count - separators;
+            width = 256;
+            height = 52 + rows * 38 + separators * 9;
         }
         else if (flyout is MenuFlyout menu)
         {
@@ -1215,6 +1239,45 @@ public sealed partial class FileSurfaceContent :
         }
 
         return ((int)Math.Ceiling(width * scale), (int)Math.Ceiling(height * scale));
+    }
+
+    private void CacheMenuSizeOnOpened(object sender, object e)
+    {
+        if (sender is not FlyoutBase flyout || Root.XamlRoot is null)
+        {
+            return;
+        }
+
+        try
+        {
+            foreach (Microsoft.UI.Xaml.Controls.Primitives.Popup popup in
+                     Microsoft.UI.Xaml.Media.VisualTreeHelper
+                         .GetOpenPopupsForXamlRoot(Root.XamlRoot))
+            {
+                if (popup.Child is Microsoft.UI.Xaml.Controls.Primitives
+                        .CommandBarFlyoutCommandBar bar)
+                {
+                    s_measuredMenuSizes[MenuShapeKey(flyout)] =
+                        (bar.ActualWidth, bar.ActualHeight);
+                    break;
+                }
+
+                if (popup.Child is MenuFlyoutPresenter presenter)
+                {
+                    s_measuredMenuSizes[MenuShapeKey(flyout)] =
+                        (presenter.ActualWidth, presenter.ActualHeight);
+                    break;
+                }
+            }
+        }
+        catch
+        {
+            // Measurement is an optimization; placement keeps the estimate.
+        }
+        finally
+        {
+            flyout.Opened -= CacheMenuSizeOnOpened;
+        }
     }
 
     private void Items_DragStarting(
