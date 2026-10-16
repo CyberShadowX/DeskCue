@@ -1068,37 +1068,22 @@ public sealed partial class FileSurfaceContent :
             Root;
         try
         {
-            // Deterministic manual placement, like the native Shell menu:
-            // cursor point + the containing monitor's work area decide the
-            // menu's top-left (open down-right; flip left/up when the menu
-            // would not fit). The flyout placement engine is bypassed via a
-            // 0x0 proxy anchored at the computed point — Bottom of a
-            // zero-size target lands the menu's top-left exactly there.
-            // Root padding is compensated: child margins lay out in the
-            // padded content box while the transform is relative to the
-            // full bounds.
-            Windows.Foundation.Point anchorPoint = ComputeManualMenuAnchor(
-                flyout,
-                e.GetPosition(Root));
-            var anchor = new Border
-            {
-                Width = 0,
-                Height = 0,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                VerticalAlignment = VerticalAlignment.Top,
-                Margin = new Thickness(
-                    anchorPoint.X - Root.Padding.Left,
-                    anchorPoint.Y - Root.Padding.Top,
-                    0,
-                    0),
-                IsHitTestVisible = false
-            };
-            Root.Children.Add(anchor);
-            flyout.Closed += (_, _) => Root.Children.Remove(anchor);
-            flyout.Opened += CacheMenuSizeOnOpened;
+            // Engine-owned placement (Files-app pattern): show at the
+            // invocation point in the target's coordinate space. The
+            // windowed popup engine clamps to the containing monitor's
+            // work area and flips (Bottom -> Top with the menu bottom at
+            // the pointer, then edge slides / height compression) when
+            // the menu does not fit — the same policy as the native
+            // Windows 11 context menu. Manual flip math used to fight
+            // this and drifted from native behavior at screen edges.
+            flyout.Opened += LogOpenedMenuPlacementAsync;
             flyout.ShowAt(
-                anchor,
-                new FlyoutShowOptions { Placement = FlyoutPlacementMode.Bottom });
+                target,
+                new FlyoutShowOptions
+                {
+                    Position = e.GetPosition(target),
+                    Placement = FlyoutPlacementMode.Bottom
+                });
         }
         catch
         {
@@ -1112,199 +1097,101 @@ public sealed partial class FileSurfaceContent :
     }
 
     /// <summary>
-    /// Native-style menu anchor: the click point itself, shifted left/up
-    /// only when the estimated menu would not fit the containing monitor's
-    /// work area. Falls back to the raw click point whenever Win32 geometry
-    /// is unavailable, so placement degrades to the previous behavior
-    /// instead of failing.
+    /// Verbose-only placement check: logs where the engine actually put the
+    /// opened menu on screen. At Opened time the first popup listed can
+    /// still be the hover tooltip, so re-check for a few ticks until the
+    /// menu's command bar shows up. Render-time open animations do not
+    /// affect layout transforms, so the logged geometry is final.
     /// </summary>
-    private Windows.Foundation.Point ComputeManualMenuAnchor(
-        FlyoutBase flyout,
-        Windows.Foundation.Point fallbackPoint)
-    {
-        if (!Win32Helper.GetCursorPos(out Win32Helper.POINT cursor) ||
-            !Win32Helper.GetWindowRect(_hostWindowHandle, out Win32Helper.RECT windowRect))
-        {
-            return fallbackPoint;
-        }
-
-        double scale = Root.XamlRoot?.RasterizationScale ?? 1;
-        if (scale <= 0)
-        {
-            scale = 1;
-        }
-
-        Windows.Foundation.Point rootTopLeft =
-            Root.TransformToVisual(null).TransformPoint(
-                new Windows.Foundation.Point(0, 0));
-        int rootOriginX = windowRect.Left +
-            (int)Math.Round(rootTopLeft.X * scale);
-        int rootOriginY = windowRect.Top +
-            (int)Math.Round(rootTopLeft.Y * scale);
-
-        (int Width, int Height) size = EstimateMenuSize(flyout, scale);
-
-        int x = cursor.X;
-        int y = cursor.Y;
-        if (Win32Helper.GetMonitorWorkAreaInfos()
-                .FirstOrDefault(area =>
-                    cursor.X >= area.Monitor.Left &&
-                    cursor.X < area.Monitor.Right &&
-                    cursor.Y >= area.Monitor.Top &&
-                    cursor.Y < area.Monitor.Bottom)
-            is { WorkArea: { } work })
-        {
-            if (x + size.Width > work.Right)
-            {
-                x = Math.Max(work.Left, cursor.X - size.Width);
-            }
-
-            if (y + size.Height > work.Bottom)
-            {
-                y = Math.Max(work.Top, cursor.Y - size.Height);
-            }
-        }
-
-        App.LogVerbose(
-            $"[ContextMenuPlacement] cursor={cursor.X},{cursor.Y} " +
-            $"work={work.Right},{work.Bottom} size={size.Width}x{size.Height} " +
-            $"screenAnchor={x},{y} scale={scale} rootOrigin={rootOriginX},{rootOriginY}");
-
-        return new Windows.Foundation.Point(
-            (x - rootOriginX) / scale,
-            (y - rootOriginY) / scale);
-    }
-
-    /// <summary>
-    /// Measured menu sizes by menu shape (DIPs), refreshed by
-    /// <see cref="CacheMenuSizeOnOpened"/>; the first open of a shape uses
-    /// the estimate below. Only the fit/flip decision consumes the size.
-    /// </summary>
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<
-        string,
-        (double Width,
-        double Height)> s_measuredMenuSizes = new();
-
-    private static string MenuShapeKey(FlyoutBase flyout) => flyout switch
-    {
-        CommandBarFlyout bar => $"bar:{bar.SecondaryCommands.Count}",
-        MenuFlyout menu => $"menu:{menu.Items.Count}",
-        _ => "other"
-    };
-
-    private static (int Width, int Height) EstimateMenuSize(
-        FlyoutBase flyout,
-        double scale)
-    {
-        double width;
-        double height;
-        if (s_measuredMenuSizes.TryGetValue(
-                MenuShapeKey(flyout),
-                out (double Width, double Height) measured))
-        {
-            width = measured.Width;
-            height = measured.Height;
-        }
-        else if (flyout is CommandBarFlyout commandBar)
-        {
-            // Fallback estimate until the first open measures the real
-            // presenter: rows and separators are charged separately
-            // (charging separators full row height overshot the upward
-            // flip by a tile and parked the menu far above the cursor).
-            int separators = commandBar.SecondaryCommands
-                .OfType<AppBarSeparator>()
-                .Count();
-            int rows = commandBar.SecondaryCommands.Count - separators;
-            width = 256;
-            height = 52 + rows * 38 + separators * 9;
-        }
-        else if (flyout is MenuFlyout menu)
-        {
-            int rows = 0;
-            int separators = 0;
-            foreach (MenuFlyoutItemBase item in menu.Items)
-            {
-                if (item is MenuFlyoutSeparator)
-                {
-                    separators++;
-                }
-                else
-                {
-                    rows++;
-                }
-            }
-
-            width = 240;
-            height = 12 + rows * 36 + separators * 9;
-        }
-        else
-        {
-            width = 240;
-            height = 220;
-        }
-
-        return ((int)Math.Ceiling(width * scale), (int)Math.Ceiling(height * scale));
-    }
-
-    /// <summary>
-    /// Sanity-clamped measurement store: template stretch (the flyout
-    /// command bar carries MaxWidth=440) must not inflate the flip math —
-    /// an oversized width parks the left-flipped menu far from the cursor.
-    /// </summary>
-    private static void StoreMeasuredMenuSize(
-        FlyoutBase flyout,
-        double width,
-        double height)
-    {
-        if (width < 160 || width > 360 || height < 40 || height > 640)
-        {
-            return;
-        }
-
-        s_measuredMenuSizes[MenuShapeKey(flyout)] = (width, height);
-    }
-
-    private void CacheMenuSizeOnOpened(object sender, object e)
+    private async void LogOpenedMenuPlacementAsync(object? sender, object e)
     {
         if (sender is not FlyoutBase flyout || Root.XamlRoot is null)
         {
             return;
         }
 
+        // Detach first: retries below must not re-enter on later opens.
+        flyout.Opened -= LogOpenedMenuPlacementAsync;
+
         try
         {
-            foreach (Microsoft.UI.Xaml.Controls.Primitives.Popup popup in
-                     Microsoft.UI.Xaml.Media.VisualTreeHelper
-                         .GetOpenPopupsForXamlRoot(Root.XamlRoot))
+            for (int attempt = 0; attempt < 3; attempt++)
             {
-                if (popup.Child is Microsoft.UI.Xaml.Controls.Primitives
-                        .CommandBarFlyoutCommandBar bar)
+                foreach (Microsoft.UI.Xaml.Controls.Primitives.Popup popup in
+                         Microsoft.UI.Xaml.Media.VisualTreeHelper
+                             .GetOpenPopupsForXamlRoot(Root.XamlRoot))
                 {
-                    StoreMeasuredMenuSize(
-                        flyout,
-                        bar.ActualWidth,
-                        bar.ActualHeight);
-                    break;
+                    FrameworkElement? content = popup.Child switch
+                    {
+                        Microsoft.UI.Xaml.Controls.Primitives.CommandBarFlyoutCommandBar
+                            bar => bar,
+                        MenuFlyoutPresenter presenter => presenter,
+                        FrameworkElement wrapper when FindPopupCommandBar(
+                            wrapper,
+                            depth: 0) is not null => wrapper,
+                        _ => null
+                    };
+                    if (content is null)
+                    {
+                        continue;
+                    }
+
+                    if (Win32Helper.GetWindowRect(
+                            _hostWindowHandle,
+                            out Win32Helper.RECT windowRect))
+                    {
+                        double scale = Root.XamlRoot?.RasterizationScale ?? 1;
+                        Windows.Foundation.Point topLeft = content
+                            .TransformToVisual(null)
+                            .TransformPoint(new Windows.Foundation.Point(0, 0));
+                        App.LogVerbose(
+                            $"[ContextMenuPlacement] opened at screen " +
+                            $"{windowRect.Left + (int)Math.Round(topLeft.X * scale)}," +
+                            $"{windowRect.Top + (int)Math.Round(topLeft.Y * scale)} " +
+                            $"actual={content.ActualWidth:0.#}x{content.ActualHeight:0.#}");
+                    }
+
+                    return;
                 }
 
-                if (popup.Child is MenuFlyoutPresenter presenter)
-                {
-                    StoreMeasuredMenuSize(
-                        flyout,
-                        presenter.ActualWidth,
-                        presenter.ActualHeight);
-                    break;
-                }
+                await Task.Delay(60);
             }
         }
         catch
         {
-            // Measurement is an optimization; placement keeps the estimate.
+            // Diagnostics only.
         }
-        finally
+    }
+
+    private static Microsoft.UI.Xaml.Controls.Primitives
+            .CommandBarFlyoutCommandBar? FindPopupCommandBar(
+            Microsoft.UI.Xaml.DependencyObject node,
+            int depth)
+    {
+        if (depth > 6)
         {
-            flyout.Opened -= CacheMenuSizeOnOpened;
+            return null;
         }
+
+        int count = Microsoft.UI.Xaml.Media.VisualTreeHelper
+            .GetChildrenCount(node);
+        for (int i = 0; i < count; i++)
+        {
+            Microsoft.UI.Xaml.DependencyObject child =
+                Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(node, i);
+            if (child is Microsoft.UI.Xaml.Controls.Primitives
+                    .CommandBarFlyoutCommandBar bar)
+            {
+                return bar;
+            }
+
+            if (FindPopupCommandBar(child, depth + 1) is { } nested)
+            {
+                return nested;
+            }
+        }
+
+        return null;
     }
 
     private void Items_DragStarting(
