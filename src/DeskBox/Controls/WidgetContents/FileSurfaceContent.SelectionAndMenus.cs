@@ -490,7 +490,181 @@ public sealed partial class FileSurfaceContent
             ClearSelection,
             ShowSystemContextMenuAsync,
             ElevatedFileLauncher.CanRunAsAdministrator,
-            RunAsAdministratorAsync);
+            RunAsAdministratorAsync,
+            CreateOpenWithSubmenu,
+            CanExtractArchiveItem,
+            ExtractArchiveItemAsync,
+            CanCompressSelection,
+            CompressSelectionAsync);
+    }
+
+    private MenuFlyoutSubItem? CreateOpenWithSubmenu(
+        WidgetItem item,
+        MenuFlyout flyout)
+    {
+        if (item.IsFolder)
+        {
+            return null;
+        }
+
+        var submenu = new MenuFlyoutSubItem
+        {
+            Text = T("Widget.OpenWith"),
+            Icon = new FontIcon { Glyph = "\uE8AF" }
+        };
+
+        List<OpenWithHandlerEntry> apps;
+        try
+        {
+            apps = ShellOpenWithHelper.GetRecommendedApps(item.Path)
+                .ToList();
+        }
+        catch
+        {
+            apps = [];
+        }
+
+        foreach (OpenWithHandlerEntry app in apps)
+        {
+            OpenWithHandlerEntry captured = app;
+            var appItem = new MenuFlyoutItem { Text = captured.UiName };
+            appItem.Click += (_, _) =>
+            {
+                if (!captured.TryInvoke(item.Path))
+                {
+                    ShowFeedback(new WidgetFeedbackRequest(
+                        T("Widget.Error.OperationIncomplete"),
+                        WidgetFeedbackSeverity.Warning,
+                        "open-with"));
+                }
+            };
+            submenu.Items.Add(appItem);
+        }
+
+        if (apps.Count > 0)
+        {
+            submenu.Items.Add(new MenuFlyoutSeparator());
+        }
+
+        var chooseApp = new MenuFlyoutItem
+        {
+            Text = T("Widget.OpenWith.ChooseApp"),
+            Icon = new FontIcon { Glyph = "\uE712" }
+        };
+        chooseApp.Click += (_, _) =>
+        {
+            if (!ShellOpenWithHelper.ShowChooseAppDialog(
+                    _hostWindowHandle,
+                    item.Path))
+            {
+                ShowFeedback(new WidgetFeedbackRequest(
+                    T("Widget.Error.OperationIncomplete"),
+                    WidgetFeedbackSeverity.Warning,
+                    "open-with-choose"));
+            }
+        };
+        submenu.Items.Add(chooseApp);
+
+        if (apps.Count > 0)
+        {
+            // The Shell association handlers behind the entries must stay
+            // alive until the menu round ends.
+            flyout.Closed += (_, _) =>
+            {
+                foreach (OpenWithHandlerEntry app in apps)
+                {
+                    app.Dispose();
+                }
+            };
+        }
+
+        return submenu;
+    }
+
+    private static bool CanExtractArchiveItem(WidgetItem item) =>
+        !item.IsFolder &&
+        string.Equals(
+            Path.GetExtension(item.Path),
+            ".zip",
+            StringComparison.OrdinalIgnoreCase);
+
+    private async Task ExtractArchiveItemAsync(WidgetItem item)
+    {
+        string? folderPath = ViewModel.CurrentFolderPath;
+        if (string.IsNullOrWhiteSpace(folderPath) ||
+            TryBlockTransferOpen(item) ||
+            TryBlockTransferMutation(folderPath))
+        {
+            return;
+        }
+
+        try
+        {
+            string destination = await ArchiveZipService.ExtractAllAsync(
+                item.Path);
+            _ = destination;
+            await RunAsync(() => ViewModel.RefreshFolderContentsAsync());
+        }
+        catch (Exception ex)
+        {
+            App.Log(
+                $"[ArchiveZip] extract failed widget={WidgetId} " +
+                $"archive='{item.Path}': {ex.Message}");
+            ShowFeedback(new WidgetFeedbackRequest(
+                T("Widget.Zip.ExtractFailed"),
+                WidgetFeedbackSeverity.Warning,
+                "extract-zip"));
+        }
+    }
+
+    private static bool CanCompressSelection(
+        IReadOnlyList<WidgetItem> items)
+    {
+        if (items.Count == 0)
+        {
+            return false;
+        }
+
+        // Compressing an archive itself is a no-op almost nobody wants;
+        // Explorer still offers it, the grid keeps the menu lean.
+        bool singleZipArchive = items.Count == 1 &&
+            string.Equals(
+                Path.GetExtension(items[0].Path),
+                ".zip",
+                StringComparison.OrdinalIgnoreCase);
+        return !singleZipArchive && items.All(item =>
+            !string.IsNullOrWhiteSpace(item.Path));
+    }
+
+    private async Task CompressSelectionAsync(
+        IReadOnlyList<WidgetItem> items)
+    {
+        List<WidgetItem> selection = items
+            .Where(item => !string.IsNullOrWhiteSpace(item.Path))
+            .ToList();
+        if (selection.Count == 0 ||
+            TryBlockTransferMutation(selection))
+        {
+            return;
+        }
+
+        try
+        {
+            string zipPath = await ArchiveZipService.CompressToZipAsync(
+                selection.Select(item => item.Path).ToList());
+            _ = zipPath;
+            await RunAsync(() => ViewModel.RefreshFolderContentsAsync());
+        }
+        catch (Exception ex)
+        {
+            App.Log(
+                $"[ArchiveZip] compress failed widget={WidgetId}: " +
+                ex.Message);
+            ShowFeedback(new WidgetFeedbackRequest(
+                T("Widget.Zip.CompressFailed"),
+                WidgetFeedbackSeverity.Warning,
+                "compress-zip"));
+        }
     }
 
     private void ShowFileProperties(WidgetItem item)
@@ -709,6 +883,71 @@ public sealed partial class FileSurfaceContent
         bool hasMappedFolder =
             !string.IsNullOrWhiteSpace(mappedFolderPath);
 
+        var hostItems = new WidgetHostContextMenuOpeningEventArgs(flyout);
+        HostContextMenuOpening?.Invoke(this, hostItems);
+
+        var view = new MenuFlyoutSubItem
+        {
+            Text = T("Widget.View"),
+            Icon = new FontIcon { Glyph = "\uE8CB" }
+        };
+        var iconView = new ToggleMenuFlyoutItem
+        {
+            Text = T("Widget.IconView"),
+            IsChecked = ViewModel.IsIconMode
+        };
+        iconView.Click += (_, _) =>
+        {
+            if (!ViewModel.IsIconMode)
+            {
+                ToggleViewButton_Click(this, new RoutedEventArgs());
+            }
+        };
+        view.Items.Add(iconView);
+
+        var listView = new ToggleMenuFlyoutItem
+        {
+            Text = T("Widget.ListView"),
+            IsChecked = ViewModel.IsListMode
+        };
+        listView.Click += (_, _) =>
+        {
+            if (!ViewModel.IsListMode)
+            {
+                ToggleViewButton_Click(this, new RoutedEventArgs());
+            }
+        };
+        view.Items.Add(listView);
+        view.Items.Add(CreateIconSizeMenu());
+        flyout.Items.Add(view);
+
+        var sortBy = new MenuFlyoutSubItem
+        {
+            Text = T("Widget.SortBy"),
+            Icon = new FontIcon { Glyph = "\uE8CB" }
+        };
+        AddSortItem(
+            sortBy,
+            "Widget.Sort.Manual",
+            WidgetSortMode.Manual);
+        AddSortItem(
+            sortBy,
+            "Widget.Sort.Name",
+            WidgetSortMode.Name);
+        AddSortItem(
+            sortBy,
+            "Widget.Sort.Size",
+            WidgetSortMode.Size);
+        AddSortItem(
+            sortBy,
+            "Widget.Sort.Type",
+            WidgetSortMode.Type);
+        AddSortItem(
+            sortBy,
+            "Widget.Sort.DateModified",
+            WidgetSortMode.DateModified);
+        flyout.Items.Add(sortBy);
+
         MenuFlyoutItem refresh =
             CreateMenuItem("Common.Refresh", "\uE72C");
         refresh.KeyboardAcceleratorTextOverride = "F5";
@@ -718,6 +957,8 @@ public sealed partial class FileSurfaceContent
             await RunAsync(RefreshAsync);
         };
         flyout.Items.Add(refresh);
+
+        flyout.Items.Add(new MenuFlyoutSeparator());
 
         MenuFlyoutItem paste =
             CreateMenuItem("Common.Paste", "\uE77F");
@@ -730,16 +971,17 @@ public sealed partial class FileSurfaceContent
         };
         flyout.Items.Add(paste);
 
-        MenuFlyoutItem newFolder =
-            CreateMenuItem("Common.NewFolder", "\uE8B7");
-        newFolder.KeyboardAcceleratorTextOverride = "Ctrl+Shift+N";
-        newFolder.IsEnabled = hasMappedFolder;
-        newFolder.Click += async (_, _) =>
+        flyout.Items.Add(new MenuFlyoutSeparator());
+
+        flyout.Items.Add(CreateNewSubMenu(hasMappedFolder));
+
+        flyout.Items.Add(new MenuFlyoutSeparator());
+
+        if (hostItems.TitleStyleItem is not null)
         {
-            flyout.Hide();
-            await CreateFolderInMappedLocationAsync();
-        };
-        flyout.Items.Add(newFolder);
+            flyout.Items.Add(hostItems.TitleStyleItem);
+        }
+        flyout.Items.Add(CreateStackSettingsMenu());
 
         MenuFlyoutItem openFolder = CreateMenuItem(
             "Widget.OpenStorageFolder",
@@ -764,76 +1006,104 @@ public sealed partial class FileSurfaceContent
         };
         flyout.Items.Add(openFolder);
 
-        var hostItems = new WidgetHostContextMenuOpeningEventArgs(flyout);
-        HostContextMenuOpening?.Invoke(this, hostItems);
-        if (hostItems.TitleStyleItem is not null)
-        {
-            flyout.Items.Add(hostItems.TitleStyleItem);
-        }
-
-        var viewAndSort = new MenuFlyoutSubItem
-        {
-            Text = T("Widget.ViewAndSort"),
-            Icon = new FontIcon { Glyph = "\uE8CB" }
-        };
-        var iconView = new ToggleMenuFlyoutItem
-        {
-            Text = T("Widget.IconView"),
-            IsChecked = ViewModel.IsIconMode
-        };
-        iconView.Click += (_, _) =>
-        {
-            if (!ViewModel.IsIconMode)
-            {
-                ToggleViewButton_Click(this, new RoutedEventArgs());
-            }
-        };
-        viewAndSort.Items.Add(iconView);
-
-        var listView = new ToggleMenuFlyoutItem
-        {
-            Text = T("Widget.ListView"),
-            IsChecked = ViewModel.IsListMode
-        };
-        listView.Click += (_, _) =>
-        {
-            if (!ViewModel.IsListMode)
-            {
-                ToggleViewButton_Click(this, new RoutedEventArgs());
-            }
-        };
-        viewAndSort.Items.Add(listView);
-        viewAndSort.Items.Add(CreateIconSizeMenu());
-        viewAndSort.Items.Add(new MenuFlyoutSeparator());
-        AddSortItem(
-            viewAndSort,
-            "Widget.Sort.Manual",
-            WidgetSortMode.Manual);
-        AddSortItem(
-            viewAndSort,
-            "Widget.Sort.Name",
-            WidgetSortMode.Name);
-        AddSortItem(
-            viewAndSort,
-            "Widget.Sort.Size",
-            WidgetSortMode.Size);
-        AddSortItem(
-            viewAndSort,
-            "Widget.Sort.Type",
-            WidgetSortMode.Type);
-        AddSortItem(
-            viewAndSort,
-            "Widget.Sort.DateModified",
-            WidgetSortMode.DateModified);
-        flyout.Items.Add(viewAndSort);
-        flyout.Items.Add(CreateStackSettingsMenu());
-
         if (hostItems.CloseWidgetItem is not null)
         {
             flyout.Items.Add(new MenuFlyoutSeparator());
             flyout.Items.Add(hostItems.CloseWidgetItem);
         }
         return flyout;
+    }
+
+    private MenuFlyoutSubItem CreateNewSubMenu(bool hasMappedFolder)
+    {
+        var menu = new MenuFlyoutSubItem
+        {
+            Text = T("Widget.New"),
+            Icon = new FontIcon { Glyph = "\uE710" }
+        };
+
+        MenuFlyoutItem newFolder =
+            CreateMenuItem("Common.NewFolder", "\uE8B7");
+        newFolder.KeyboardAcceleratorTextOverride = "Ctrl+Shift+N";
+        newFolder.IsEnabled = hasMappedFolder;
+        newFolder.Click += async (_, _) =>
+        {
+            await CreateFolderInMappedLocationAsync();
+        };
+        menu.Items.Add(newFolder);
+
+        if (hasMappedFolder)
+        {
+            IReadOnlyList<ShellNewEntry> entries = [];
+            try
+            {
+                entries = ShellNewMenuHelper.GetEntries();
+            }
+            catch
+            {
+                // The registry New list is best-effort; the folder entry
+                // above still works without it.
+            }
+
+            if (entries.Count > 0)
+            {
+                menu.Items.Add(new MenuFlyoutSeparator());
+                foreach (ShellNewEntry entry in entries)
+                {
+                    ShellNewEntry captured = entry;
+                    var newItem = new MenuFlyoutItem
+                    {
+                        Text = captured.DisplayName
+                    };
+                    newItem.Click += async (_, _) =>
+                    {
+                        await CreateFileFromShellNewEntryAsync(captured);
+                    };
+                    menu.Items.Add(newItem);
+                }
+            }
+        }
+
+        return menu;
+    }
+
+    private async Task CreateFileFromShellNewEntryAsync(
+        ShellNewEntry entry)
+    {
+        string? folderPath = ViewModel.CurrentFolderPath;
+        if (string.IsNullOrWhiteSpace(folderPath) ||
+            TryBlockTransferMutation(folderPath))
+        {
+            return;
+        }
+
+        await RunAsync(async () =>
+        {
+            string? createdPath = ShellNewMenuHelper.CreateFile(
+                entry,
+                folderPath,
+                name => _localizationService.Format(
+                    "Widget.NewFileName",
+                    name));
+            if (createdPath is null)
+            {
+                ShowFeedback(new WidgetFeedbackRequest(
+                    T("Widget.Error.OperationIncomplete"),
+                    WidgetFeedbackSeverity.Warning,
+                    "new-file"));
+                return;
+            }
+
+            await ViewModel.RefreshFolderContentsAsync();
+            if (ViewModel.Items.FirstOrDefault(item =>
+                    string.Equals(
+                        item.Path,
+                        createdPath,
+                        StringComparison.OrdinalIgnoreCase)) is { } newFile)
+            {
+                await StartItemRenameAsync(newFile);
+            }
+        });
     }
 
     private MenuFlyoutSubItem CreateIconSizeMenu()

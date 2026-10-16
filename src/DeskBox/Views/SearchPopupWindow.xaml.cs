@@ -3713,6 +3713,34 @@ public sealed partial class SearchPopupWindow : Window
             return flyout;
         }
 
+        // Executables and administrator-requiring shortcuts keep the same
+        // entry point here as the grid items menu (#381, #228).
+        if (ElevatedFileLauncher.CanRunAsAdministrator(item.DetailPath!))
+        {
+            var runAsAdminItem = new MenuFlyoutItem
+            {
+                Text = _localizationService.T("Widget.RunAsAdministrator"),
+                Icon = new FontIcon { Glyph = "\uE7EF" }
+            };
+            runAsAdminItem.Click += (_, _) =>
+            {
+                ElevatedFileLaunchResult result =
+                    ElevatedFileLauncher.RunAsAdministrator(
+                        _hwnd,
+                        item.DetailPath!);
+                if (result.Status is not (ElevatedFileLaunchStatus.Launched
+                    or ElevatedFileLaunchStatus.Cancelled))
+                {
+                    ShowTransientStatus(_localizationService.T(
+                        result.Status ==
+                        ElevatedFileLaunchStatus.AlreadyRunningUnelevated
+                            ? "Widget.RunAsAdministrator.AlreadyRunning"
+                            : "Widget.Error.OperationIncomplete"));
+                }
+            };
+            flyout.Items.Add(runAsAdminItem);
+        }
+
         flyout.Items.Add(new MenuFlyoutSeparator());
 
         var cutItem = new MenuFlyoutItem

@@ -27,8 +27,19 @@ public sealed record FileItemMenuActions(
     Action ClearSelection,
     Func<WidgetItem, Task>? ShowSystemContextMenuAsync = null,
     Func<WidgetItem, bool>? CanRunAsAdministrator = null,
-    Func<WidgetItem, Task>? RunAsAdministratorAsync = null);
+    Func<WidgetItem, Task>? RunAsAdministratorAsync = null,
+    Func<WidgetItem, MenuFlyout, MenuFlyoutSubItem?>? CreateOpenWithSubmenu = null,
+    Func<WidgetItem, bool>? CanExtractArchive = null,
+    Func<WidgetItem, Task>? ExtractArchiveAsync = null,
+    Func<IReadOnlyList<WidgetItem>, bool>? CanCompressSelection = null,
+    Func<IReadOnlyList<WidgetItem>, Task>? CompressSelectionAsync = null);
 
+/// <summary>
+/// Builds the item context menus with Windows 11 ordering: the open family
+/// leads, then the clipboard family, then type-specific archive actions,
+/// then host-unique actions, with Delete, Properties, and the full system
+/// menu escape hatch at the bottom.
+/// </summary>
 public static class FileItemMenuBuilder
 {
     public static MenuFlyout CreateItemFlyout(
@@ -48,6 +59,8 @@ public static class FileItemMenuBuilder
         };
         flyout.Items.Add(open);
 
+        AddOpenWithSubmenu(flyout, item, actions);
+
         if (actions.CanRunAsAdministrator?.Invoke(item) == true &&
             actions.RunAsAdministratorAsync is not null)
         {
@@ -60,6 +73,20 @@ public static class FileItemMenuBuilder
                 await actions.RunAsAdministratorAsync(item);
             };
             flyout.Items.Add(runAsAdministrator);
+        }
+
+        if (actions.CanExtractArchive?.Invoke(item) == true &&
+            actions.ExtractArchiveAsync is not null)
+        {
+            MenuFlyoutItem extractAll = actions.CreateMenuItem(
+                "Widget.ExtractAll",
+                "\uE979");
+            extractAll.Click += async (_, _) =>
+            {
+                flyout.Hide();
+                await actions.ExtractArchiveAsync(item);
+            };
+            flyout.Items.Add(extractAll);
         }
 
         flyout.Items.Add(new MenuFlyoutSeparator());
@@ -96,7 +123,10 @@ public static class FileItemMenuBuilder
             await actions.RenameItemAsync(item);
         };
         flyout.Items.Add(rename);
+
         flyout.Items.Add(new MenuFlyoutSeparator());
+
+        AddCompressToZipItem(flyout, actions);
 
         MenuFlyoutItem copyPath = actions.CreateMenuItem(
             "Widget.CopyPath",
@@ -108,27 +138,6 @@ public static class FileItemMenuBuilder
             actions.CopySelectedPathsToClipboard();
         };
         flyout.Items.Add(copyPath);
-
-        MenuFlyoutItem showInExplorer = actions.CreateMenuItem(
-            "Widget.ShowInExplorer",
-            "\uE838");
-        showInExplorer.Click += (_, _) =>
-        {
-            flyout.Hide();
-            actions.ShowInExplorer(item);
-        };
-        flyout.Items.Add(showInExplorer);
-
-        MenuFlyoutItem properties = actions.CreateMenuItem(
-            "Common.Properties",
-            "\uE946");
-        properties.KeyboardAcceleratorTextOverride = "Alt+Enter";
-        properties.Click += (_, _) =>
-        {
-            flyout.Hide();
-            actions.ShowProperties(item);
-        };
-        flyout.Items.Add(properties);
 
         if (actions.CanRemoveFromStack(item))
         {
@@ -159,20 +168,6 @@ public static class FileItemMenuBuilder
             flyout.Items.Add(moveBack);
         }
 
-        if (actions.ShowSystemContextMenuAsync is not null)
-        {
-            flyout.Items.Add(new MenuFlyoutSeparator());
-            MenuFlyoutItem moreSystemOperations = actions.CreateMenuItem(
-                "Widget.MoreSystemOperations",
-                "\uE712");
-            moreSystemOperations.Click += async (_, _) =>
-            {
-                flyout.Hide();
-                await actions.ShowSystemContextMenuAsync(item);
-            };
-            flyout.Items.Add(moreSystemOperations);
-        }
-
         flyout.Items.Add(new MenuFlyoutSeparator());
         MenuFlyoutItem delete = actions.CreateMenuItem(
             "Widget.MoveToRecycleBin",
@@ -185,6 +180,31 @@ public static class FileItemMenuBuilder
         };
         flyout.Items.Add(delete);
 
+        flyout.Items.Add(new MenuFlyoutSeparator());
+
+        MenuFlyoutItem showInExplorer = actions.CreateMenuItem(
+            "Widget.ShowInExplorer",
+            "\uE838");
+        showInExplorer.Click += (_, _) =>
+        {
+            flyout.Hide();
+            actions.ShowInExplorer(item);
+        };
+        flyout.Items.Add(showInExplorer);
+
+        MenuFlyoutItem properties = actions.CreateMenuItem(
+            "Common.Properties",
+            "\uE946");
+        properties.KeyboardAcceleratorTextOverride = "Alt+Enter";
+        properties.Click += (_, _) =>
+        {
+            flyout.Hide();
+            actions.ShowProperties(item);
+        };
+        flyout.Items.Add(properties);
+
+        AddShowMoreOptionsItem(flyout, item, actions);
+
         return flyout;
     }
 
@@ -193,20 +213,22 @@ public static class FileItemMenuBuilder
     {
         var flyout = new MenuFlyout();
 
-        if (actions.CanCreateManualStack)
+        MenuFlyoutItem open = actions.CreateMenuItem(
+            "Widget.Open",
+            "\uE8E5");
+        open.Click += async (_, _) =>
         {
-            MenuFlyoutItem startStack = actions.CreateMenuItem(
-                "Widget.Stack.Start",
-                "\uE8B7");
-            startStack.Click += (_, _) =>
+            flyout.Hide();
+            foreach (WidgetItem item in actions.GetSelectedItems())
             {
-                flyout.Hide();
-                actions.CreateManualStack(actions.GetSelectedItems());
-                actions.ClearSelection();
-            };
-            flyout.Items.Add(startStack);
-            flyout.Items.Add(new MenuFlyoutSeparator());
-        }
+                await actions.OpenItemAsync(item);
+            }
+        };
+        flyout.Items.Add(open);
+
+        AddCompressToZipItem(flyout, actions);
+
+        flyout.Items.Add(new MenuFlyoutSeparator());
 
         MenuFlyoutItem cut = actions.CreateMenuItem(
             "Common.Cut",
@@ -242,6 +264,20 @@ public static class FileItemMenuBuilder
         };
         flyout.Items.Add(copyPath);
 
+        if (actions.CanCreateManualStack)
+        {
+            MenuFlyoutItem startStack = actions.CreateMenuItem(
+                "Widget.Stack.Start",
+                "\uE8B7");
+            startStack.Click += (_, _) =>
+            {
+                flyout.Hide();
+                actions.CreateManualStack(actions.GetSelectedItems());
+                actions.ClearSelection();
+            };
+            flyout.Items.Add(startStack);
+        }
+
         if (actions.CanMoveItemsBackToDesktop())
         {
             MenuFlyoutItem moveBack = actions.CreateMenuItem(
@@ -269,5 +305,67 @@ public static class FileItemMenuBuilder
         flyout.Items.Add(delete);
 
         return flyout;
+    }
+
+    private static void AddOpenWithSubmenu(
+        MenuFlyout flyout,
+        WidgetItem item,
+        FileItemMenuActions actions)
+    {
+        if (actions.CreateOpenWithSubmenu is null)
+        {
+            return;
+        }
+
+        MenuFlyoutSubItem? submenu =
+            actions.CreateOpenWithSubmenu(item, flyout);
+        if (submenu is not null)
+        {
+            flyout.Items.Add(submenu);
+        }
+    }
+
+    private static void AddCompressToZipItem(
+        MenuFlyout flyout,
+        FileItemMenuActions actions)
+    {
+        if (actions.CanCompressSelection?.Invoke(
+                actions.GetSelectedItems()) != true ||
+            actions.CompressSelectionAsync is null)
+        {
+            return;
+        }
+
+        MenuFlyoutItem compress = actions.CreateMenuItem(
+            "Widget.CompressToZip",
+            "\uE979");
+        compress.Click += async (_, _) =>
+        {
+            flyout.Hide();
+            await actions.CompressSelectionAsync(
+                actions.GetSelectedItems());
+        };
+        flyout.Items.Add(compress);
+    }
+
+    private static void AddShowMoreOptionsItem(
+        MenuFlyout flyout,
+        WidgetItem item,
+        FileItemMenuActions actions)
+    {
+        if (actions.ShowSystemContextMenuAsync is null)
+        {
+            return;
+        }
+
+        MenuFlyoutItem showMoreOptions = actions.CreateMenuItem(
+            "Widget.MoreSystemOperations",
+            "\uE712");
+        showMoreOptions.Click += async (_, _) =>
+        {
+            flyout.Hide();
+            await actions.ShowSystemContextMenuAsync(item);
+        };
+        flyout.Items.Add(showMoreOptions);
     }
 }
