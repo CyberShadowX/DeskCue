@@ -351,6 +351,10 @@ public static class FileItemMenuBuilder
             menu.Items.Add(entry);
         }
 
+        // Same monitor-bounds-only rule as the parent menu; the submenu
+        // regularly extends past the widget window.
+        menu.ShouldConstrainToRootBounds = false;
+
         // Picking an app (or the choose-app dialog entry) ends the whole
         // menu round, not just the submenu.
         foreach (MenuFlyoutItem entry in payload.Items
@@ -388,7 +392,12 @@ public static class FileItemMenuBuilder
         // AlwaysExpanded removes the overflow/collapse button and the
         // collapsed-then-expand opening animation (the two-step visual lag
         // on first show); the menu opens fully formed like Windows 11.
-        AlwaysExpanded = true
+        AlwaysExpanded = true,
+        // Grid widgets are small windows; the default root-bounds
+        // constraint shoves the menu far away when the item sits near the
+        // widget edge. Like the native Shell menu, only the monitor bounds
+        // should matter (flip at screen edges, glued to the click point).
+        ShouldConstrainToRootBounds = false
     };
 
     private static void AddCompressToZipRow(

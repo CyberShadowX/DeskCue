@@ -876,7 +876,12 @@ public sealed partial class FileSurfaceContent
 
     private MenuFlyout CreateContentAreaFlyout()
     {
-        var flyout = new MenuFlyout();
+        var flyout = new MenuFlyout
+        {
+            // Monitor-bounds-only placement (see FileItemMenuBuilder): the
+            // grid window is too small to host the menu near its edges.
+            ShouldConstrainToRootBounds = false
+        };
         string? mappedFolderPath = ViewModel.CurrentFolderPath;
         bool hasMappedFolder =
             !string.IsNullOrWhiteSpace(mappedFolderPath);
@@ -1462,7 +1467,11 @@ public sealed partial class FileSurfaceContent
 
     private MenuFlyout CreateStackFlyout(WidgetStackItem stack)
     {
-        var flyout = new MenuFlyout();
+        var flyout = new MenuFlyout
+        {
+            // Monitor-bounds-only placement, same as the other grid menus.
+            ShouldConstrainToRootBounds = false
+        };
         MenuFlyoutItem toggle = new()
         {
             Text = T(stack.IsExpanded
