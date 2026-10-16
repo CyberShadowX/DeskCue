@@ -1069,13 +1069,31 @@ public sealed partial class FileSurfaceContent :
         try
         {
             // Anchor like the native Shell menu: the flyout's top-left at
-            // the right-click point. Auto placement (the default, same as
-            // MenuFlyout's (element, point) overload) anchors at the point
-            // itself; explicit Bottom instead anchors below the whole item
-            // rect, which adds the tile height (~100px) as a gap.
-            flyout.ShowAt(
-                target,
-                new FlyoutShowOptions { Position = e.GetPosition(target) });
+            // the right-click point. The CommandBarFlyout placement engine
+            // works on the target element's RECT (MenuFlyout's
+            // show-at-point override does not apply), which parks the menu
+            // a tile-height away from the click. A 0x0 proxy anchored at
+            // the click point gives the engine a point-shaped target; the
+            // Root padding is compensated because child margins lay out in
+            // the padded content box while GetPosition is relative to the
+            // full bounds.
+            Windows.Foundation.Point point = e.GetPosition(Root);
+            var anchor = new Border
+            {
+                Width = 0,
+                Height = 0,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(
+                    point.X - Root.Padding.Left,
+                    point.Y - Root.Padding.Top,
+                    0,
+                    0),
+                IsHitTestVisible = false
+            };
+            Root.Children.Add(anchor);
+            flyout.Closed += (_, _) => Root.Children.Remove(anchor);
+            flyout.ShowAt(anchor);
         }
         catch
         {
