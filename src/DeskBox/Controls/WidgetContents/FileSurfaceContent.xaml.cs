@@ -1068,9 +1068,17 @@ public sealed partial class FileSurfaceContent :
             Root;
         try
         {
+            // Anchor the menu at the pointer like the native Shell menu
+            // (top-left at the right-click point); Bottom keeps it growing
+            // down-right with edge flipping instead of right-aligning back
+            // over the item when space is tight.
             flyout.ShowAt(
                 target,
-                new FlyoutShowOptions { Position = e.GetPosition(target) });
+                new FlyoutShowOptions
+                {
+                    Position = e.GetPosition(target),
+                    Placement = FlyoutPlacementMode.Bottom
+                });
         }
         catch
         {

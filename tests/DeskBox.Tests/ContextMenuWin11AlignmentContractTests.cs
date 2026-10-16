@@ -115,7 +115,11 @@ public sealed class ContextMenuWin11AlignmentContractTests
             builder,
             StringComparison.Ordinal);
         Assert.Contains(
-            "FlyoutPlacementMode.Right",
+            "FlyoutBase.ShowAttachedFlyout(row)",
+            builder,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "AppBarButtonHasFlyoutChevronVisibility",
             builder,
             StringComparison.Ordinal);
     }

@@ -329,46 +329,56 @@ public static class FileItemMenuBuilder
             return;
         }
 
-        // A real AppBarButton row (full-width hit target, icon rendered like
-        // every other row) that opens the app list in a standard MenuFlyout
-        // beside it. Hosting a MenuFlyoutSubItem inside
-        // AppBarElementContainer renders half-width and its submenu refuses
-        // to dismiss, so the submenu becomes its own flyout instead.
+        // A real AppBarButton row with an attached MenuFlyout: the platform
+        // opens it on click and draws the submenu chevron
+        // (AppBarButtonHasFlyoutChevronVisibility is collapsed inside
+        // CommandBarFlyout by default, so the row re-enables it locally).
+        // Hovering the row opens the submenu after a short delay, like the
+        // Windows 11 menu. Nested MenuFlyoutSubItem hosting inside
+        // AppBarElementContainer renders half-width and refuses to dismiss,
+        // which is why the list is its own flyout.
         var row = new AppBarButton
         {
             Label = actions.Localize("Widget.OpenWith"),
-            Icon = new FontIcon { Glyph = "\uE8AF" }
+            Icon = new FontIcon { Glyph = "" }
         };
-        bool submenuShown = false;
-        row.Click += (_, _) =>
+        row.Resources["AppBarButtonHasFlyoutChevronVisibility"] =
+            Visibility.Visible;
+
+        var menu = new MenuFlyout();
+        foreach (MenuFlyoutItemBase entry in payload.Items)
         {
-            if (submenuShown)
-            {
-                return;
-            }
+            menu.Items.Add(entry);
+        }
 
-            submenuShown = true;
-            flyout.Hide();
-            var menu = new MenuFlyout();
-            foreach (MenuFlyoutItemBase entry in payload.Items)
-            {
-                menu.Items.Add(entry);
-            }
+        // Picking an app (or the choose-app dialog entry) ends the whole
+        // menu round, not just the submenu.
+        foreach (MenuFlyoutItem entry in payload.Items
+                     .OfType<MenuFlyoutItem>())
+        {
+            entry.Click += (_, _) => flyout.Hide();
+        }
 
-            menu.Closed += (_, _) => payload.Dispose();
-            menu.ShowAt(
-                row,
-                new FlyoutShowOptions
-                {
-                    Placement = FlyoutPlacementMode.Right
-                });
+        row.Flyout = menu;
+
+        var hoverTimer = row.DispatcherQueue.CreateTimer();
+        hoverTimer.Interval = TimeSpan.FromMilliseconds(180);
+        hoverTimer.Tick += (_, _) =>
+        {
+            hoverTimer.Stop();
+            if (!menu.IsOpen)
+            {
+                FlyoutBase.ShowAttachedFlyout(row);
+            }
         };
+        row.PointerEntered += (_, _) => hoverTimer.Start();
+        row.PointerExited += (_, _) => hoverTimer.Stop();
+
         flyout.Closed += (_, _) =>
         {
-            if (!submenuShown)
-            {
-                payload.Dispose();
-            }
+            hoverTimer.Stop();
+            menu.Hide();
+            payload.Dispose();
         };
         flyout.SecondaryCommands.Add(row);
     }
@@ -474,6 +484,10 @@ public static class FileItemMenuBuilder
             Label = actions.Localize(localizationKey),
             Icon = new FontIcon { Glyph = glyph }
         };
+        // Overflow rows otherwise size to their label alone, which makes
+        // the menu feel wider than the Windows 11 reference; a uniform
+        // floor keeps the menu compact and consistent.
+        button.MinWidth = 232;
         if (!string.IsNullOrEmpty(acceleratorText))
         {
             button.KeyboardAcceleratorTextOverride = acceleratorText;
