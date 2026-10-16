@@ -1165,6 +1165,11 @@ public sealed partial class FileSurfaceContent :
             }
         }
 
+        App.LogVerbose(
+            $"[ContextMenuPlacement] cursor={cursor.X},{cursor.Y} " +
+            $"work={work.Right},{work.Bottom} size={size.Width}x{size.Height} " +
+            $"screenAnchor={x},{y} scale={scale} rootOrigin={rootOriginX},{rootOriginY}");
+
         return new Windows.Foundation.Point(
             (x - rootOriginX) / scale,
             (y - rootOriginY) / scale);
@@ -1241,6 +1246,24 @@ public sealed partial class FileSurfaceContent :
         return ((int)Math.Ceiling(width * scale), (int)Math.Ceiling(height * scale));
     }
 
+    /// <summary>
+    /// Sanity-clamped measurement store: template stretch (the flyout
+    /// command bar carries MaxWidth=440) must not inflate the flip math —
+    /// an oversized width parks the left-flipped menu far from the cursor.
+    /// </summary>
+    private static void StoreMeasuredMenuSize(
+        FlyoutBase flyout,
+        double width,
+        double height)
+    {
+        if (width < 160 || width > 360 || height < 40 || height > 640)
+        {
+            return;
+        }
+
+        s_measuredMenuSizes[MenuShapeKey(flyout)] = (width, height);
+    }
+
     private void CacheMenuSizeOnOpened(object sender, object e)
     {
         if (sender is not FlyoutBase flyout || Root.XamlRoot is null)
@@ -1257,15 +1280,19 @@ public sealed partial class FileSurfaceContent :
                 if (popup.Child is Microsoft.UI.Xaml.Controls.Primitives
                         .CommandBarFlyoutCommandBar bar)
                 {
-                    s_measuredMenuSizes[MenuShapeKey(flyout)] =
-                        (bar.ActualWidth, bar.ActualHeight);
+                    StoreMeasuredMenuSize(
+                        flyout,
+                        bar.ActualWidth,
+                        bar.ActualHeight);
                     break;
                 }
 
                 if (popup.Child is MenuFlyoutPresenter presenter)
                 {
-                    s_measuredMenuSizes[MenuShapeKey(flyout)] =
-                        (presenter.ActualWidth, presenter.ActualHeight);
+                    StoreMeasuredMenuSize(
+                        flyout,
+                        presenter.ActualWidth,
+                        presenter.ActualHeight);
                     break;
                 }
             }
