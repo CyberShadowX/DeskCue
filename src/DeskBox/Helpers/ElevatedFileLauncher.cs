@@ -43,7 +43,12 @@ public static class ElevatedFileLauncher
     private const int TokenElevationInformationClass = 20;
     private const int ErrorCancelled = 1223;
 
-    private static readonly HashSet<string> ExecutableExtensions =
+    /// <summary>
+    /// Extensions Windows treats as executables; the Open With dialog
+    /// refuses them and the association list is empty, so open-with UI
+    /// must be hidden for these types (shared with ShellOpenWithHelper).
+    /// </summary>
+    internal static readonly HashSet<string> ExecutableExtensions =
         new(StringComparer.OrdinalIgnoreCase)
         {
             ".exe",

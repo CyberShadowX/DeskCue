@@ -163,6 +163,20 @@ public static class ShellOpenWithHelper
     }
 
     /// <summary>
+    /// Whether the type can meaningfully be opened with another app: the
+    /// Windows Open With dialog refuses executable file types outright
+    /// (their recommended-handler list is empty and "choose another app"
+    /// fails), so the whole Open With entry is hidden for them, matching
+    /// Explorer.
+    /// </summary>
+    public static bool SupportsOpenWith(string filePath)
+    {
+        string? extension = Path.GetExtension(filePath);
+        return !string.IsNullOrEmpty(extension) &&
+            !ElevatedFileLauncher.ExecutableExtensions.Contains(extension);
+    }
+
+    /// <summary>
     /// Shows the system Open With dialog for the file via the documented
     /// <c>openas</c> verb.
     /// </summary>

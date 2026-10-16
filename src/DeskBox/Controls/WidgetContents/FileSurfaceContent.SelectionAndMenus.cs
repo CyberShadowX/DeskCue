@@ -501,7 +501,8 @@ public sealed partial class FileSurfaceContent
 
     private OpenWithMenuPayload? GetOpenWithMenuItems(WidgetItem item)
     {
-        if (item.IsFolder)
+        if (item.IsFolder ||
+            !ShellOpenWithHelper.SupportsOpenWith(item.Path))
         {
             return null;
         }
