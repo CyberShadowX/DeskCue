@@ -1062,28 +1062,46 @@ public sealed partial class FileSurfaceContent :
                 ItemsList.SelectedItems.Remove(item);
             };
         }
-        FrameworkElement target =
-            FindItemElement(e.OriginalSource) ??
-            sender as FrameworkElement ??
-            Root;
         try
         {
-            // Engine-owned placement (Files-app pattern): show at the
-            // invocation point in the target's coordinate space. The
-            // windowed popup engine clamps to the containing monitor's
-            // work area and flips (Bottom -> Top with the menu bottom at
-            // the pointer, then edge slides / height compression) when
-            // the menu does not fit — the same policy as the native
-            // Windows 11 context menu. Manual flip math used to fight
-            // this and drifted from native behavior at screen edges.
-            flyout.Opened += LogOpenedMenuPlacementAsync;
+            // Engine-owned placement at the invocation point. The target
+            // is a zero-size proxy at the cursor point, not the icon
+            // container: when this flyout flips upward (lower half of the
+            // screen) the engine re-anchors the menu horizontally to the
+            // target RECT's left edge, parking the whole menu left of the
+            // icon; a degenerate 0x0 rect leaves the engine only the
+            // point, so its flip/slide/work-area logic stays and the
+            // rect-anchoring drift goes. Root padding is compensated:
+            // child margins lay out in the padded content box.
+            Windows.Foundation.Point point = e.GetPosition(Root);
+            if (PredictsUpwardFlip(flyout))
+            {
+                // Up-flip drops the primary strip window with its TOP at
+                // the point, hanging the ~80px strip below the cursor and
+                // over the clicked icon; the native Shell menu bottoms
+                // out AT the pointer. Pre-lifting the anchor by the strip
+                // height makes the flipped menu end at the cursor.
+                point.Y -= UpFlipStripLiftDip;
+            }
+
+            var anchor = new Border
+            {
+                Width = 0,
+                Height = 0,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(
+                    point.X - Root.Padding.Left,
+                    point.Y - Root.Padding.Top,
+                    0,
+                    0),
+                IsHitTestVisible = false
+            };
+            Root.Children.Add(anchor);
+            flyout.Closed += (_, _) => Root.Children.Remove(anchor);
             flyout.ShowAt(
-                target,
-                new FlyoutShowOptions
-                {
-                    Position = e.GetPosition(target),
-                    Placement = FlyoutPlacementMode.Bottom
-                });
+                anchor,
+                new FlyoutShowOptions { Placement = FlyoutPlacementMode.Bottom });
         }
         catch
         {
@@ -1096,102 +1114,46 @@ public sealed partial class FileSurfaceContent :
         e.Handled = true;
     }
 
+    /// <summary>Strip window height measured on the up-flipped flyout
+    /// (physical px at scale 1; the anchor shift works in DIP).</summary>
+    private const double UpFlipStripLiftDip = 80;
+
     /// <summary>
-    /// Verbose-only placement check: logs where the engine actually put the
-    /// opened menu on screen. At Opened time the first popup listed can
-    /// still be the hover tooltip, so re-check for a few ticks until the
-    /// menu's command bar shows up. Render-time open animations do not
-    /// affect layout transforms, so the logged geometry is final.
+    /// Whether the engine will have to open the menu upward: no room for
+    /// the estimated full menu (rows + strip) below the cursor inside the
+    /// containing monitor's work area. Matching the engine's flip decision
+    /// matters only near the boundary, where either direction fits
+    /// visually; a rough row-count estimate is therefore enough.
     /// </summary>
-    private async void LogOpenedMenuPlacementAsync(object? sender, object e)
+    private bool PredictsUpwardFlip(FlyoutBase flyout)
     {
-        if (sender is not FlyoutBase flyout || Root.XamlRoot is null)
+        if (flyout is not CommandBarFlyout commandBar ||
+            !Win32Helper.GetCursorPos(out Win32Helper.POINT cursor))
         {
-            return;
+            return false;
         }
 
-        // Detach first: retries below must not re-enter on later opens.
-        flyout.Opened -= LogOpenedMenuPlacementAsync;
-
-        try
+        double scale = Root.XamlRoot?.RasterizationScale ?? 1;
+        if (scale <= 0)
         {
-            for (int attempt = 0; attempt < 3; attempt++)
-            {
-                foreach (Microsoft.UI.Xaml.Controls.Primitives.Popup popup in
-                         Microsoft.UI.Xaml.Media.VisualTreeHelper
-                             .GetOpenPopupsForXamlRoot(Root.XamlRoot))
-                {
-                    FrameworkElement? content = popup.Child switch
-                    {
-                        Microsoft.UI.Xaml.Controls.Primitives.CommandBarFlyoutCommandBar
-                            bar => bar,
-                        MenuFlyoutPresenter presenter => presenter,
-                        FrameworkElement wrapper when FindPopupCommandBar(
-                            wrapper,
-                            depth: 0) is not null => wrapper,
-                        _ => null
-                    };
-                    if (content is null)
-                    {
-                        continue;
-                    }
-
-                    if (Win32Helper.GetWindowRect(
-                            _hostWindowHandle,
-                            out Win32Helper.RECT windowRect))
-                    {
-                        double scale = Root.XamlRoot?.RasterizationScale ?? 1;
-                        Windows.Foundation.Point topLeft = content
-                            .TransformToVisual(null)
-                            .TransformPoint(new Windows.Foundation.Point(0, 0));
-                        App.LogVerbose(
-                            $"[ContextMenuPlacement] opened at screen " +
-                            $"{windowRect.Left + (int)Math.Round(topLeft.X * scale)}," +
-                            $"{windowRect.Top + (int)Math.Round(topLeft.Y * scale)} " +
-                            $"actual={content.ActualWidth:0.#}x{content.ActualHeight:0.#}");
-                    }
-
-                    return;
-                }
-
-                await Task.Delay(60);
-            }
-        }
-        catch
-        {
-            // Diagnostics only.
-        }
-    }
-
-    private static Microsoft.UI.Xaml.Controls.Primitives
-            .CommandBarFlyoutCommandBar? FindPopupCommandBar(
-            Microsoft.UI.Xaml.DependencyObject node,
-            int depth)
-    {
-        if (depth > 6)
-        {
-            return null;
+            scale = 1;
         }
 
-        int count = Microsoft.UI.Xaml.Media.VisualTreeHelper
-            .GetChildrenCount(node);
-        for (int i = 0; i < count; i++)
-        {
-            Microsoft.UI.Xaml.DependencyObject child =
-                Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(node, i);
-            if (child is Microsoft.UI.Xaml.Controls.Primitives
-                    .CommandBarFlyoutCommandBar bar)
-            {
-                return bar;
-            }
+        int separators = commandBar.SecondaryCommands
+            .OfType<AppBarSeparator>()
+            .Count();
+        int rows = commandBar.SecondaryCommands.Count - separators;
+        double estimatedMenuHeight =
+            52 + rows * 38 + separators * 9 + UpFlipStripLiftDip;
 
-            if (FindPopupCommandBar(child, depth + 1) is { } nested)
-            {
-                return nested;
-            }
-        }
-
-        return null;
+        return Win32Helper.GetMonitorWorkAreaInfos()
+            .FirstOrDefault(area =>
+                cursor.X >= area.Monitor.Left &&
+                cursor.X < area.Monitor.Right &&
+                cursor.Y >= area.Monitor.Top &&
+                cursor.Y < area.Monitor.Bottom)
+            is { WorkArea: { } work } &&
+            cursor.Y + estimatedMenuHeight * scale > work.Bottom;
     }
 
     private void Items_DragStarting(
