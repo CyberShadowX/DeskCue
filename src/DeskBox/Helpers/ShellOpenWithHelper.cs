@@ -36,8 +36,7 @@ public sealed class OpenWithHandlerEntry : IDisposable
 
         if (!ShellOpenWithInterop.TryCreateDataObjectForPath(
                 filePath,
-                out IntPtr dataObject,
-                out IntPtr shellItem))
+                out IntPtr dataObject))
         {
             return false;
         }
@@ -56,9 +55,7 @@ public sealed class OpenWithHandlerEntry : IDisposable
         }
         finally
         {
-            ShellOpenWithInterop.ReleaseDataObject(
-                ref dataObject,
-                ref shellItem);
+            ShellOpenWithInterop.ReleaseDataObject(ref dataObject);
         }
     }
 

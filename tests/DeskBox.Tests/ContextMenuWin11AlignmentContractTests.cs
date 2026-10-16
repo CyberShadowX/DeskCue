@@ -174,6 +174,23 @@ public sealed class ContextMenuWin11AlignmentContractTests
             shellNew,
             StringComparison.Ordinal);
 
+        // 2026-10-16 crash pins: interface-method arrays default to
+        // SAFEARRAY marshaling and the SafeArray marshaler hard-crashes the
+        // CLR on IntPtr[]; Invoke requires a real IDataObject obtained via
+        // BindToHandler(BHID_DataObject).
+        Assert.Contains(
+            "[MarshalAs(UnmanagedType.LPArray), Out] IntPtr[] rgelt",
+            openWithInterop,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "b8c0bd9f-ed24-455c-83e6-d5390c4fe8c4",
+            openWithInterop,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "BindToHandler",
+            openWithInterop,
+            StringComparison.Ordinal);
+
         string surface = ReadRepositoryFile(
             "src/DeskBox/Controls/WidgetContents/" +
             "FileSurfaceContent.SelectionAndMenus.cs");

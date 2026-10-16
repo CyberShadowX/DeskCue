@@ -20,6 +20,14 @@ internal static class ShellOpenWithInterop
     private static readonly Guid IID_IShellItem =
         new("43826d1e-e718-42ee-bc55-a1e261c37bfe");
 
+    // IID_IShellItemArray and BHID_DataObject verified against the Windows
+    // SDK 10.0.26100 headers (shobjidl_core.h, ShlGuid.h).
+    private static readonly Guid IID_IShellItemArray =
+        new("b63ea76d-1f85-456f-a19c-48159efa858b");
+
+    private static readonly Guid BHID_DataObject =
+        new("b8c0bd9f-ed24-455c-83e6-d5390c4fe8c4");
+
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
     internal static extern void SHAssocEnumHandlers(
         string extension,
@@ -45,19 +53,22 @@ internal static class ShellOpenWithInterop
 
     /// <summary>
     /// Builds the Shell data object for one item so it can be handed to
-    /// <c>IAssocHandler::Invoke</c>, which accepts an IDataObject.
-    /// Returns the data object pointer; the caller must release it with
+    /// <c>IAssocHandler::Invoke</c>, which accepts an IDataObject. The
+    /// documented route is IShellItemArray.BindToHandler(BHID_DataObject);
+    /// passing the IShellItem pointer straight to Invoke is an access
+    /// violation, and SHCreateShellItemArrayFromShellItem does not accept
+    /// IID_IDataObject. Returns the data object pointer; release it with
     /// <see cref="ReleaseDataObject"/> after the invoke returns.
     /// </summary>
     internal static bool TryCreateDataObjectForPath(
         string path,
-        out IntPtr dataObject,
-        out IntPtr shellItem)
+        out IntPtr dataObject)
     {
         dataObject = IntPtr.Zero;
-        shellItem = IntPtr.Zero;
         Guid shellItemId = IID_IShellItem;
-        Guid dataObjectId = IID_IDataObject;
+        Guid arrayId = IID_IShellItemArray;
+        IntPtr shellItem = IntPtr.Zero;
+        IntPtr arrayPointer = IntPtr.Zero;
         try
         {
             SHCreateItemFromParsingName(
@@ -67,31 +78,57 @@ internal static class ShellOpenWithInterop
                 out shellItem);
             SHCreateShellItemArrayFromShellItem(
                 shellItem,
-                ref dataObjectId,
-                out dataObject);
-            return dataObject != IntPtr.Zero;
+                ref arrayId,
+                out arrayPointer);
+            if (Marshal.GetObjectForIUnknown(arrayPointer)
+                is not ShellItemArray array)
+            {
+                return false;
+            }
+
+            try
+            {
+                Guid handlerId = BHID_DataObject;
+                Guid dataObjectId = IID_IDataObject;
+                array.BindToHandler(
+                    IntPtr.Zero,
+                    ref handlerId,
+                    ref dataObjectId,
+                    out dataObject);
+                return dataObject != IntPtr.Zero;
+            }
+            finally
+            {
+                Marshal.ReleaseComObject(array);
+            }
         }
-        catch (COMException)
+        catch (Exception ex) when (
+            ex is COMException or InvalidCastException or
+            InvalidOperationException)
         {
-            ReleaseDataObject(ref dataObject, ref shellItem);
+            ReleaseDataObject(ref dataObject);
             return false;
+        }
+        finally
+        {
+            if (arrayPointer != IntPtr.Zero)
+            {
+                Marshal.Release(arrayPointer);
+            }
+
+            if (shellItem != IntPtr.Zero)
+            {
+                Marshal.Release(shellItem);
+            }
         }
     }
 
-    internal static void ReleaseDataObject(
-        ref IntPtr dataObject,
-        ref IntPtr shellItem)
+    internal static void ReleaseDataObject(ref IntPtr dataObject)
     {
         if (dataObject != IntPtr.Zero)
         {
             Marshal.Release(dataObject);
             dataObject = IntPtr.Zero;
-        }
-
-        if (shellItem != IntPtr.Zero)
-        {
-            Marshal.Release(shellItem);
-            shellItem = IntPtr.Zero;
         }
     }
 
@@ -145,11 +182,28 @@ internal static class ShellOpenWithInterop
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     internal interface ShellOpenWithEnumHandlers
     {
-        // IEnumAssocHandlers exposes only Next in the SDK header.
+        // IEnumAssocHandlers exposes only Next in the SDK header. The array
+        // parameter must opt into LPArray marshaling explicitly: interface
+        // method arrays default to SAFEARRAY, and the SafeArray marshaler
+        // dies with a CLR internal error on IntPtr[] (crash, not exception —
+        // proven 2026-10-16 by the open-with repro).
         void Next(
             uint celt,
-            [Out] IntPtr[] rgelt,
+            [MarshalAs(UnmanagedType.LPArray), Out] IntPtr[] rgelt,
             out uint pceltFetched);
+    }
+
+    [ComImport]
+    [Guid("b63ea76d-1f85-456f-a19c-48159efa858b")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    internal interface ShellItemArray
+    {
+        // First method after IUnknown per shobjidl_core.h.
+        void BindToHandler(
+            IntPtr bindContext,
+            ref Guid handlerId,
+            ref Guid iid,
+            out IntPtr bound);
     }
 
     [ComImport]
