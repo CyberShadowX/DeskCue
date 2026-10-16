@@ -1068,17 +1068,14 @@ public sealed partial class FileSurfaceContent :
             Root;
         try
         {
-            // Anchor the menu at the pointer like the native Shell menu
-            // (top-left at the right-click point); Bottom keeps it growing
-            // down-right with edge flipping instead of right-aligning back
-            // over the item when space is tight.
+            // Anchor like the native Shell menu: the flyout's top-left at
+            // the right-click point. Auto placement (the default, same as
+            // MenuFlyout's (element, point) overload) anchors at the point
+            // itself; explicit Bottom instead anchors below the whole item
+            // rect, which adds the tile height (~100px) as a gap.
             flyout.ShowAt(
                 target,
-                new FlyoutShowOptions
-                {
-                    Position = e.GetPosition(target),
-                    Placement = FlyoutPlacementMode.Bottom
-                });
+                new FlyoutShowOptions { Position = e.GetPosition(target) });
         }
         catch
         {
