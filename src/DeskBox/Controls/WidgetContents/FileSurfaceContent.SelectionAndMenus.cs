@@ -492,27 +492,19 @@ public sealed partial class FileSurfaceContent
             ShowSystemContextMenuAsync,
             ElevatedFileLauncher.CanRunAsAdministrator,
             RunAsAdministratorAsync,
-            CreateOpenWithSubmenu,
+            GetOpenWithMenuItems: GetOpenWithMenuItems,
             CanExtractArchiveItem,
             ExtractArchiveItemAsync,
             CanCompressSelection,
             CompressSelectionAsync);
     }
 
-    private MenuFlyoutSubItem? CreateOpenWithSubmenu(
-        WidgetItem item,
-        FlyoutBase flyout)
+    private OpenWithMenuPayload? GetOpenWithMenuItems(WidgetItem item)
     {
         if (item.IsFolder)
         {
             return null;
         }
-
-        var submenu = new MenuFlyoutSubItem
-        {
-            Text = T("Widget.OpenWith"),
-            Icon = new FontIcon { Glyph = "\uE8AF" }
-        };
 
         List<OpenWithHandlerEntry> apps;
         try
@@ -525,6 +517,7 @@ public sealed partial class FileSurfaceContent
             apps = [];
         }
 
+        var items = new List<MenuFlyoutItemBase>();
         foreach (OpenWithHandlerEntry app in apps)
         {
             OpenWithHandlerEntry captured = app;
@@ -539,18 +532,18 @@ public sealed partial class FileSurfaceContent
                         "open-with"));
                 }
             };
-            submenu.Items.Add(appItem);
+            items.Add(appItem);
         }
 
         if (apps.Count > 0)
         {
-            submenu.Items.Add(new MenuFlyoutSeparator());
+            items.Add(new MenuFlyoutSeparator());
         }
 
         var chooseApp = new MenuFlyoutItem
         {
             Text = T("Widget.OpenWith.ChooseApp"),
-            Icon = new FontIcon { Glyph = "\uE712" }
+            Icon = new FontIcon { Glyph = "" }
         };
         chooseApp.Click += (_, _) =>
         {
@@ -564,22 +557,26 @@ public sealed partial class FileSurfaceContent
                     "open-with-choose"));
             }
         };
-        submenu.Items.Add(chooseApp);
+        items.Add(chooseApp);
 
-        if (apps.Count > 0)
-        {
-            // The Shell association handlers behind the entries must stay
-            // alive until the menu round ends.
-            flyout.Closed += (_, _) =>
+        // The Shell association handlers behind the entries must stay alive
+        // until the submenu round ends (idempotent for the two close paths).
+        bool disposed = false;
+        return new OpenWithMenuPayload(
+            items,
+            () =>
             {
+                if (disposed)
+                {
+                    return;
+                }
+
+                disposed = true;
                 foreach (OpenWithHandlerEntry app in apps)
                 {
                     app.Dispose();
                 }
-            };
-        }
-
-        return submenu;
+            });
     }
 
     private static bool CanExtractArchiveItem(WidgetItem item) =>

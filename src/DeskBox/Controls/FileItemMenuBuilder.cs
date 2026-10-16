@@ -7,6 +7,15 @@ using Microsoft.UI.Xaml.Input;
 namespace DeskBox.Controls;
 
 /// <summary>
+/// The Open With app list handed to the menu builder. The entries ride in a
+/// dedicated MenuFlyout opened beside the row; Dispose releases the live
+/// Shell association handlers once the submenu round is over.
+/// </summary>
+public sealed record OpenWithMenuPayload(
+    IReadOnlyList<MenuFlyoutItemBase> Items,
+    Action Dispose);
+
+/// <summary>
 /// Host operations used by the shared file-item context menus.
 /// The menu shape lives here; each surface only supplies its host-specific
 /// actions and selection state.
@@ -32,7 +41,7 @@ public sealed record FileItemMenuActions(
     Func<WidgetItem, Task>? ShowSystemContextMenuAsync = null,
     Func<WidgetItem, bool>? CanRunAsAdministrator = null,
     Func<WidgetItem, Task>? RunAsAdministratorAsync = null,
-    Func<WidgetItem, FlyoutBase, MenuFlyoutSubItem?>? CreateOpenWithSubmenu = null,
+    Func<WidgetItem, OpenWithMenuPayload?>? GetOpenWithMenuItems = null,
     Func<WidgetItem, bool>? CanExtractArchive = null,
     Func<WidgetItem, Task>? ExtractArchiveAsync = null,
     Func<IReadOnlyList<WidgetItem>, bool>? CanCompressSelection = null,
@@ -52,7 +61,7 @@ public static class FileItemMenuBuilder
         WidgetItem item,
         FileItemMenuActions actions)
     {
-        var flyout = new CommandBarFlyout();
+        var flyout = CreateExpandedFlyout();
 
         AddClipboardStrip(flyout, actions, item, includeRename: true);
         AddDeleteStripButton(flyout, actions);
@@ -79,7 +88,7 @@ public static class FileItemMenuBuilder
                 flyout,
                 actions,
                 "Widget.ExtractAll",
-                "\uE979",
+                "\uE7F8",
                 null,
                 async () => await actions.ExtractArchiveAsync!(item)));
         }
@@ -162,7 +171,7 @@ public static class FileItemMenuBuilder
     public static CommandBarFlyout CreateMultiSelectionFlyout(
         FileItemMenuActions actions)
     {
-        var flyout = new CommandBarFlyout();
+        var flyout = CreateExpandedFlyout();
 
         AddClipboardStrip(flyout, actions, null, includeRename: false);
         AddDeleteStripButton(flyout, actions);
@@ -300,19 +309,77 @@ public static class FileItemMenuBuilder
         WidgetItem item,
         FileItemMenuActions actions)
     {
-        if (actions.CreateOpenWithSubmenu is null)
+        if (actions.GetOpenWithMenuItems is null)
         {
             return;
         }
 
-        MenuFlyoutSubItem? submenu =
-            actions.CreateOpenWithSubmenu(item, flyout);
-        if (submenu is not null)
+        OpenWithMenuPayload? payload;
+        try
         {
-            flyout.SecondaryCommands.Add(
-                new AppBarElementContainer { Content = submenu });
+            payload = actions.GetOpenWithMenuItems(item);
         }
+        catch
+        {
+            payload = null;
+        }
+
+        if (payload is null || payload.Items.Count == 0)
+        {
+            return;
+        }
+
+        // A real AppBarButton row (full-width hit target, icon rendered like
+        // every other row) that opens the app list in a standard MenuFlyout
+        // beside it. Hosting a MenuFlyoutSubItem inside
+        // AppBarElementContainer renders half-width and its submenu refuses
+        // to dismiss, so the submenu becomes its own flyout instead.
+        var row = new AppBarButton
+        {
+            Label = actions.Localize("Widget.OpenWith"),
+            Icon = new FontIcon { Glyph = "\uE8AF" }
+        };
+        bool submenuShown = false;
+        row.Click += (_, _) =>
+        {
+            if (submenuShown)
+            {
+                return;
+            }
+
+            submenuShown = true;
+            flyout.Hide();
+            var menu = new MenuFlyout();
+            foreach (MenuFlyoutItemBase entry in payload.Items)
+            {
+                menu.Items.Add(entry);
+            }
+
+            menu.Closed += (_, _) => payload.Dispose();
+            menu.ShowAt(
+                row,
+                new FlyoutShowOptions
+                {
+                    Placement = FlyoutPlacementMode.Right
+                });
+        };
+        flyout.Closed += (_, _) =>
+        {
+            if (!submenuShown)
+            {
+                payload.Dispose();
+            }
+        };
+        flyout.SecondaryCommands.Add(row);
     }
+
+    private static CommandBarFlyout CreateExpandedFlyout() => new()
+    {
+        // AlwaysExpanded removes the overflow/collapse button and the
+        // collapsed-then-expand opening animation (the two-step visual lag
+        // on first show); the menu opens fully formed like Windows 11.
+        AlwaysExpanded = true
+    };
 
     private static void AddCompressToZipRow(
         CommandBarFlyout flyout,
@@ -329,7 +396,7 @@ public static class FileItemMenuBuilder
             flyout,
             actions,
             "Widget.CompressToZip",
-            "\uE979",
+            "\uE7F8",
             null,
             async () => await actions.CompressSelectionAsync(
                 actions.GetSelectedItems())));

@@ -107,10 +107,15 @@ public sealed class ContextMenuWin11AlignmentContractTests
         Assert.True(cut >= 0 && copy > cut && rename > copy && delete > rename,
             "Strip order is cut / copy / rename / delete");
 
-        // Submenus ride in AppBarElementContainer (the documented way to
-        // host MenuFlyoutSubItem inside secondary commands).
+        // AlwaysExpanded kills the overflow/collapse button and the
+        // collapsed-then-expand opening animation (the two-step flash);
+        // the Open With submenu opens as its own MenuFlyout beside the row.
         Assert.Contains(
-            "AppBarElementContainer",
+            "AlwaysExpanded = true",
+            builder,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "FlyoutPlacementMode.Right",
             builder,
             StringComparison.Ordinal);
     }
@@ -225,9 +230,11 @@ public sealed class ContextMenuWin11AlignmentContractTests
         string surface = ReadRepositoryFile(
             "src/DeskBox/Controls/WidgetContents/" +
             "FileSurfaceContent.SelectionAndMenus.cs");
+        // The row label is built via Localize in the builder; the host
+        // supplies the submenu entries including the choose-app tail.
         Assert.Contains(
-            "T(\"Widget.OpenWith\")",
-            surface,
+            "Localize(\"Widget.OpenWith\")",
+            ReadRepositoryFile("src/DeskBox/Controls/FileItemMenuBuilder.cs"),
             StringComparison.Ordinal);
         Assert.Contains(
             "T(\"Widget.OpenWith.ChooseApp\")",
