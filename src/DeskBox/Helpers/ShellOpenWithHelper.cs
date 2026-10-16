@@ -14,13 +14,23 @@ public sealed class OpenWithHandlerEntry : IDisposable
 
     internal OpenWithHandlerEntry(
         ShellOpenWithInterop.ShellOpenWithAssocHandler handler,
-        string displayName)
+        string displayName,
+        string? iconSourcePath,
+        int iconSourceIndex)
     {
         _handler = handler;
         UiName = displayName;
+        IconSourcePath = iconSourcePath;
+        IconSourceIndex = iconSourceIndex;
     }
 
     public string UiName { get; }
+
+    /// <summary>Icon location from IAssocHandler::GetIconLocation; null
+    /// when the handler has no icon path (the entry stays text-only).</summary>
+    public string? IconSourcePath { get; }
+
+    public int IconSourceIndex { get; }
 
     /// <summary>
     /// Opens <paramref name="filePath"/> with this application through the
@@ -135,10 +145,28 @@ public static class ShellOpenWithHelper
                         continue;
                     }
 
+                    string? iconPath = null;
+                    int iconIndex = 0;
+                    try
+                    {
+                        handler.GetIconLocation(
+                            out IntPtr iconPtr,
+                            out iconIndex);
+                        iconPath = PtrToStringOrNull(iconPtr);
+                    }
+                    catch (COMException)
+                    {
+                        // No icon location is fine; the entry stays
+                        // text-only.
+                    }
+
                     if (seen.Add(displayName))
                     {
-                        entries.Add(
-                            new OpenWithHandlerEntry(handler, displayName));
+                        entries.Add(new OpenWithHandlerEntry(
+                            handler,
+                            displayName,
+                            iconPath,
+                            iconIndex));
                     }
                     else
                     {

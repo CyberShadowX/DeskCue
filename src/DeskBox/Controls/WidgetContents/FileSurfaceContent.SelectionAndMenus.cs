@@ -563,6 +563,78 @@ public sealed partial class FileSurfaceContent
         // The Shell association handlers behind the entries must stay alive
         // until the submenu round ends (idempotent for the two close paths).
         bool disposed = false;
+
+        // Prefetch app icons in the background: extraction starts the moment
+        // the menu is built (right-click), so by the time the user hovers
+        // Open With the icons are already decoded — opening the menu itself
+        // never waits on icon I/O. Entries without an icon location stay
+        // text-only, matching the native menu's tolerance.
+        if (apps.Count > 0 &&
+            Root.DispatcherQueue is { } iconDispatcher)
+        {
+            var iconPairs = new List<(MenuFlyoutItem Item, OpenWithHandlerEntry App)>();
+            int appIndex = 0;
+            foreach (MenuFlyoutItemBase entry in items)
+            {
+                if (entry is MenuFlyoutItem menuItem &&
+                    appIndex < apps.Count &&
+                    apps[appIndex].IconSourcePath is not null)
+                {
+                    iconPairs.Add((menuItem, apps[appIndex]));
+                }
+
+                if (entry is MenuFlyoutItem)
+                {
+                    appIndex++;
+                }
+            }
+
+            if (iconPairs.Count > 0)
+            {
+                _ = Task.Run(async () =>
+                {
+                    foreach ((MenuFlyoutItem item2, OpenWithHandlerEntry app)
+                             in iconPairs)
+                    {
+                        if (disposed)
+                        {
+                            return;
+                        }
+
+                        byte[]? png = await Task.Run(() =>
+                            IconHelper.GetIndexedIconPngBytes(
+                                app.IconSourcePath!,
+                                app.IconSourceIndex,
+                                20));
+                        if (png is null || disposed)
+                        {
+                            continue;
+                        }
+
+                        Microsoft.UI.Xaml.Media.Imaging.BitmapImage? image =
+                            await IconHelper.CreateBitmapImageAsync(
+                                iconDispatcher,
+                                png,
+                                20);
+                        if (image is null || disposed)
+                        {
+                            continue;
+                        }
+
+                        iconDispatcher.TryEnqueue(() =>
+                        {
+                            if (disposed)
+                            {
+                                return;
+                            }
+
+                            item2.Icon = new ImageIcon { Source = image };
+                        });
+                    }
+                });
+            }
+        }
+
         return new OpenWithMenuPayload(
             items,
             () =>
