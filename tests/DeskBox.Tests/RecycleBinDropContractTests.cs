@@ -207,6 +207,32 @@ public sealed class RecycleBinDropContractTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void NamespaceKind_PrewarmsDuringShortcutTargetHydration()
+    {
+        // The drop-target policy resolves the kind inside drag callbacks;
+        // a cold first resolve there (shell-link CoClass load plus the
+        // vtable IDList read) can consume the entire hover-over-tile window
+        // and leave the bin tile unarmed for that whole gesture — the
+        // first-drag swallow seen on 2026-10-21. The shortcut-target
+        // hydration pass runs on the UI thread's STA apartment with the
+        // metadata read already cache-hot, so the classification prewarms
+        // there instead.
+        string hydration = ReadRepositoryFile(
+            "src/DeskBox/ViewModels/WidgetViewModel.ItemHydration.cs");
+        int setTarget = hydration.IndexOf(
+            "private void SetShortcutTarget(",
+            StringComparison.Ordinal);
+        Assert.True(setTarget >= 0, "shortcut target hydration exists");
+        string region = hydration[setTarget..Math.Min(
+            hydration.Length,
+            setTarget + 2500)];
+        Assert.Contains(
+            "NamespaceShortcutHelper.ResolveKind(item);",
+            region,
+            StringComparison.Ordinal);
+    }
+
     private static string ReadRepositoryFile(string relativePath) =>
         File.ReadAllText(TestPaths.FromRepository(relativePath));
 }

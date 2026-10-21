@@ -902,6 +902,16 @@ public partial class WidgetViewModel
                     // a later generation retries.
                     item.IsShortcutTargetLoaded = true;
                 }
+
+                // Prewarm the namespace classification here, on the UI
+                // thread's STA apartment: the drop-target policy resolves it
+                // inside drag callbacks, and a first-drag cold resolve (the
+                // shell-link CoClass load plus the vtable IDList read) can
+                // consume the entire hover-over-tile window, leaving the
+                // recycle-bin tile unarmed for that gesture's release. The
+                // stored-metadata read is cache-hot at this point, so only
+                // PIDL-only links pay the vtable pass, once per item.
+                NamespaceShortcutHelper.ResolveKind(item);
             }
         }
 
