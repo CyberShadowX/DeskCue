@@ -13,7 +13,7 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void ProductionInventory_IsFrozenAtFortyFilesAndNinetyThreeCalls()
+    public void ProductionInventory_IsFrozenAtFortyOneFilesAndNinetyFiveCalls()
     {
         var expected = new Dictionary<string, int>(StringComparer.Ordinal)
         {
@@ -44,6 +44,8 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             ["src/DeskBox/Services/ManagedStorageMigrationService.cs"] = 2,
             ["src/DeskBox/Services/NativeNotificationActivationEnvelopeStore.cs"] = 2,
             ["src/DeskBox/Services/QuickCaptureStore.cs"] = 2,
+            // 2: the wipe-recovery offer marker (read deserialize, atomic save serialize).
+            ["src/DeskBox/Services/RecoveryOfferStore.cs"] = 2,
             ["src/DeskBox/Services/SearchHistoryService.cs"] = 2,
             ["src/DeskBox/Services/SettingsMigrationService.cs"] = 2,
             ["src/DeskBox/Services/SettingsService.cs"] = 3,
@@ -80,8 +82,8 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             Assert.Equal(expectedCount, actual[path]);
         }
 
-        Assert.Equal(40, actual.Count);
-        Assert.Equal(93, actual.Values.Sum());
+        Assert.Equal(41, actual.Count);
+        Assert.Equal(95, actual.Values.Sum());
 
         string[] expectedContextOwners =
         [
@@ -109,6 +111,7 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             "src/DeskBox/Services/ManagedStorageMigrationModels.cs",
             "src/DeskBox/Services/NativeNotificationActivationEnvelopeStore.cs",
             "src/DeskBox/Services/QuickCaptureStore.cs",
+            "src/DeskBox/Services/RecoveryOfferStore.cs",
             "src/DeskBox/Services/SearchHistoryService.cs",
             "src/DeskBox/Services/SettingsService.cs",
             "src/DeskBox/Services/StartupSessionLedger.cs",
@@ -130,7 +133,7 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             .Order()
             .ToArray();
 
-        Assert.Equal(36, actualContextOwners.Length);
+        Assert.Equal(37, actualContextOwners.Length);
         Assert.Equal(expectedContextOwners, actualContextOwners);
     }
 

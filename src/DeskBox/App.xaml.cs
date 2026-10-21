@@ -2,6 +2,7 @@
 
 using CommunityToolkit.Mvvm.Input;
 using DeskBox.Controls.WidgetContents;
+using DeskBox.Core.Persistence;
 using DeskBox.Features.Todo;
 using DeskBox.Features.Search;
 using DeskBox.Features.Backup;
@@ -124,6 +125,25 @@ public partial class App : Application
     private SettingsWindow? _settingsWindow;
     private OnboardingWindow? _onboardingWindow;
     private ElevationNoticeWindow? _elevationNoticeWindow;
+    private RecoveryOfferWindow? _recoveryOfferWindow;
+    private RecoveryOfferStore? _recoveryOfferStore;
+    private bool _recoveryOfferShownThisSession;
+    private bool _recoveryOfferInFlight;
+    private DateTimeOffset? _lastSnapshotPausedReminderAtUtc;
+    private RecoveryOfferOutcome _lastRecoveryOfferOutcome = RecoveryOfferOutcome.NotOffered;
+    private readonly DateTimeOffset _startupProcessStartUtc =
+        new DateTimeOffset(Process.GetCurrentProcess().StartTime).ToUniversalTime();
+
+    internal RecoveryOfferStore RecoveryOfferStore =>
+        _recoveryOfferStore ??= new RecoveryOfferStore();
+
+    /// <summary>
+    /// Wipe-recovery detection, offer and snapshot suppression stay off
+    /// development data roots: smoke harnesses and portable runs deliberately
+    /// start without settings and their snapshots are test fixtures.
+    /// </summary>
+    internal bool IsWipeRecoveryEligible =>
+        !DeskBoxDataPathService.Current.IsDevelopmentRoot;
     internal event Action<bool>? OnboardingWidgetsVisibilityChanged;
     private NativeAppNotificationService? _nativeNotificationService;
     private NativeNotificationActivationBootstrap? _nativeNotificationBootstrap;
@@ -441,6 +461,11 @@ public partial class App : Application
         SettingsService.PersistenceFailed += OnSettingsPersistenceFailed;
         DataBackupService = Services.GetRequiredService<DeskBoxDataBackupService>();
         DataBackupService.AutomaticSnapshotFallbackDetected += OnAutomaticBackupFallbackDetected;
+        // While a wipe-recovery decision is pending, scheduled automatic
+        // snapshots stay paused so the fresh-default profile cannot evict the
+        // pre-wipe snapshots the offer restores from.
+        DataBackupService.SetRecoveryOfferPauseProbe(
+            () => RecoveryOfferStore.TryRead() is not null);
         CloudBackupService = Services.GetRequiredService<CloudBackupService>();
         CloudBackupService.BackupRunCompleted += OnCloudBackupRunCompleted;
         _ = LegacySearchIndexCleanupService.TryCleanup();
@@ -1115,6 +1140,13 @@ public partial class App : Application
             await RunOptionalStartupStepAsync(
                 "apply-pending-restore",
                 async () => restoreResult = await DataBackupService.ApplyPendingRestoreAsync());
+            if (restoreResult.Kind == DeskBoxRestoreApplyKind.Full && restoreResult.Succeeded)
+            {
+                // A completed restore answers the wipe-recovery question by
+                // definition; a marker carried in through an archive written
+                // before the exclusion existed must not re-offer it.
+                await RecoveryOfferStore.ClearAsync();
+            }
             bool hadSettingsBeforeStartup = File.Exists(Path.Combine(
                 DeskBoxDataPathService.Current.DataDirectory,
                 "settings.json"));
@@ -1143,6 +1175,14 @@ public partial class App : Application
                         or DeskBox.Contracts.BackupOutcome.Canceled)
                     {
                         LogVerbose(line);
+                        // A skip while the recovery decision is pending is the
+                        // pause doing its job; make sure the user knows the
+                        // pause exists (at most one reminder per day).
+                        if (completion.Outcome == DeskBox.Contracts.BackupOutcome.Skipped)
+                        {
+                            ScheduleSnapshotPausedReminderIfNeeded();
+                        }
+
                         return;
                     }
 
@@ -1163,6 +1203,15 @@ public partial class App : Application
             // a foreign account's directory tree under permissive ACLs). The
             // pre-restore safety archive from the apply already protects this
             // state; the next launch snapshots with rebased options.
+            // Phase 1: Load settings (must complete first). The task is
+            // created ahead of the snapshot task below so the snapshot's
+            // wipe gate can await it and key on the load outcome
+            // deterministically — the gate must see DefaultsAfterFailure,
+            // which only exists after the load.
+            MarkStartupProgress();
+            Task settingsLoadTask = RunCriticalStartupStepAsync(
+                "settings-load",
+                () => SettingsService.LoadAsync());
             bool skipStartupAutomaticSnapshot = PostRestoreRecoveryPolicy
                 .ShouldSkipStartupScheduledSnapshot(restoreResult.Kind, restoreResult.Succeeded);
             Task startupAutomaticSnapshotTask = RunOptionalStartupStepAsync(
@@ -1176,12 +1225,30 @@ public partial class App : Application
                         return;
                     }
 
+                    // A defaults launch (missing settings, or settings that
+                    // failed to load) with surviving recovery snapshots is the
+                    // wipe signature: snapshotting now archives the defaults
+                    // this session created, pollutes the candidate pool and
+                    // starts evicting the pre-wipe snapshots the offer exists
+                    // to serve. The recovery marker is written later in the
+                    // pipeline, so the service-level pause cannot cover this
+                    // first snapshot; later launches pause through the probe.
+                    await settingsLoadTask;
+                    if (IsWipeRecoveryEligible &&
+                        (SettingsService.LastLoadRecoveryState
+                            is SettingsLoadRecoveryState.DefaultsForMissingFile
+                            or SettingsLoadRecoveryState.DefaultsAfterFailure) &&
+                        await DataBackupService.HasRecoverySnapshotNotAfterAsync(_startupProcessStartUtc))
+                    {
+                        Log("[DataBackup] Skipped the startup automatic snapshot: settings started from " +
+                            $"defaults ({SettingsService.LastLoadRecoveryState}) but pre-existing recovery " +
+                            "snapshots survive; keeping the recovery offer's candidate pool clean.");
+                        return;
+                    }
+
                     await _backupRuntime.RunScheduledLocalAsync();
                 });
-
-            // Phase 1: Load settings (must complete first)
-            MarkStartupProgress();
-            await RunCriticalStartupStepAsync("settings-load", () => SettingsService.LoadAsync());
+            await settingsLoadTask;
             // Runs only on the launch that applied a full restore, before the
             // backup options refresh below so a rebased snapshot folder is the
             // one this session uses. The await is accepted because restore
@@ -1465,17 +1532,81 @@ public partial class App : Application
             {
                 RunOptionalStartupStep("storage-unavailable-notification", ShowManagedStorageUnavailableNotification);
             }
-            if (!hadSettingsBeforeStartup ||
-                SettingsService.LastLoadRecoveryState == SettingsLoadRecoveryState.DefaultsAfterFailure)
+            if (IsWipeRecoveryEligible &&
+                (!hadSettingsBeforeStartup ||
+                 SettingsService.LastLoadRecoveryState == SettingsLoadRecoveryState.DefaultsAfterFailure))
             {
                 await RunOptionalStartupStepAsync("recovery-snapshot-notification", async () =>
+                {
+                    RecoverySnapshotCandidate? wipeRecoveryCandidate = null;
+                    try
+                    {
+                        wipeRecoveryCandidate = await DataBackupService
+                            .GetLatestValidRecoverySnapshotAsync(_startupProcessStartUtc);
+                    }
+                    catch (Exception ex)
+                    {
+                        // The wipe is only detectable on this single launch; a
+                        // transient enumeration failure must not escalate into
+                        // a lost offer — fall through to the legacy toast and
+                        // leave the settings-page restore entry as the net.
+                        Log($"[RecoveryOffer] Candidate detection failed: {ex.Message}");
+                    }
+
+                    if (wipeRecoveryCandidate is not null)
+                    {
+                        // The toast is one-shot and easy to miss, and the next
+                        // boot loads the just-written defaults as Primary — the
+                        // wipe stops being detectable. The marker keeps the
+                        // offer alive until the user answers it.
+                        await RecoveryOfferStore.WriteAsync(new RecoveryOfferMarker(
+                            wipeRecoveryCandidate.Path,
+                            wipeRecoveryCandidate.CreatedAtUtc,
+                            wipeRecoveryCandidate.AppVersion,
+                            wipeRecoveryCandidate.WidgetCount,
+                            DateTimeOffset.UtcNow));
+                        Log(
+                            "[RecoveryOffer] Configuration wipe detected with a surviving recovery " +
+                            $"snapshot ('{wipeRecoveryCandidate.Path}', {wipeRecoveryCandidate.WidgetCount} " +
+                            "widgets); offer armed for the next interactive activation.");
+                    }
+
                     ShowRecoverySnapshotAvailableNotification(
-                        await DataBackupService.GetLatestRecoverySnapshotAsync()));
+                        wipeRecoveryCandidate is null
+                            ? await DataBackupService.GetLatestRecoverySnapshotAsync()
+                            : ToRecoverySnapshotInfo(wipeRecoveryCandidate));
+                });
+            }
+
+            // The recovery offer precedes the first-run flows it gates: an
+            // interactive launch must not walk a wipe victim through onboarding
+            // and a default widget before the restore question is answered.
+            // Unattended launches defer the whole block — the offer surfaces on
+            // the first external activation instead.
+            RecoveryOfferOutcome recoveryOfferOutcome = RecoveryOfferOutcome.NotOffered;
+            if (!IsStartupMode && !IsShuttingDown)
+            {
+                recoveryOfferOutcome = await ShowRecoveryOfferIfNeededAsync();
+                if (recoveryOfferOutcome == RecoveryOfferOutcome.RestoreScheduled)
+                {
+                    return;
+                }
+            }
+
+            // A restore may also have been scheduled from an activation that
+            // ran during the startup's own activation initialization; either
+            // way the process is shutting down and first-run flows must not
+            // run inside it.
+            if (IsShuttingDown)
+            {
+                return;
             }
 
             await RunOptionalStartupStepAsync(
                 "initial-file-widget-setup",
-                () => EnsureInitialFileWidgetSetupAsync(isInteractiveLaunch: !IsStartupMode));
+                () => EnsureInitialFileWidgetSetupAsync(
+                    isInteractiveLaunch: !IsStartupMode,
+                    allowDefaultAfterRecoveryFailure: recoveryOfferOutcome == RecoveryOfferOutcome.FreshStart));
             await RunOptionalStartupStepAsync(
                 "managed-storage-desktop-shortcut",
                 () => ManagedStorageDesktopShortcutService.SyncAsync());
@@ -3170,7 +3301,30 @@ public partial class App : Application
                     continue;
                 }
 
-                await EnsureInitialFileWidgetSetupAsync(isInteractiveLaunch: true);
+                // The wipe-recovery offer outranks the first-run flows: a wipe
+                // victim must answer the restore question before onboarding or
+                // a default widget appears. RestoreScheduled: the process is
+                // shutting down for the relaunch. Dismissed: keep the decision
+                // pending and defer the first-run flows to a later activation.
+                RecoveryOfferOutcome activationRecoveryOffer =
+                    await ShowRecoveryOfferIfNeededAsync();
+                if (activationRecoveryOffer == RecoveryOfferOutcome.RestoreScheduled ||
+                    _recoveryOfferWindow is not null ||
+                    _recoveryOfferInFlight)
+                {
+                    // RestoreScheduled: the process is shutting down for the
+                    // relaunch. Window open or another surface mid-show: the
+                    // decision is still live — defer this activation's
+                    // first-run flows until it lands. A settled Dismissed
+                    // needs no deferral: it already cleared the marker as an
+                    // implicit fresh start.
+                    continue;
+                }
+
+                await EnsureInitialFileWidgetSetupAsync(
+                    isInteractiveLaunch: true,
+                    allowDefaultAfterRecoveryFailure:
+                        activationRecoveryOffer == RecoveryOfferOutcome.FreshStart);
                 if (await EnsureOnboardingAsync(isInteractiveLaunch: true))
                 {
                     continue;
@@ -3604,7 +3758,9 @@ public partial class App : Application
         }
 
         string title = LocalizationService.T("Settings.Recovery.AvailableTitle");
-        string message = LocalizationService.T("Settings.Recovery.AvailableBody");
+        string message = LocalizationService.Format(
+            "Settings.Recovery.AvailableBody",
+            snapshot.CreatedAtUtc.ToLocalTime().ToString("g"));
         Log($"[DataBackup] Recovery snapshot available after fresh settings start: {snapshot.Path}");
 
         if (_nativeNotificationService?.TryShow(
@@ -3847,7 +4003,9 @@ public partial class App : Application
         settingsWindow.ShowGlanceSection(widgetId);
     }
 
-    private async Task EnsureInitialFileWidgetSetupAsync(bool isInteractiveLaunch)
+    private async Task EnsureInitialFileWidgetSetupAsync(
+        bool isInteractiveLaunch,
+        bool allowDefaultAfterRecoveryFailure = false)
     {
         if (WidgetManager is null)
         {
@@ -3860,7 +4018,8 @@ public partial class App : Application
                 isInteractiveLaunch,
                 SettingsService.LastLoadRecoveryState,
                 settings.HasResolvedInitialFileWidgetSetup,
-                InitialFileWidgetSetupPolicy.HasConfiguredFileWidget(settings)));
+                InitialFileWidgetSetupPolicy.HasConfiguredFileWidget(settings),
+                allowDefaultAfterRecoveryFailure));
         Log(
             $"[InitialFileWidgetSetup] decision={decision} interactive={isInteractiveLaunch} " +
             $"loadState={SettingsService.LastLoadRecoveryState} " +
@@ -3912,6 +4071,322 @@ public partial class App : Application
         ShowOnboarding(resumeProgress: true);
         return true;
     }
+
+    /// <summary>
+    /// Shows the wipe-recovery offer when its marker is pending and a valid
+    /// candidate still exists. Called at interactive surfaces only — the
+    /// startup pipeline's interactive path and external activations — because
+    /// a freshly activated process holds the foreground rights a logon-time
+    /// window cannot rely on. One show per session: a second surface gets the
+    /// first surface's decision back (the outcome propagates), and closing
+    /// the window counts as a fresh start — the marker is cleared so the
+    /// first-run flows that follow are treated as the user's answer, and the
+    /// offer never resurfaces over a profile the user has already rebuilt.
+    /// </summary>
+    private async Task<RecoveryOfferOutcome> ShowRecoveryOfferIfNeededAsync()
+    {
+        if (_recoveryOfferShownThisSession)
+        {
+            // Whichever surface showed the offer already recorded the user's
+            // decision; hand it to this caller so the pipeline and activation
+            // paths act on the same answer.
+            return _lastRecoveryOfferOutcome;
+        }
+
+        if (_recoveryOfferInFlight)
+        {
+            // Another surface is mid-way through showing the offer; its window
+            // decision has not landed yet, so defer this caller's first-run
+            // flows rather than racing a second window.
+            return RecoveryOfferOutcome.Dismissed;
+        }
+
+        if (IsShuttingDown || !IsWipeRecoveryEligible)
+        {
+            return RecoveryOfferOutcome.NotOffered;
+        }
+
+        RecoveryOfferMarker? marker;
+        try
+        {
+            marker = RecoveryOfferStore.TryRead();
+        }
+        catch (Exception ex)
+        {
+            Log($"[RecoveryOffer] Marker read failed: {ex.Message}");
+            return RecoveryOfferOutcome.NotOffered;
+        }
+
+        if (marker is null)
+        {
+            return RecoveryOfferOutcome.NotOffered;
+        }
+
+        _recoveryOfferInFlight = true;
+        try
+        {
+            RecoverySnapshotCandidate? candidate;
+            try
+            {
+                candidate = await DataBackupService
+                    .GetLatestValidRecoverySnapshotAsync(_startupProcessStartUtc);
+            }
+            catch (Exception ex)
+            {
+                Log($"[RecoveryOffer] Candidate validation failed: {ex.Message}");
+                return RecoveryOfferOutcome.NotOffered;
+            }
+
+            if (candidate is null)
+            {
+                await RecoveryOfferStore.ClearAsync();
+                Log("[RecoveryOffer] Marker cleared; no valid recovery snapshot remains.");
+                return RecoveryOfferOutcome.NotOffered;
+            }
+
+            _recoveryOfferShownThisSession = true;
+            RecoveryOfferOutcome outcome;
+            try
+            {
+                _recoveryOfferWindow = new RecoveryOfferWindow(LocalizationService, candidate);
+                _recoveryOfferWindow.Closed += (_, _) => _recoveryOfferWindow = null;
+                ThemeService.TrackWindow(_recoveryOfferWindow);
+                _recoveryOfferWindow.Activate();
+                Log($"[RecoveryOffer] Offer shown for snapshot '{candidate.Path}'.");
+
+                RecoveryOfferDecision decision = await _recoveryOfferWindow.Completion;
+                outcome = decision switch
+                {
+                    RecoveryOfferDecision.FreshStart => RecoveryOfferOutcome.FreshStart,
+                    RecoveryOfferDecision.Restore => RecoveryOfferOutcome.RestoreScheduled,
+                    _ => RecoveryOfferOutcome.Dismissed,
+                };
+            }
+            catch (Exception ex)
+            {
+                Log($"[RecoveryOffer] Offer failed: {ex.Message}");
+                outcome = RecoveryOfferOutcome.Dismissed;
+            }
+
+            // Restore is pre-recorded so activations arriving while the
+            // restore transaction is being prepared see the user's answer
+            // instead of NotOffered (which would run the first-run flows in a
+            // process that is about to relaunch).
+            _lastRecoveryOfferOutcome = outcome;
+
+            switch (outcome)
+            {
+                case RecoveryOfferOutcome.RestoreScheduled:
+                    if (!await TryScheduleRecoveryRestoreAsync(candidate))
+                    {
+                        _lastRecoveryOfferOutcome = outcome = RecoveryOfferOutcome.Dismissed;
+                    }
+
+                    break;
+                case RecoveryOfferOutcome.FreshStart:
+                    await HandleRecoveryOfferFreshStartAsync(relaxDefaultWidgetPolicy: true);
+                    break;
+                default:
+                    // Closing the window counts as a fresh start (decision A):
+                    // clear the marker so the rebuilt profile is never
+                    // re-offered, but without the explicit button's
+                    // DefaultsAfterFailure relaxation.
+                    await HandleRecoveryOfferFreshStartAsync(relaxDefaultWidgetPolicy: false);
+                    break;
+            }
+
+            Log($"[RecoveryOffer] Offer outcome={outcome}.");
+            return outcome;
+        }
+        finally
+        {
+            _recoveryOfferInFlight = false;
+        }
+    }
+
+    /// <summary>
+    /// Prepares, confirms and schedules the full restore the offer proposed.
+    /// The offer window already presented the snapshot's date, version and
+    /// widget count, so its Restore button is the confirmation — the marker is
+    /// cleared here as well because the pre-restore safety backup (which the
+    /// pending restore keeps) could otherwise carry it back in.
+    /// </summary>
+    private async Task<bool> TryScheduleRecoveryRestoreAsync(RecoverySnapshotCandidate candidate)
+    {
+        bool restartScheduled = false;
+        try
+        {
+            await DataBackupService.PrepareRestoreAsync(candidate.Path);
+            if (!await DataBackupService.ConfirmPendingFullRestoreAsync())
+            {
+                await DataBackupService.CancelPendingRestoreAsync();
+                Log("[RecoveryOffer] Restore confirmation failed; pending restore cancelled.");
+                ShowRecoveryNotification(
+                    "Settings.DataBackup.RestoreFailedTitle",
+                    "Settings.DataBackup.RestoreFailedBody",
+                    errorMessage: null,
+                    isError: true);
+                return false;
+            }
+
+            AppRelaunchScheduleResult relaunch = AppRelaunchService.ScheduleAfterCurrentProcessExit();
+            if (!relaunch.Started)
+            {
+                await DataBackupService.CancelPendingRestoreAsync();
+                Log($"[RecoveryOffer] Relaunch scheduling failed: {relaunch.ErrorMessage}");
+                ShowRecoveryNotification(
+                    "Settings.DataBackup.RestoreFailedTitle",
+                    "Settings.DataBackup.RestoreFailedBody",
+                    relaunch.ErrorMessage,
+                    isError: true);
+                return false;
+            }
+
+            restartScheduled = true;
+            await RecoveryOfferStore.ClearAsync();
+            Log($"[RecoveryOffer] Restore from '{candidate.Path}' scheduled; restarting.");
+            await ShutdownForRestartAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log($"[RecoveryOffer] Restore scheduling failed: {ex}");
+            // A restore that already scheduled its relaunch helper must not be
+            // cancelled by a later failure (e.g. the shutdown call itself
+            // throwing): the helper owns the restart and the confirmed marker
+            // is exactly what the next launch applies. Mirrors the manual
+            // restore flow's restartScheduled guard.
+            if (!restartScheduled)
+            {
+                try
+                {
+                    await DataBackupService.CancelPendingRestoreAsync();
+                }
+                catch (Exception cancelEx)
+                {
+                    Log($"[RecoveryOffer] Pending restore cleanup failed: {cancelEx.Message}");
+                }
+
+                ShowRecoveryNotification(
+                    "Settings.DataBackup.RestoreFailedTitle",
+                    "Settings.DataBackup.RestoreFailedBody",
+                    ex.Message,
+                    isError: true);
+            }
+
+            return restartScheduled;
+        }
+    }
+
+    private async Task HandleRecoveryOfferFreshStartAsync(bool relaxDefaultWidgetPolicy)
+    {
+        try
+        {
+            await RecoveryOfferStore.ClearAsync();
+        }
+        catch (Exception ex)
+        {
+            Log($"[RecoveryOffer] Marker clear failed: {ex.Message}");
+        }
+
+        if (!relaxDefaultWidgetPolicy)
+        {
+            return;
+        }
+
+        // DefaultsAfterFailure resolves initial setup at load so a recovery
+        // launch never manufactures widgets; the explicit fresh start reopens
+        // that first-run decision (the policy's allow flag covers the rest).
+        if (SettingsService.LastLoadRecoveryState == SettingsLoadRecoveryState.DefaultsAfterFailure &&
+            SettingsService.Settings.HasResolvedInitialFileWidgetSetup)
+        {
+            SettingsService.Settings.HasResolvedInitialFileWidgetSetup = false;
+            await SettingsService.SaveAsync();
+        }
+    }
+
+    private void ShowRecoveryNotification(
+        string titleKey,
+        string bodyKey,
+        string? errorMessage,
+        bool isError = false)
+    {
+        if (LocalizationService is null)
+        {
+            return;
+        }
+
+        string title = LocalizationService.T(titleKey);
+        string message = LocalizationService.Format(bodyKey, errorMessage ?? string.Empty);
+        if (_nativeNotificationService?.TryShow(
+                title,
+                message,
+                new Dictionary<string, string>
+                {
+                    ["type"] = "settings",
+                    ["section"] = "BackupRestoreSettings"
+                }) != true)
+        {
+            _trayIcon?.ShowNotification(
+                title,
+                message,
+                isError ? NotificationIcon.Error : NotificationIcon.Info,
+                customIconHandle: null,
+                largeIcon: false,
+                sound: false,
+                respectQuietTime: true,
+                realtime: false,
+                timeout: TimeSpan.FromSeconds(10));
+        }
+    }
+
+    /// <summary>
+    /// While the recovery decision is pending, automatic snapshots are paused
+    /// (see <see cref="DeskBoxDataBackupService.SetRecoveryOfferPauseProbe"/>);
+    /// a silent pause is its own data risk, so the user gets at most one
+    /// reminder per day telling them a decision is waiting. Bounded nagging:
+    /// the offer window and the pause end together as soon as they answer.
+    /// </summary>
+    private void ScheduleSnapshotPausedReminderIfNeeded()
+    {
+        if (IsShuttingDown ||
+            _recoveryOfferWindow is not null ||
+            (_lastSnapshotPausedReminderAtUtc is { } last &&
+             DateTimeOffset.UtcNow - last < TimeSpan.FromHours(20)))
+        {
+            return;
+        }
+
+        try
+        {
+            if (RecoveryOfferStore.TryRead() is null)
+            {
+                return;
+            }
+        }
+        catch
+        {
+            return;
+        }
+
+        _lastSnapshotPausedReminderAtUtc = DateTimeOffset.UtcNow;
+        Log("[RecoveryOffer] Automatic backups are paused; reminding the user a recovery decision is pending.");
+        UiDispatcherQueue?.TryEnqueue(() => ShowRecoveryNotification(
+            "Settings.Recovery.SnapshotPausedReminderTitle",
+            "Settings.Recovery.SnapshotPausedReminderBody",
+            errorMessage: null));
+    }
+
+    private static DeskBoxBackupSnapshotInfo ToRecoverySnapshotInfo(
+        RecoverySnapshotCandidate candidate) =>
+        new(
+            candidate.Path,
+            "automatic",
+            candidate.CreatedAtUtc,
+            0,
+            IsReadable: true,
+            candidate.AppVersion,
+            candidate.BackupSchemaVersion);
 
     /// <summary>
     /// Shows the elevated-launch notice once startup has produced a usable
@@ -5606,6 +6081,7 @@ public partial class App : Application
             ShutdownStep.Sync("settings-window", () => { _settingsWindow?.CloseForShutdown(); _settingsWindow = null; }),
             ShutdownStep.Sync("backup-settings", () => _backupSettings?.Dispose()),
             ShutdownStep.Sync("onboarding-window", () => { _onboardingWindow?.Close(); _onboardingWindow = null; }),
+            ShutdownStep.Sync("recovery-offer-window", () => { _recoveryOfferWindow?.Close(); _recoveryOfferWindow = null; }),
             ShutdownStep.Sync("elevation-notice-window", () => { _elevationNoticeWindow?.Close(); _elevationNoticeWindow = null; }),
             // Closing a surface may commit its final edit/order. Flush after
             // those consumers are closed, while persistence services still live.

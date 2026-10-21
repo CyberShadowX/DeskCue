@@ -15,6 +15,9 @@ namespace DeskBox.Services;
 public sealed partial class DeskBoxDataBackupService
 {
     private const int BackupSchemaVersion = 2;
+    // Upper bound the wipe-recovery peek shares so its offer never proposes
+    // an archive the restore validator's schema gate would refuse.
+    internal const int CurrentBackupSchemaVersion = BackupSchemaVersion;
     private const int MinimumSupportedBackupSchemaVersion = 1;
     private const int MaxPreRestoreBackupCount = 5;
     private const int MaxRestoreFileCount = 100_000;
@@ -93,6 +96,21 @@ public sealed partial class DeskBoxDataBackupService
                 ? Path.Combine(Path.GetDirectoryName(_rootPath) ?? _rootPath, "DeskBox-Recovery")
                 : recoveryRootPath);
     }
+
+    private Func<bool>? _isRecoveryOfferPending;
+
+    /// <summary>
+    /// Wires the wipe-recovery pending probe. While a recovery decision is
+    /// pending (its marker exists), scheduled automatic snapshots stay paused:
+    /// every snapshot of the fresh-default profile would occupy a retention
+    /// slot and evict the pre-wipe snapshots the recovery offer exists to
+    /// serve. Manual "back up now" (forced) snapshots stay available — the
+    /// user is already looking at the backup page.
+    /// </summary>
+    public void SetRecoveryOfferPauseProbe(Func<bool>? isPending) => _isRecoveryOfferPending = isPending;
+
+    private bool IsRecoveryOfferPauseActive =>
+        _isRecoveryOfferPending?.Invoke() == true;
 
     internal string DataDirectory => Path.Combine(_rootPath, "data");
 
@@ -246,6 +264,13 @@ public sealed partial class DeskBoxDataBackupService
         await _gate.WaitAsync(cancellationToken);
         try
         {
+            if (!force && IsRecoveryOfferPauseActive)
+            {
+                App.Log("[DataBackup] Skipped the scheduled snapshot: a recovery decision is pending; " +
+                        "automatic snapshots stay paused until the user answers the recovery offer.");
+                return new(BackupOutcome.Skipped);
+            }
+
             AutomaticBackupOptions options = _automaticBackupOptions;
             // "Back up now" (force) stays available even when the schedule is off.
             if (!options.IsEnabled && !force)
@@ -2553,6 +2578,113 @@ public sealed partial class DeskBoxDataBackupService
         }
     }
 
+    /// <summary>
+    /// True when any automatic recovery snapshot predates
+    /// <paramref name="notAfterUtc"/> — the cheap existence probe the
+    /// wipe-recovery detection uses before suppressing the startup snapshot
+    /// on a fresh-default launch.
+    /// </summary>
+    internal async Task<bool> HasRecoverySnapshotNotAfterAsync(
+        DateTimeOffset notAfterUtc,
+        CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            return EnumerateRecoverySnapshotFiles()
+                .Any(path => File.GetLastWriteTimeUtc(path) <= notAfterUtc);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Newest automatic recovery snapshot that predates this process and
+    /// passes the wipe-recovery content gates (readable manifest and settings,
+    /// resolved initial setup, live widgets, a settings schema this build can
+    /// own). Newest-first with per-archive peek validation: the archive
+    /// created moments after a wipe captures fresh defaults rather than the
+    /// lost profile, so file time alone must never pick the candidate.
+    /// </summary>
+    internal async Task<RecoverySnapshotCandidate?> GetLatestValidRecoverySnapshotAsync(
+        DateTimeOffset notAfterUtc,
+        CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            foreach (string path in EnumerateRecoverySnapshotFiles()
+                         .Where(path => File.GetLastWriteTimeUtc(path) <= notAfterUtc)
+                         .OrderByDescending(File.GetLastWriteTimeUtc))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                RecoverySnapshotPeek peek = await PeekRecoverySnapshotAsync(path, cancellationToken);
+                if (RecoverySnapshotCandidatePolicy.Evaluate(peek) !=
+                    RecoverySnapshotCandidateVerdict.Valid)
+                {
+                    continue;
+                }
+
+                return new RecoverySnapshotCandidate(
+                    path,
+                    peek.CreatedAtUtc ?? File.GetLastWriteTimeUtc(path),
+                    peek.AppVersion,
+                    peek.BackupSchemaVersion,
+                    peek.LiveWidgetCount,
+                    IsBackupFromNewerApp(peek.AppVersion));
+            }
+
+            return null;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private IEnumerable<string> EnumerateRecoverySnapshotFiles()
+    {
+        string[] directories =
+        [
+            EffectiveAutomaticSnapshotDirectory,
+            AutomaticSnapshotDirectory,
+            LegacyAutomaticSnapshotDirectory
+        ];
+        foreach (string directory in directories
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .Where(Directory.Exists))
+        {
+            foreach (string path in Directory.EnumerateFiles(directory, "DeskBox-Auto-*.zip"))
+            {
+                yield return path;
+            }
+        }
+    }
+
+    private static async Task<RecoverySnapshotPeek> PeekRecoverySnapshotAsync(
+        string snapshotPath,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var input = new FileStream(
+                snapshotPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete,
+                bufferSize: 81920,
+                useAsync: true);
+            using var archive = new ZipArchive(input, ZipArchiveMode.Read, leaveOpen: false);
+            return RecoverySnapshotPeekReader.Read(archive);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            return RecoverySnapshotPeek.Unreadable;
+        }
+    }
+
     public async Task<bool> DeleteSnapshotAsync(
         string snapshotPath,
         CancellationToken cancellationToken = default)
@@ -3117,8 +3249,13 @@ public sealed partial class DeskBoxDataBackupService
         // data: carrying pending/committed/orig files into a backup would
         // land a half-applied restore on the target machine and let a stale
         // journal fire the first time a style restore runs there.
+        // The wipe-recovery offer marker is machine-local session state for
+        // an in-flight decision: restoring it onto a machine (or back onto
+        // this one through an old archive) would re-offer a restore right
+        // after the user finished one. Detection rewrites it when warranted.
         if (relativePath.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase) ||
             relativePath.Contains(".style-restore.", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(relativePath, RecoveryOfferStore.MarkerFileName, StringComparison.OrdinalIgnoreCase) ||
             IsInternalStoreRecoveryArtifact(relativePath))
         {
             return false;

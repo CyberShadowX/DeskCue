@@ -2712,6 +2712,12 @@ Text="DeskBox" />
                                         <InfoBar
                                             IsClosable="False"
                                             IsOpen="True"
+                                            Severity="Informational"
+                                            Message="{Binding CustomDirectoryRecoveryNoteText}"
+                                            Visibility="{Binding ShowCustomDirectoryRecoveryNote, Converter={StaticResource SettingsBoolToVisibilityConverter}}" />
+                                        <InfoBar
+                                            IsClosable="False"
+                                            IsOpen="True"
                                             Severity="Warning"
                                             Message="{Binding LocalFallbackWarningText}"
                                             Visibility="{Binding ShowLocalFallbackWarning, Converter={StaticResource SettingsBoolToVisibilityConverter}}" />
