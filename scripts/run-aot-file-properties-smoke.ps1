@@ -519,7 +519,7 @@ try {
         -Name "visibleWidgetKinds"
     if ([int]$smokeResult.loadedSurfaceCount -ne 2 -or
         [int]$smokeResult.visibleSurfaceCount -ne 2 -or
-        @($smokeResult.locales).Count -ne 12) {
+        @($smokeResult.locales).Count -ne 13) {
         throw "File Properties smoke did not restore its two real widget surfaces and locale baseline."
     }
 

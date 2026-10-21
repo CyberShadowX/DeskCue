@@ -440,7 +440,7 @@ function Assert-PhaseResult {
         @($Result.seededWidgetIds).Count -ne 2 -or
         [int]$Result.loadedSurfaceCount -ne 2 -or
         [int]$Result.visibleSurfaceCount -ne 2 -or
-        @($Result.locales).Count -ne 12) {
+        @($Result.locales).Count -ne 13) {
         throw "Picker/StorageItems phase '$Phase' evidence is incomplete."
     }
 
