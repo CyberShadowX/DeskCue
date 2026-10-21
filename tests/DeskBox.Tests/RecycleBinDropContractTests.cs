@@ -48,15 +48,17 @@ public sealed class RecycleBinDropContractTests
         Assert.True(armRegion >= 0, "native drag pointer observer exists");
         Assert.Contains(
             "ItemDropBehavior.RecycleBinDelete",
-            window[armRegion..(armRegion + 4000)],
+            window[armRegion..Math.Min(window.Length, armRegion + 4000)],
             StringComparison.Ordinal);
         int normalizeRegion = window.IndexOf(
-            "NormalizeNativeFileDropItemTarget(",
+            "private static WidgetItem? NormalizeNativeFileDropItemTarget(",
             StringComparison.Ordinal);
         Assert.True(normalizeRegion >= 0, "drop normalization exists");
         Assert.Contains(
             "ItemDropBehavior.RecycleBinDelete",
-            window[normalizeRegion..(normalizeRegion + 800)],
+            window[normalizeRegion..Math.Min(
+                window.Length,
+                normalizeRegion + 800)],
             StringComparison.Ordinal);
 
         // The shell drop description must not advertise the generic
