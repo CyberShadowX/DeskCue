@@ -344,6 +344,19 @@ function Invoke-PickerDialogAutomation {
             $snapshot.commitMethod = "WindowPattern.Close"
             $snapshot.invoked = $true
         }
+
+        # The UIA paths above can report success while the modern "Open"
+        # dialog stays on screen (the pick task then hangs until the app's
+        # 30 s close window lapses). Give the dialog two seconds to react,
+        # then drive the classic cancel control directly.
+        Start-Sleep -Milliseconds 2000
+        $dialogHandle = [IntPtr][long]$snapshot.windowHandle
+        if ([DeskBoxPickerWindowNative]::IsWindowAlive($dialogHandle) -and
+            [DeskBoxPickerWindowNative]::IsDialogVisible($dialogHandle)) {
+            [void][DeskBoxPickerWindowNative]::ClosePickerDialog($dialogHandle)
+            $snapshot.commitMethod =
+                [string]$snapshot.commitMethod + "+native-fallback"
+        }
     }
     else {
         $edits = Get-AutomationElementsById `
@@ -706,7 +719,8 @@ public static class DeskBoxPickerWindowNative
                 return true;
             }
 
-            GetWindowThreadProcessId(windowHandle, out uint ownerProcessId);
+            uint ownerProcessId;
+            GetWindowThreadProcessId(windowHandle, out ownerProcessId);
             if (ownerProcessId != (uint)processId)
             {
                 return true;
@@ -738,6 +752,57 @@ public static class DeskBoxPickerWindowNative
             IntPtr.Zero,
             IntPtr.Zero);
         return true;
+    }
+
+    // The modern "Open" dialog ignores UIAutomation Invoke on its Cancel
+    // entry (observed: dialog stays visible for the whole close window
+    // while the pick task hangs). Click the classic dialog control id 2
+    // (Cancel) via BM_CLICK, then fall back to WM_CLOSE.
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetDlgItem(
+        IntPtr windowHandle,
+        int controlId);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(
+        IntPtr windowHandle,
+        int message,
+        IntPtr wParam,
+        IntPtr lParam);
+
+    public static bool ClosePickerDialog(IntPtr windowHandle)
+    {
+        if (!IsWindow(windowHandle))
+        {
+            return true;
+        }
+
+        IntPtr cancel = GetDlgItem(windowHandle, 2);
+        if (cancel != IntPtr.Zero)
+        {
+            SendPointerMessage(
+                cancel,
+                BmClick,
+                IntPtr.Zero,
+                IntPtr.Zero);
+            if (!IsWindowVisible(windowHandle))
+            {
+                return true;
+            }
+        }
+
+        SendMessage(windowHandle, 0x0010, IntPtr.Zero, IntPtr.Zero);
+        return true;
+    }
+
+    public static bool IsWindowAlive(IntPtr windowHandle)
+    {
+        return IsWindow(windowHandle);
+    }
+
+    public static bool IsDialogVisible(IntPtr windowHandle)
+    {
+        return IsWindow(windowHandle) && IsWindowVisible(windowHandle);
     }
 
     public static bool SetWindowText(IntPtr windowHandle, string value)
@@ -802,8 +867,8 @@ $pickerSourceRoot = Join-Path $fixtureRoot "sources\picker"
 $clipboardSourceRoot = Join-Path $fixtureRoot "sources\clipboard"
 $pickerFileName = "picker-$runId.txt"
 $clipboardFileName = "storage-file-$runId.txt"
-$clipboardFolderName = "storage-folder-$runId"
-$nestedFileName = "nested-$runId.txt"
+$clipboardFolderName = "storage-folder"
+$nestedFileName = "nested.txt"
 $pickerSourceFile = Join-Path $pickerSourceRoot $pickerFileName
 $clipboardSourceFile = Join-Path $clipboardSourceRoot $clipboardFileName
 $clipboardSourceFolder = Join-Path $clipboardSourceRoot $clipboardFolderName
