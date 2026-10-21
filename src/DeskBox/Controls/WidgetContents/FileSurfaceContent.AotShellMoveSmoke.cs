@@ -111,7 +111,7 @@ public sealed partial class FileSurfaceContent
                 _hostWindowHandle.ToInt64(),
                 AotContextMenuProbe.Count(flyout),
                 moveIndex,
-                moveItem.Label,
+                moveItem.Text,
                 moveItem.IsEnabled,
                 AutomationInvoked: true,
                 feedback.DeduplicationKey ?? string.Empty,

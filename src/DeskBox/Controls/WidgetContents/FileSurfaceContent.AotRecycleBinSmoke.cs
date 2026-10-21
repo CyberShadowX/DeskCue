@@ -101,7 +101,7 @@ public sealed partial class FileSurfaceContent
                 selectedItems.Select(item => item.Path).ToArray(),
                 AotContextMenuProbe.Count(flyout),
                 deleteIndex,
-                deleteItem.Label,
+                deleteItem.Text,
                 deleteItem.IsEnabled,
                 AutomationInvoked: true,
                 feedback.DeduplicationKey ?? string.Empty,

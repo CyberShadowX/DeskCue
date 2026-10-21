@@ -99,7 +99,7 @@ public sealed partial class FileSurfaceContent
                 _hostWindowHandle.ToInt64(),
                 AotContextMenuProbe.Count(flyout),
                 propertiesIndex,
-                propertiesItem.Label,
+                propertiesItem.Text,
                 propertiesItem.IsEnabled,
                 AutomationInvoked: true,
                 feedback?.DeduplicationKey ?? string.Empty,

@@ -532,7 +532,10 @@ public sealed class LocalizationService
         return new AotLocaleResourceDiagnostic(
             locale,
             resources.Count,
-            resources.TryGetValue("Window.Settings.Title", out string? settingsTitle) &&
+            // The settings window title key was renamed by the settings-entry
+            // consolidation (bc8fd2eb retired "Window.Settings.Title"); the
+            // smoke keeps requiring the live key, "Settings.WindowTitle".
+            resources.TryGetValue("Settings.WindowTitle", out string? settingsTitle) &&
                 !string.IsNullOrWhiteSpace(settingsTitle),
             resources.TryGetValue("Search.Action.OpenSettings", out string? openSettings) &&
                 !string.IsNullOrWhiteSpace(openSettings));

@@ -141,7 +141,7 @@ public sealed class AotStage5B4AContractTests
             Assert.Contains($"\"{locale}\"", source, StringComparison.Ordinal);
         }
 
-        Assert.Contains("Window.Settings.Title", source, StringComparison.Ordinal);
+        Assert.Contains("Settings.WindowTitle", source, StringComparison.Ordinal);
         Assert.Contains("Search.Action.OpenSettings", source, StringComparison.Ordinal);
         string diagnostic = source[
             source.IndexOf("CaptureAotSmokeResourceDiagnostics", StringComparison.Ordinal)..];
