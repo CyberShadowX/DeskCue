@@ -30,9 +30,9 @@ public sealed partial class FileSurfaceContent
         UpdateSelectionCommandBar();
         RefreshItemSelectionVisuals();
 
-        CommandBarFlyout flyout = CreateItemFlyout(target);
+        MenuFlyout flyout = CreateItemFlyout(target);
         string propertiesText = T("Common.Properties");
-        AppBarButton propertiesItem = AotContextMenuProbe.FindButton(
+        MenuFlyoutItem propertiesItem = AotContextMenuProbe.FindItem(
             flyout,
             propertiesText);
         int propertiesIndex = AotContextMenuProbe.IndexOf(flyout, propertiesItem);

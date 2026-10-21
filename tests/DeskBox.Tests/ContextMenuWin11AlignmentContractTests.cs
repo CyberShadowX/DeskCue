@@ -37,32 +37,28 @@ public sealed class ContextMenuWin11AlignmentContractTests
     }
 
     [Fact]
-    public void ItemMenu_Win11Shape_StripOrder_RowOrder_EscapeHatchLast()
+    public void ItemMenu_SingleColumn_Order_EscapeHatchLast()
     {
         string builder = ReadRepositoryFile(
             "src/DeskBox/Controls/FileItemMenuBuilder.cs");
 
-        // CommandBarFlyout shape: the compact strip renders cut / copy /
-        // rename / delete (Windows 11 command order); the secondary rows
-        // lead with the open family and end with the system-menu escape
-        // hatch. Scoped to the single-item builder region; the shared strip
-        // helpers sit after both builders in the file, so their literal
-        // order is pinned separately below.
+        // Single-column MenuFlyout shape (2026-10-21 migration off
+        // CommandBarFlyout, which opened as two HWNDs and could never give
+        // the row window a material): the open family leads, cut / copy /
+        // rename / delete ride as icon rows in the Windows 11 command order,
+        // and the system-menu escape hatch stays last. Scoped to the
+        // single-item builder region; the shared row helpers sit after both
+        // builders in the file, so their literal order is pinned separately
+        // below.
         int singleStart = builder.IndexOf(
-            "public static CommandBarFlyout CreateItemFlyout(",
+            "public static MenuFlyout CreateItemFlyout(",
             StringComparison.Ordinal);
         int singleEnd = builder.IndexOf(
-            "public static CommandBarFlyout CreateMultiSelectionFlyout(",
+            "public static MenuFlyout CreateMultiSelectionFlyout(",
             StringComparison.Ordinal);
         Assert.True(singleStart >= 0 && singleEnd > singleStart);
         string single = builder[singleStart..singleEnd];
 
-        int strip = single.IndexOf(
-            "AddClipboardStrip(flyout, actions, item, includeRename: true);",
-            StringComparison.Ordinal);
-        int deleteStrip = single.IndexOf(
-            "AddDeleteStripButton(flyout, actions);",
-            StringComparison.Ordinal);
         int openRow = single.IndexOf(
             "AddOpenRow(flyout, item, actions);",
             StringComparison.Ordinal);
@@ -71,6 +67,12 @@ public sealed class ContextMenuWin11AlignmentContractTests
             StringComparison.Ordinal);
         int extract = single.IndexOf(
             "\"Widget.ExtractAll\"",
+            StringComparison.Ordinal);
+        int clipboard = single.IndexOf(
+            "AddClipboardRows(flyout, actions, item, includeRename: true);",
+            StringComparison.Ordinal);
+        int deleteRow = single.IndexOf(
+            "AddDeleteRow(flyout, actions);",
             StringComparison.Ordinal);
         int compress = single.IndexOf(
             "AddCompressToZipRow(flyout, actions);",
@@ -85,19 +87,19 @@ public sealed class ContextMenuWin11AlignmentContractTests
             "AddShowMoreOptionsRow(flyout, item, actions);",
             StringComparison.Ordinal);
 
-        Assert.True(strip >= 0 && deleteStrip > strip,
-            "The strip leads the menu");
-        Assert.True(openRow > deleteStrip && openWith > openRow,
-            "Open family leads the text rows");
+        Assert.True(openRow >= 0 && openWith > openRow,
+            "Open family leads the menu");
         Assert.True(extract > openWith, "Extract stays in the open family");
-        Assert.True(compress > extract && compress < copyPath,
+        Assert.True(clipboard > extract && deleteRow > clipboard,
+            "Cut / copy / rename / delete follow as icon rows");
+        Assert.True(compress > deleteRow && compress < copyPath,
             "Compress sits before Copy as path");
         Assert.True(properties > copyPath,
             "Properties stays visible in the rows");
         Assert.True(moreOptions > properties,
             "Show more options is the last row");
 
-        // Strip helper literal order: cut / copy / rename, then delete.
+        // Row helper literal order: cut / copy / rename, then delete.
         int cut = builder.IndexOf("\"Common.Cut\"", StringComparison.Ordinal);
         int copy = builder.IndexOf("\"Common.Copy\"", StringComparison.Ordinal);
         int rename = builder.IndexOf(
@@ -107,23 +109,16 @@ public sealed class ContextMenuWin11AlignmentContractTests
             "\"Widget.MoveToRecycleBin\"",
             StringComparison.Ordinal);
         Assert.True(cut >= 0 && copy > cut && rename > copy && delete > rename,
-            "Strip order is cut / copy / rename / delete");
+            "Command order is cut / copy / rename / delete");
 
-        // AlwaysExpanded kills the overflow/collapse button and the
-        // collapsed-then-expand opening animation (the two-step flash);
-        // the Open With submenu opens as its own MenuFlyout beside the row.
-        Assert.Contains(
-            "AlwaysExpanded = true",
-            builder,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "FlyoutBase.ShowAttachedFlyout(row)",
-            builder,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "AppBarButtonHasFlyoutChevronVisibility",
-            builder,
-            StringComparison.Ordinal);
+        // The retired CommandBarFlyout workarounds must not come back: the
+        // AppBarElementContainer submenu wrapper, the chevron resource hack,
+        // the manual hover debounce, and the AlwaysExpanded opener.
+        Assert.DoesNotContain("AppBarElementContainer", builder, StringComparison.Ordinal);
+        Assert.DoesNotContain("AppBarButtonHasFlyoutChevronVisibility", builder, StringComparison.Ordinal);
+        Assert.DoesNotContain("FlyoutBase.ShowAttachedFlyout(row)", builder, StringComparison.Ordinal);
+        Assert.DoesNotContain("AlwaysExpanded", builder, StringComparison.Ordinal);
+        Assert.DoesNotContain("CommandBarFlyout", builder, StringComparison.Ordinal);
     }
 
     [Fact]

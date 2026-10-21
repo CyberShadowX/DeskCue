@@ -16,12 +16,16 @@
 
             <ResourceDictionary.ThemeDictionaries>
                                 <ResourceDictionary x:Key="Light">
-                    <!-- Menu first-paint fallback: the flyout default is a
-                         nearly transparent acrylic tint, so the first frames
-                         show bare text before the backdrop lands. This
-                         semi-opaque solid reads complete on frame one and
-                         the acrylic material settles in behind it. -->
-                    <SolidColorBrush x:Key="DeskBoxMenuFallbackBackgroundBrush" Color="#F3F3F3" />
+                    <!-- Menu first-paint base: the platform flyout backdrop
+                         is a nearly transparent acrylic tint, so the first
+                         frames show bare text before the backdrop lands.
+                         This ~90% opaque solid reads complete on frame one
+                         while the restored platform acrylic shows through
+                         the remaining translucency (HighContrast below
+                         stays fully opaque). The retired CommandBarFlyout
+                         row window had no backdrop at all, which forced the
+                         fully-opaque rollback (d29a7826). -->
+                    <SolidColorBrush x:Key="DeskBoxMenuFallbackBackgroundBrush" Color="#E6F3F3F3" />
                     <SolidColorBrush x:Key="WidgetDragHandleBrush" Color="#6B6B6B" />
                     <SolidColorBrush x:Key="WidgetOverlaySurfaceBrush" Color="#FBFCFD" />
                     <SolidColorBrush x:Key="WidgetOverlayInputSurfaceBrush" Color="#FFFFFF" />
@@ -49,7 +53,7 @@
                     <Thickness x:Key="ComboBoxDropdownContentMargin">4</Thickness>
                 </ResourceDictionary>
                                 <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush x:Key="DeskBoxMenuFallbackBackgroundBrush" Color="#2B2B2B" />
+                    <SolidColorBrush x:Key="DeskBoxMenuFallbackBackgroundBrush" Color="#E62B2B2B" />
                     <SolidColorBrush x:Key="WidgetDragHandleBrush" Color="#D6D6D6" />
                     <SolidColorBrush x:Key="WidgetOverlaySurfaceBrush" Color="#2A3038" />
                     <SolidColorBrush x:Key="WidgetOverlayInputSurfaceBrush" Color="#222830" />
@@ -73,7 +77,7 @@
                      inert outside high contrast; HighContrast below owns the
                      system-owned contrast mapping. -->
                                 <ResourceDictionary x:Key="Default">
-                    <SolidColorBrush x:Key="DeskBoxMenuFallbackBackgroundBrush" Color="#F3F3F3" />
+                    <SolidColorBrush x:Key="DeskBoxMenuFallbackBackgroundBrush" Color="#E62B2B2B" />
                     <SolidColorBrush x:Key="WidgetDragHandleBrush" Color="#D6D6D6" />
                     <SolidColorBrush x:Key="WidgetOverlaySurfaceBrush" Color="#2A3038" />
                     <SolidColorBrush x:Key="WidgetOverlayInputSurfaceBrush" Color="#222830" />
@@ -108,6 +112,8 @@
                      solely to keep the four dictionaries' key sets identical. -->
                                 <ResourceDictionary x:Key="HighContrast">
                     <SolidColorBrush x:Key="DeskBoxMenuFallbackBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <!-- HighContrast stays fully opaque on purpose: the
+                         acrylic mix must not thin system contrast colors. -->
                     <SolidColorBrush x:Key="WidgetDragHandleBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
                     <SolidColorBrush x:Key="WidgetOverlaySurfaceBrush" Color="{ThemeResource SystemColorWindowColor}" />
                     <SolidColorBrush x:Key="WidgetOverlayInputSurfaceBrush" Color="{ThemeResource SystemColorWindowColor}" />
@@ -256,15 +262,15 @@
                 <Setter Property="TextWrapping" Value="Wrap" />
             </Style>
 
-            <Style TargetType="primitives:CommandBarFlyoutCommandBar" BasedOn="{StaticResource DefaultCommandBarFlyoutCommandBarStyle}">
-                <Setter Property="Background" Value="{ThemeResource DeskBoxMenuFallbackBackgroundBrush}" />
-                <Setter Property="SystemBackdrop" Value="{x:Null}" />
-            </Style>
             <Style TargetType="MenuFlyoutPresenter" BasedOn="{StaticResource DefaultMenuFlyoutPresenterStyle}">
                 <Setter Property="FontFamily" Value="{StaticResource DeskBoxMenuFontFamily}" />
                 <Setter Property="Padding" Value="{StaticResource DeskBoxMenuPresenterPadding}" />
+                <!-- Background is the semi-opaque first-paint base; the
+                     platform backdrop (no longer nulled) provides the acrylic
+                     behind it. MenuFlyout is a single window, so the material
+                     covers the whole menu — the reason the CommandBarFlyout
+                     rollback (d29a7826) could be lifted. -->
                 <Setter Property="Background" Value="{ThemeResource DeskBoxMenuFallbackBackgroundBrush}" />
-                <Setter Property="SystemBackdrop" Value="{x:Null}" />
             </Style>
 
             <Style TargetType="MenuFlyoutItem" BasedOn="{StaticResource DefaultMenuFlyoutItemStyle}">

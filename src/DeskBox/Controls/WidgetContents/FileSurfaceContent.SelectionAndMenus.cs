@@ -431,14 +431,14 @@ public sealed partial class FileSurfaceContent
         return null;
     }
 
-    private CommandBarFlyout CreateItemFlyout(WidgetItem item)
+    private MenuFlyout CreateItemFlyout(WidgetItem item)
     {
         return FileItemMenuBuilder.CreateItemFlyout(
             item,
             CreateFileItemMenuActions());
     }
 
-    private CommandBarFlyout CreateMultiSelectionFlyout()
+    private MenuFlyout CreateMultiSelectionFlyout()
     {
         return FileItemMenuBuilder.CreateMultiSelectionFlyout(
             CreateFileItemMenuActions());
