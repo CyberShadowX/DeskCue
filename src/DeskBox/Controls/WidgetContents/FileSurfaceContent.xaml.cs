@@ -997,7 +997,14 @@ public sealed partial class FileSurfaceContent :
             ClearSelection();
             FrameworkElement contentTarget =
                 sender as FrameworkElement ?? Root;
-            CreateContentAreaFlyout().ShowAt(
+            MenuFlyout contentAreaFlyout = CreateContentAreaFlyout();
+            if (ReferenceEquals(sender, _stackPopoverItemsView))
+            {
+                contentAreaFlyout.Opened += (_, _) => BeginPopoverFlyoutBandPromotion();
+                contentAreaFlyout.Closed += (_, _) => EndPopoverFlyoutBandPromotion();
+            }
+
+            contentAreaFlyout.ShowAt(
                 contentTarget,
                 e.GetPosition(contentTarget));
             e.Handled = true;
@@ -1046,6 +1053,11 @@ public sealed partial class FileSurfaceContent :
         if (fromStackPopover)
         {
             _stackPopoverContextMenuOpen = true;
+            // The popover is TOPMOST; the flyout's bridge windows are not.
+            // Promote them for the menu's lifetime or it renders beneath
+            // the popover and cannot be clicked (2026-10-21).
+            flyout.Opened += (_, _) => BeginPopoverFlyoutBandPromotion();
+            flyout.Closed += (_, _) => EndPopoverFlyoutBandPromotion();
             flyout.Closed += (_, _) =>
             {
                 if (!_stackPopoverSystemContextMenuOpen)
@@ -1117,6 +1129,18 @@ public sealed partial class FileSurfaceContent :
     /// <summary>Strip window height measured on the up-flipped flyout
     /// (physical px at scale 1; the anchor shift works in DIP).</summary>
     private const double UpFlipStripLiftDip = 80;
+
+    private void BeginPopoverFlyoutBandPromotion()
+    {
+        EndPopoverFlyoutBandPromotion();
+        _popoverFlyoutBandPromoter = Services.FlyoutBridgeBandPromoter.TryBegin();
+    }
+
+    private void EndPopoverFlyoutBandPromotion()
+    {
+        _popoverFlyoutBandPromoter?.Dispose();
+        _popoverFlyoutBandPromoter = null;
+    }
 
     /// <summary>
     /// Whether the engine will have to open the menu upward: no room for

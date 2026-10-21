@@ -1733,6 +1733,47 @@ public static partial class Win32Helper
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     }
 
+    /// <summary>
+    /// WinUI shows every FlyoutBase in per-show bridge windows of this class
+    /// (CommandBarFlyout's icon strip and row area each get one). They stay
+    /// in the normal z band even when their host window is TOPMOST.
+    /// </summary>
+    public const string PopupWindowSiteBridgeClassName =
+        "Microsoft.UI.Content.PopupWindowSiteBridge";
+
+    /// <summary>
+    /// The visible popup-bridge windows of this process. A host pinned to
+    /// the TOPMOST band (the stack popover) covers these bridges unless they
+    /// are promoted into the band for the flyout's lifetime.
+    /// </summary>
+    public static IReadOnlyList<IntPtr> GetVisiblePopupBridgeWindows()
+    {
+        var bridges = new List<IntPtr>();
+        EnumWindows((hWnd, _) =>
+        {
+            if (!IsWindowVisible(hWnd))
+            {
+                return true;
+            }
+
+            GetWindowThreadProcessId(hWnd, out uint processId);
+            if (processId != (uint)Environment.ProcessId)
+            {
+                return true;
+            }
+
+            var className = new StringBuilder(64);
+            if (GetClassName(hWnd, className, 64) > 0 &&
+                className.ToString() == PopupWindowSiteBridgeClassName)
+            {
+                bridges.Add(hWnd);
+            }
+
+            return true;
+        }, IntPtr.Zero);
+        return bridges;
+    }
+
     public static bool IsWindowTopMost(IntPtr hWnd)
     {
         return (GetWindowLong(hWnd, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;

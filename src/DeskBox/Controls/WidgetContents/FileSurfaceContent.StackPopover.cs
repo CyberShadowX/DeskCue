@@ -55,6 +55,7 @@ public sealed partial class FileSurfaceContent
     private bool _stackPopoverIsListMode;
     private bool _stackPopoverContextMenuOpen;
     private bool _stackPopoverSystemContextMenuOpen;
+    private Services.FlyoutBridgeBandPromoter? _popoverFlyoutBandPromoter;
     private bool _stackPopoverDragActive;
     private bool _stackPopoverCleanupPending;
     private long _stackPopoverShowGeneration;
