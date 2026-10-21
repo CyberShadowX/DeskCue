@@ -1594,6 +1594,7 @@
   "Widget.DeleteFolderNoteOne": "폴더입니다. 폴더의 내용도 함께 휴지통으로 이동됩니다",
   "Widget.DeleteFolderNoteMany": "이 중에 폴더 {0}개가 포함되어 있으며, 폴더 내용도 함께 휴지통으로 이동됩니다",
   "Widget.MoveToRecycleBin": "삭제",
+  "Widget.EmptyRecycleBin": "휴지통 비우기",
   "Widget.MovedToRecycleBin": "항목 {0}개를 휴지통으로 이동했습니다",
   "Widget.PermanentlyDeletedCount": "항목 {0}개를 영구 삭제했습니다",
   "Widget.DeletePartialResult": "항목 {0}개를 삭제했으며 {1}개는 삭제할 수 없습니다(예: {2}).",

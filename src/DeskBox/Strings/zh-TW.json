@@ -1592,6 +1592,7 @@
   "QuickCapture.DropTab.Records": "放開以儲存到隨記",
   "Settings.QuickCapture.ClipboardReason.Enabled": "等待複製內容",
   "Widget.MoveToRecycleBin": "刪除",
+  "Widget.EmptyRecycleBin": "清空資源回收筒",
   "Widget.Stack.UseDefaultGrouping": "使用預設分組方式",
   "Settings.Todo.Tabs.Title": "頂部分類",
   "Todo.ItemsLeft": "剩餘 {0} 項",

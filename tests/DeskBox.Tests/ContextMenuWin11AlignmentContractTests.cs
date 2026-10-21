@@ -19,6 +19,8 @@ public sealed class ContextMenuWin11AlignmentContractTests
                      "Widget.Open",
                      "Widget.RunAsAdministrator",
                      "Widget.ExtractAll",
+                     "Widget.EmptyRecycleBin",
+                     "Widget.CreateShortcut",
                      "Common.Cut",
                      "Common.Copy",
                      "Common.Rename",
@@ -37,19 +39,19 @@ public sealed class ContextMenuWin11AlignmentContractTests
     }
 
     [Fact]
-    public void ItemMenu_SingleColumn_Order_EscapeHatchLast()
+    public void ItemMenu_SingleColumn_ClassicOrder_EscapeHatchLast()
     {
         string builder = ReadRepositoryFile(
             "src/DeskBox/Controls/FileItemMenuBuilder.cs");
 
-        // Single-column MenuFlyout shape (2026-10-21 migration off
-        // CommandBarFlyout, which opened as two HWNDs and could never give
-        // the row window a material): the open family leads, cut / copy /
-        // rename / delete ride as icon rows in the Windows 11 command order,
-        // and the system-menu escape hatch stays last. Scoped to the
-        // single-item builder region; the shared row helpers sit after both
-        // builders in the file, so their literal order is pinned separately
-        // below.
+        // Single-column MenuFlyout in the native classic layout (2026-10-21
+        // baseline-B decision): the open family leads (open, open with, open
+        // file location in Explorer's second slot), extension-style verbs
+        // follow (admin, extract, empty-bin, compress), then the stable tail
+        // — copy-as-path, cut/copy, create-shortcut/delete/rename — with
+        // properties and the system-menu escape hatch last. Scoped to the
+        // single-item builder region; helper definitions sit after both
+        // builders, so the row-helper literal order is pinned separately.
         int singleStart = builder.IndexOf(
             "public static MenuFlyout CreateItemFlyout(",
             StringComparison.Ordinal);
@@ -65,20 +67,35 @@ public sealed class ContextMenuWin11AlignmentContractTests
         int openWith = single.IndexOf(
             "AddOpenWithRow(flyout, item, actions);",
             StringComparison.Ordinal);
+        int showInExplorer = single.IndexOf(
+            "AddShowInExplorerRow(flyout, item, actions);",
+            StringComparison.Ordinal);
+        int admin = single.IndexOf(
+            "\"Widget.RunAsAdministrator\"",
+            StringComparison.Ordinal);
         int extract = single.IndexOf(
             "\"Widget.ExtractAll\"",
             StringComparison.Ordinal);
-        int clipboard = single.IndexOf(
-            "AddClipboardRows(flyout, actions, item, includeRename: true);",
-            StringComparison.Ordinal);
-        int deleteRow = single.IndexOf(
-            "AddDeleteRow(flyout, actions);",
+        int emptyBin = single.IndexOf(
+            "AddEmptyRecycleBinRow(flyout, actions);",
             StringComparison.Ordinal);
         int compress = single.IndexOf(
             "AddCompressToZipRow(flyout, actions);",
             StringComparison.Ordinal);
         int copyPath = single.IndexOf(
             "\"Widget.CopyPath\"",
+            StringComparison.Ordinal);
+        int cutCopy = single.IndexOf(
+            "AddCutCopyRows(flyout, actions);",
+            StringComparison.Ordinal);
+        int createShortcut = single.IndexOf(
+            "AddCreateShortcutRow(flyout, item, actions);",
+            StringComparison.Ordinal);
+        int deleteRow = single.IndexOf(
+            "AddDeleteRow(flyout, actions);",
+            StringComparison.Ordinal);
+        int renameRow = single.IndexOf(
+            "AddRenameRow(flyout, item, actions);",
             StringComparison.Ordinal);
         int properties = single.IndexOf(
             "\"Common.Properties\"",
@@ -89,27 +106,32 @@ public sealed class ContextMenuWin11AlignmentContractTests
 
         Assert.True(openRow >= 0 && openWith > openRow,
             "Open family leads the menu");
-        Assert.True(extract > openWith, "Extract stays in the open family");
-        Assert.True(clipboard > extract && deleteRow > clipboard,
-            "Cut / copy / rename / delete follow as icon rows");
-        Assert.True(compress > deleteRow && compress < copyPath,
-            "Compress sits before Copy as path");
-        Assert.True(properties > copyPath,
+        Assert.True(showInExplorer > openWith,
+            "Open file location sits in Explorer's second-row slot");
+        Assert.True(admin > showInExplorer && extract > admin,
+            "Admin and extract stay in the extension-verb zone");
+        Assert.True(emptyBin > extract && compress > emptyBin,
+            "Empty Recycle Bin rides after the open family, before compress");
+        Assert.True(copyPath > compress,
+            "Copy as path opens the stable file tail");
+        Assert.True(cutCopy > copyPath && createShortcut > cutCopy &&
+            deleteRow > createShortcut && renameRow > deleteRow,
+            "Classic two-group tail: cut/copy, then create-shortcut/delete/rename");
+        Assert.True(properties > renameRow,
             "Properties stays visible in the rows");
         Assert.True(moreOptions > properties,
             "Show more options is the last row");
 
-        // Row helper literal order: cut / copy / rename, then delete.
+        // Row helper literal order: cut / copy together; rename lives in its
+        // own helper (moved out of the clipboard group by the classic
+        // two-group decision).
         int cut = builder.IndexOf("\"Common.Cut\"", StringComparison.Ordinal);
         int copy = builder.IndexOf("\"Common.Copy\"", StringComparison.Ordinal);
-        int rename = builder.IndexOf(
-            "\"Common.Rename\"",
+        int renameHelper = builder.IndexOf(
+            "private static void AddRenameRow(",
             StringComparison.Ordinal);
-        int delete = builder.IndexOf(
-            "\"Widget.MoveToRecycleBin\"",
-            StringComparison.Ordinal);
-        Assert.True(cut >= 0 && copy > cut && rename > copy && delete > rename,
-            "Command order is cut / copy / rename / delete");
+        Assert.True(cut >= 0 && copy > cut && renameHelper > copy,
+            "Cut / copy pair, rename in its own classic-group helper");
 
         // The retired CommandBarFlyout workarounds must not come back: the
         // AppBarElementContainer submenu wrapper, the chevron resource hack,
@@ -119,6 +141,63 @@ public sealed class ContextMenuWin11AlignmentContractTests
         Assert.DoesNotContain("FlyoutBase.ShowAttachedFlyout(row)", builder, StringComparison.Ordinal);
         Assert.DoesNotContain("AlwaysExpanded", builder, StringComparison.Ordinal);
         Assert.DoesNotContain("CommandBarFlyout", builder, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ItemMenu_NamespaceShortcuts_FollowTargetDesktopMenu()
+    {
+        string builder = ReadRepositoryFile(
+            "src/DeskBox/Controls/FileItemMenuBuilder.cs");
+
+        // Baseline B: a PIDL-only namespace link (This PC / Recycle Bin /
+        // Control Panel materialized as .lnk) inherits its target's desktop
+        // verbs, while rows that need a filesystem target hide exactly the
+        // way Explorer's menu hides them.
+        Assert.Contains(
+            "NamespaceShortcutHelper.ResolveKind(item)",
+            builder,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "namespaceKind == NamespaceShortcutKind.RecycleBin",
+            builder,
+            StringComparison.Ordinal);
+        Assert.True(
+            CountOccurrences(builder, "if (!isNamespaceShortcut)") == 2,
+            "Open file location and Compress both hide for namespace links");
+
+        // The empty-bin state check must stay off the right-tap callback
+        // frame (shell aggregate query on a low-priority UI pass instead).
+        Assert.Contains(
+            "ScheduleRecycleBinEmptyStateCheck(row)",
+            builder,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "DispatcherQueuePriority.Low",
+            builder,
+            StringComparison.Ordinal);
+
+        // Host verbs: the surface supplies create-shortcut and empty-bin.
+        Assert.Contains(
+            "Func<WidgetItem, Task>? CreateItemShortcutAsync = null",
+            builder,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Func<Task>? EmptyRecycleBinAsync = null",
+            builder,
+            StringComparison.Ordinal);
+    }
+
+    private static int CountOccurrences(string text, string value)
+    {
+        int count = 0;
+        int index = 0;
+        while ((index = text.IndexOf(value, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += value.Length;
+        }
+
+        return count;
     }
 
     [Fact]
@@ -297,6 +376,7 @@ public sealed class ContextMenuWin11AlignmentContractTests
             "Widget.OpenWith",
             "Widget.OpenWith.ChooseApp",
             "Widget.ExtractAll",
+            "Widget.EmptyRecycleBin",
             "Widget.CompressTo",
             "Widget.CompressTo.Zip",
             "Widget.CompressTo.Tar",

@@ -1,5 +1,8 @@
+using DeskBox.Helpers;
 using DeskBox.Models;
+using DeskBox.Platform;
 using DeskBox.Services;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -44,7 +47,9 @@ public sealed record FileItemMenuActions(
     Func<WidgetItem, bool>? CanExtractArchive = null,
     Func<WidgetItem, Task>? ExtractArchiveAsync = null,
     Func<IReadOnlyList<WidgetItem>, bool>? CanCompressSelection = null,
-    Func<IReadOnlyList<WidgetItem>, ArchiveCompressionFormat, Task>? CompressSelectionAsync = null);
+    Func<IReadOnlyList<WidgetItem>, ArchiveCompressionFormat, Task>? CompressSelectionAsync = null,
+    Func<WidgetItem, Task>? CreateItemShortcutAsync = null,
+    Func<Task>? EmptyRecycleBinAsync = null);
 
 /// <summary>
 /// Builds the item context menus as a single-column MenuFlyout — one popup
@@ -52,9 +57,16 @@ public sealed record FileItemMenuActions(
 /// shape opened as two separate HWNDs and the row window had
 /// no backdrop to show a material through (five failed rounds, see
 /// artifacts/context-menu-enhancement-20261015); MenuFlyout restores the
-/// material and the native submenu/hover/entrance behaviors, matching the
-/// Windows 11 classic column (cut / copy / rename / delete ride as icon
-/// rows in the Windows 11 command order).
+/// material and the native submenu/hover/entrance behaviors.
+/// The single-item order mirrors the native classic menu (the desktop
+/// right-click the reference screenshots capture): the open family leads,
+/// extension-style verbs follow, then the stable tail — copy-as-path,
+/// cut/copy, create-shortcut/delete/rename, properties — with the
+/// system-menu escape hatch last. Namespace shortcuts (This PC, Recycle
+/// Bin, Control Panel links) additionally inherit their target's desktop
+/// verbs: Empty Recycle Bin rides right after Open, matching the native
+/// desktop icon menu, while rows that need a filesystem target (Open file
+/// location, Compress) are hidden the way Explorer hides them.
 /// </summary>
 public static class FileItemMenuBuilder
 {
@@ -64,8 +76,20 @@ public static class FileItemMenuBuilder
     {
         var flyout = CreateMenu();
 
+        NamespaceShortcutKind namespaceKind =
+            NamespaceShortcutHelper.ResolveKind(item);
+        bool isNamespaceShortcut = namespaceKind != NamespaceShortcutKind.None;
+
         AddOpenRow(flyout, item, actions);
         AddOpenWithRow(flyout, item, actions);
+
+        // Explorer's classic menu pins Open file location as the second row
+        // for links; a PIDL-only namespace link has no filesystem target, so
+        // the native menu omits the row entirely.
+        if (!isNamespaceShortcut)
+        {
+            AddShowInExplorerRow(flyout, item, actions);
+        }
 
         if (actions.CanRunAsAdministrator?.Invoke(item) == true &&
             actions.RunAsAdministratorAsync is not null)
@@ -89,14 +113,21 @@ public static class FileItemMenuBuilder
                 async () => await actions.ExtractArchiveAsync!(item)));
         }
 
+        if (namespaceKind == NamespaceShortcutKind.RecycleBin &&
+            actions.EmptyRecycleBinAsync is not null)
+        {
+            AddEmptyRecycleBinRow(flyout, actions);
+        }
+
+        // DeskBox's own archive verbs occupy the extension-verb zone of the
+        // native layout (between the open family and the file-group tail).
+        // The namespace targets have no desktop counterpart, so they skip it.
+        if (!isNamespaceShortcut)
+        {
+            AddCompressToZipRow(flyout, actions);
+        }
+
         flyout.Items.Add(new MenuFlyoutSeparator());
-
-        AddClipboardRows(flyout, actions, item, includeRename: true);
-        AddDeleteRow(flyout, actions);
-
-        flyout.Items.Add(new MenuFlyoutSeparator());
-
-        AddCompressToZipRow(flyout, actions);
 
         flyout.Items.Add(CreateRow(
             actions,
@@ -109,9 +140,25 @@ public static class FileItemMenuBuilder
                 return Task.CompletedTask;
             }));
 
-        if (actions.CanRemoveFromStack(item))
+        flyout.Items.Add(new MenuFlyoutSeparator());
+
+        AddCutCopyRows(flyout, actions);
+
+        flyout.Items.Add(new MenuFlyoutSeparator());
+
+        AddCreateShortcutRow(flyout, item, actions);
+        AddDeleteRow(flyout, actions);
+        AddRenameRow(flyout, item, actions);
+
+        bool hasSurfaceRows = actions.CanRemoveFromStack(item) ||
+            actions.CanMoveItemsBackToDesktop();
+        if (hasSurfaceRows)
         {
             flyout.Items.Add(new MenuFlyoutSeparator());
+        }
+
+        if (actions.CanRemoveFromStack(item))
+        {
             flyout.Items.Add(CreateRow(
                 actions,
                 "Widget.Stack.RemoveItem",
@@ -136,17 +183,6 @@ public static class FileItemMenuBuilder
         }
 
         flyout.Items.Add(new MenuFlyoutSeparator());
-
-        flyout.Items.Add(CreateRow(
-            actions,
-            "Widget.ShowInExplorer",
-            "\uE838",
-            null,
-            () =>
-            {
-                actions.ShowInExplorer(item);
-                return Task.CompletedTask;
-            }));
 
         flyout.Items.Add(CreateRow(
             actions,
@@ -184,7 +220,7 @@ public static class FileItemMenuBuilder
 
         flyout.Items.Add(new MenuFlyoutSeparator());
 
-        AddClipboardRows(flyout, actions, null, includeRename: false);
+        AddCutCopyRows(flyout, actions);
         AddDeleteRow(flyout, actions);
 
         flyout.Items.Add(new MenuFlyoutSeparator());
@@ -232,14 +268,13 @@ public static class FileItemMenuBuilder
     }
 
     /// <summary>
-    /// Cut / copy / rename as icon rows, matching the Windows 11 command
-    /// order (cut, copy, rename, delete). Rename is single-selection only.
+    /// Cut / copy, the first of the native classic file groups; rename moved
+    /// to the second group (create shortcut / delete / rename) where the
+    /// classic menu keeps it.
     /// </summary>
-    private static void AddClipboardRows(
+    private static void AddCutCopyRows(
         MenuFlyout flyout,
-        FileItemMenuActions actions,
-        WidgetItem? renameTarget,
-        bool includeRename)
+        FileItemMenuActions actions)
     {
         flyout.Items.Add(CreateRow(
             actions,
@@ -254,16 +289,6 @@ public static class FileItemMenuBuilder
             "\uE8C8",
             "Ctrl+C",
             async () => await actions.CopySelectionToClipboardAsync(false)));
-
-        if (includeRename && renameTarget is not null)
-        {
-            flyout.Items.Add(CreateRow(
-                actions,
-                "Common.Rename",
-                "\uE8AC",
-                "F2",
-                async () => await actions.RenameItemAsync(renameTarget)));
-        }
     }
 
     private static void AddDeleteRow(
@@ -279,6 +304,41 @@ public static class FileItemMenuBuilder
                 actions.GetSelectedItems())));
     }
 
+    /// <summary>
+    /// Create shortcut — the first row of the native classic tail group
+    /// (create shortcut / delete / rename), offered for every item.
+    /// </summary>
+    private static void AddCreateShortcutRow(
+        MenuFlyout flyout,
+        WidgetItem item,
+        FileItemMenuActions actions)
+    {
+        if (actions.CreateItemShortcutAsync is null)
+        {
+            return;
+        }
+
+        flyout.Items.Add(CreateRow(
+            actions,
+            "Widget.CreateShortcut",
+            "\uE71B",
+            null,
+            async () => await actions.CreateItemShortcutAsync!(item)));
+    }
+
+    private static void AddRenameRow(
+        MenuFlyout flyout,
+        WidgetItem item,
+        FileItemMenuActions actions)
+    {
+        flyout.Items.Add(CreateRow(
+            actions,
+            "Common.Rename",
+            "\uE8AC",
+            "F2",
+            async () => await actions.RenameItemAsync(item)));
+    }
+
     private static void AddOpenRow(
         MenuFlyout flyout,
         WidgetItem item,
@@ -290,6 +350,63 @@ public static class FileItemMenuBuilder
             "\uE8E5",
             "Enter",
             async () => await actions.OpenItemAsync(item)));
+    }
+
+    private static void AddShowInExplorerRow(
+        MenuFlyout flyout,
+        WidgetItem item,
+        FileItemMenuActions actions)
+    {
+        flyout.Items.Add(CreateRow(
+            actions,
+            "Widget.ShowInExplorer",
+            "\uE838",
+            null,
+            () =>
+            {
+                actions.ShowInExplorer(item);
+                return Task.CompletedTask;
+            }));
+    }
+
+    /// <summary>
+    /// Empty Recycle Bin for the bin's namespace shortcut — the target
+    /// desktop icon's own verb, kept in its native slot right after the
+    /// open family. Native grays the verb for an empty bin; the aggregate
+    /// query is Shell work, so it runs on a low-priority UI pass after the
+    /// menu is up, never in the right-tap callback. Until it answers, the
+    /// row stays enabled and the click path re-checks before invoking.
+    /// </summary>
+    private static void AddEmptyRecycleBinRow(
+        MenuFlyout flyout,
+        FileItemMenuActions actions)
+    {
+        MenuFlyoutItem row = CreateRow(
+            actions,
+            "Widget.EmptyRecycleBin",
+            "\uE74D",
+            null,
+            async () => await actions.EmptyRecycleBinAsync!());
+        flyout.Opened += (_, _) => ScheduleRecycleBinEmptyStateCheck(row);
+        flyout.Items.Add(row);
+    }
+
+    private static void ScheduleRecycleBinEmptyStateCheck(MenuFlyoutItem row)
+    {
+        DispatcherQueue? queue = DispatcherQueue.GetForCurrentThread();
+        if (queue is null)
+        {
+            return;
+        }
+
+        _ = queue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+        {
+            if (ShellRecycleBinInterop.TryQueryTotalItemCount(out long totalItems) &&
+                totalItems == 0)
+            {
+                row.IsEnabled = false;
+            }
+        });
     }
 
     private static void AddOpenWithRow(

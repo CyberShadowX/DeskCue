@@ -496,7 +496,9 @@ public sealed partial class FileSurfaceContent
             CanExtractArchiveItem,
             ExtractArchiveItemAsync,
             CanCompressSelection,
-            CompressSelectionAsync);
+            CompressSelectionAsync,
+            CreateItemShortcutAsync: CreateItemShortcutAsync,
+            EmptyRecycleBinAsync: EmptyRecycleBinAsync);
     }
 
     private OpenWithMenuPayload? GetOpenWithMenuItems(WidgetItem item)
@@ -756,6 +758,108 @@ public sealed partial class FileSurfaceContent
                 WidgetFeedbackSeverity.Warning,
                 "file-properties"));
         }
+    }
+
+    /// <summary>
+    /// Native "Create shortcut" verb: a new "name - Shortcut.lnk" beside the
+    /// item, matching Explorer. Namespace links re-materialize the same
+    /// namespace target; every other item gets a link pointing at the item
+    /// itself (a link source nests exactly the way Explorer's verb does, and
+    /// Windows resolves the chain on open).
+    /// </summary>
+    private async Task CreateItemShortcutAsync(WidgetItem item)
+    {
+        if (TryBlockTransferMutation(new[] { item }))
+        {
+            return;
+        }
+
+        try
+        {
+            string? directory = Path.GetDirectoryName(item.Path);
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                return;
+            }
+
+            string linkPath = FileService.GetAvailablePath(
+                Path.Combine(directory, GetShortcutDisplayName(item.Path)));
+
+            if (item.NamespaceShortcutKind != NamespaceShortcutKind.None &&
+                !string.IsNullOrWhiteSpace(item.NamespaceShortcutParsingName))
+            {
+                ShortcutHelper.CreateShellNamespaceShortcut(
+                    linkPath,
+                    item.NamespaceShortcutParsingName,
+                    T("Widget.CreateShortcut"));
+            }
+            else if (Directory.Exists(item.Path))
+            {
+                ShortcutHelper.CreateOrUpdateFolderShortcut(
+                    linkPath,
+                    item.Path,
+                    T("Widget.CreateShortcut"));
+            }
+            else
+            {
+                // No icon override: the system renders the target's own icon
+                // with the shortcut overlay, matching Explorer's native verb.
+                DragDropPermissionService.CreateOrUpdateShortcut(
+                    linkPath,
+                    item.Path,
+                    string.Empty,
+                    iconPath: null);
+            }
+
+            await RunAsync(() => ViewModel.RefreshFolderContentsAsync());
+        }
+        catch (Exception ex)
+        {
+            App.Log(
+                $"[CreateShortcut] failed widget={WidgetId} " +
+                $"source={item.Path}: {ex.Message}");
+            ShowFeedback(new WidgetFeedbackRequest(
+                T("Widget.Error.OperationIncomplete"),
+                WidgetFeedbackSeverity.Warning,
+                "create-shortcut"));
+        }
+    }
+
+    /// <summary>
+    /// Empty Recycle Bin for the bin's namespace shortcut — the desktop
+    /// icon's own verb, with the system's confirmation and progress dialogs
+    /// (flags 0). A bin emptied between the menu check and the click no-ops
+    /// instead of popping the dialog for nothing.
+    /// </summary>
+    private async Task EmptyRecycleBinAsync()
+    {
+        try
+        {
+            if (ShellRecycleBinInterop.TryQueryTotalItemCount(out long totalItems) &&
+                totalItems == 0)
+            {
+                return;
+            }
+
+            if (!ShellRecycleBinInterop.TryEmptyAllBins(_hostWindowHandle))
+            {
+                ShowFeedback(new WidgetFeedbackRequest(
+                    T("Widget.Error.OperationIncomplete"),
+                    WidgetFeedbackSeverity.Warning,
+                    "empty-recycle-bin"));
+            }
+        }
+        catch (Exception ex)
+        {
+            App.Log(
+                $"[EmptyRecycleBin] failed widget={WidgetId}: {ex.Message}");
+            ShowFeedback(new WidgetFeedbackRequest(
+                T("Widget.Error.OperationIncomplete"),
+                WidgetFeedbackSeverity.Warning,
+                "empty-recycle-bin"));
+        }
+
+        await Task.CompletedTask;
     }
 
     /// <summary>

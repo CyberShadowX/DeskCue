@@ -1582,6 +1582,7 @@
   "Widget.DeleteFolderNoteOne": "Dies ist ein Ordner. Dessen Inhalte werden ebenfalls in den Papierkorb verschoben.",
   "Widget.DeleteFolderNoteMany": "Dies schließt {0} Ordner ein. Ordnerinhalte werden ebenfalls in den Papierkorb verschoben.",
   "Widget.MoveToRecycleBin": "Löschen",
+  "Widget.EmptyRecycleBin": "Papierkorb leeren",
   "Widget.MovedToRecycleBin": "{0} Element(e) in den Papierkorb verschoben",
   "Widget.PermanentlyDeletedCount": "{0} Element(e) endgültig gelöscht",
   "Widget.DeletePartialResult": "{0} Element(e) gelöscht; {1} konnten nicht gelöscht werden (z. B. {2}).",

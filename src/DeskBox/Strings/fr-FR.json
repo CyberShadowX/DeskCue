@@ -1594,6 +1594,7 @@
   "Widget.DeleteFolderNoteOne": "Ceci est un dossier. Son contenu ira également dans la corbeille.",
   "Widget.DeleteFolderNoteMany": "Cela inclut {0} dossier(s). Le contenu du dossier ira également dans la corbeille.",
   "Widget.MoveToRecycleBin": "Supprimer",
+  "Widget.EmptyRecycleBin": "Vider la corbeille",
   "Widget.MovedToRecycleBin": "{0} élément(s) déplacé(s) vers la corbeille",
   "Widget.PermanentlyDeletedCount": "{0} élément(s) supprimé(s) définitivement",
   "Widget.DeletePartialResult": "{0} élément(s) supprimé(s) ; impossible d’en supprimer {1} (par exemple {2}).",

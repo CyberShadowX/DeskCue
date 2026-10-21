@@ -1594,6 +1594,7 @@
   "Widget.DeleteFolderNoteOne": "هذا مجلد. ستنتقل محتوياته أيضًا إلى سلة المحذوفات.",
   "Widget.DeleteFolderNoteMany": "يتضمن ذلك {0} مجلد (مجلدات). ستنتقل محتوياته أيضًا إلى سلة المحذوفات.",
   "Widget.MoveToRecycleBin": "حذف",
+  "Widget.EmptyRecycleBin": "إفراغ سلة المحذوفات",
   "Widget.MovedToRecycleBin": "تم نقل {0} من العناصر إلى سلة المحذوفات",
   "Widget.PermanentlyDeletedCount": "تم حذف {0} من العناصر نهائيًا",
   "Widget.DeletePartialResult": "تم حذف {0} من العناصر؛ تعذر حذف {1} (مثل {2}).",

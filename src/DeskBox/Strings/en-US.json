@@ -1594,6 +1594,7 @@
   "Widget.DeleteFolderNoteOne": "This is a folder. Its contents will also go to Recycle Bin.",
   "Widget.DeleteFolderNoteMany": "This includes {0} folder(s). Folder contents will also go to Recycle Bin.",
   "Widget.MoveToRecycleBin": "Delete",
+  "Widget.EmptyRecycleBin": "Empty Recycle Bin",
   "Widget.MovedToRecycleBin": "Moved {0} item(s) to Recycle Bin",
   "Widget.PermanentlyDeletedCount": "Permanently deleted {0} item(s)",
   "Widget.DeletePartialResult": "Deleted {0} item(s); {1} could not be deleted (for example, {2}).",
