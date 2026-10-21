@@ -1077,12 +1077,14 @@ public sealed partial class FileSurfaceContent :
         try
         {
             // MenuFlyout's ShowAt(target, point) places the menu at the point
-            // with the engine's flip/slide/work-area logic intact. The 0x0
-            // anchor proxy and the up-flip pre-lift were workarounds for the
-            // retired CommandBarFlyout placement engine (which re-anchored to
-            // the target RECT's left edge and dropped its strip below the
-            // cursor on up-flips) and retired with it.
-            flyout.ShowAt(Root, e.GetPosition(Root));
+            // with the engine's flip/slide/work-area logic intact. The target
+            // is the view that raised the event: from the stack popover the
+            // items live in the popover's own visual tree, and positioning
+            // against this surface's Root (in the widget window's tree)
+            // produces a cross-tree point that lands the menu far from the
+            // clicked icon.
+            FrameworkElement placementTarget = sender as FrameworkElement ?? Root;
+            flyout.ShowAt(placementTarget, e.GetPosition(placementTarget));
         }
         catch
         {

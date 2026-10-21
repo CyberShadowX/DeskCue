@@ -73,6 +73,40 @@ public sealed class StackPopoverMenuBandContractTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void PopoverFlyouts_PlaceAgainstTheRaisingViewAndDismissAfterMenuRounds()
+    {
+        string source = Read("src/DeskBox/Controls/WidgetContents/FileSurfaceContent.xaml.cs");
+
+        // From the stack popover the items live in the popover's own visual
+        // tree; positioning against this surface's Root (in the widget
+        // window's tree) lands the menu far from the clicked icon.
+        Assert.Contains(
+            "FrameworkElement placementTarget = sender as FrameworkElement ?? Root;",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "flyout.ShowAt(placementTarget, e.GetPosition(placementTarget));",
+            source,
+            StringComparison.Ordinal);
+
+        // The outside-click light dismiss rides a fresh Activated→
+        // Deactivated transition that the menu-round flag deliberately
+        // blocks; the transition fires before Closed resets the flag and no
+        // new one follows. Every menu-round completion re-evaluates the
+        // foreground and runs the missed dismiss when the host lost it.
+        string popover = Read(
+            "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.StackPopover.cs");
+        Assert.Contains(
+            "SchedulePopoverDismissIfDeactivated();",
+            popover,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Win32Helper.GetForegroundWindow() != host.WindowHandle",
+            popover,
+            StringComparison.Ordinal);
+    }
+
     private static string Read(string relativePath) =>
         // Normalize EOL: the repository blob is LF but a fresh Windows
         // checkout materializes CRLF, and multi-line assertions pin exact

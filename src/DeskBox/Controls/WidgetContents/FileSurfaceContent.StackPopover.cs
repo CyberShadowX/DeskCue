@@ -2385,6 +2385,39 @@ public sealed partial class FileSurfaceContent
         {
             HideStackPopoverForReuse();
         }
+
+        SchedulePopoverDismissIfDeactivated();
+    }
+
+    /// <summary>
+    /// The popover's light dismiss rides a fresh Activated→Deactivated
+    /// transition, and the menu-round flag deliberately blocks that
+    /// transition while a context menu is open. An outside click that
+    /// dismisses the menu fires Deactivated BEFORE the flyout's Closed
+    /// resets the flag, so the one transition the dismiss needed is
+    /// consumed and no new one follows — the popover is already
+    /// deactivated. Re-evaluate once activation settles after every menu
+    /// round: when the host no longer owns the foreground, run the same
+    /// dismiss path the missed transition would have.
+    /// </summary>
+    private void SchedulePopoverDismissIfDeactivated()
+    {
+        if (_stackPopoverHostWindow is not { } host)
+        {
+            return;
+        }
+
+        _ = DispatcherQueue.TryEnqueue(() =>
+        {
+            if (_stackPopoverPopupOpen &&
+                !_stackPopoverContextMenuOpen &&
+                !_stackPopoverSystemContextMenuOpen &&
+                !_stackPopoverDragActive &&
+                Win32Helper.GetForegroundWindow() != host.WindowHandle)
+            {
+                StackPopoverHost_DeactivatedByOutsideClick();
+            }
+        });
     }
 
     private void CompleteStackPopoverDrag()
