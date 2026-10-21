@@ -1130,8 +1130,24 @@ public partial class App : Application
             _backupRuntime = new BackupRuntime(
                 new BackupBackend(SettingsService, DataBackupService, CloudBackupService),
                 new DispatcherBackupTimer(UiDispatcherQueue),
-                completion => Log($"[BackupRuntime] kind={completion.Kind} scheduled={completion.Scheduled} " +
-                    $"outcome={completion.Outcome}" + (completion.Error is null ? string.Empty : $" error={completion.Error}")));
+                completion =>
+                {
+                    string line = $"[BackupRuntime] kind={completion.Kind} scheduled={completion.Scheduled} " +
+                        $"outcome={completion.Outcome}" + (completion.Error is null ? string.Empty : $" error={completion.Error}");
+                    // Skipped (not due / not configured), AlreadyRunning and the
+                    // shutdown-time Canceled are the per-minute routine: two
+                    // lines every tick would dominate the log. Succeeded and
+                    // Failed are real events.
+                    if (completion.Outcome is DeskBox.Contracts.BackupOutcome.Skipped
+                        or DeskBox.Contracts.BackupOutcome.AlreadyRunning
+                        or DeskBox.Contracts.BackupOutcome.Canceled)
+                    {
+                        LogVerbose(line);
+                        return;
+                    }
+
+                    Log(line);
+                });
             // The snapshot copy tolerates concurrent writers (per-file length
             // and write-time stability checks with retries), so it runs
             // alongside the early startup phases instead of gating the tray,
@@ -1272,9 +1288,17 @@ public partial class App : Application
             var localizationService = LocalizationService;
 
             // Parallel: theme refresh only. Clipboard event subscription must stay on the UI thread.
+            // RunAsync keeps the refresh on the UI thread (inline while the
+            // dispatcher is idle here, enqueued once startup starts awaiting);
+            // the old Task.Run hop made ThemeService's off-thread tripwire
+            // fire on every single launch.
             Task themeTask = RunOptionalStartupStepAsync(
                 "theme-refresh",
-                () => Task.Run(() => themeService.RefreshAppearance()));
+                () => DeskBox.Platform.UiDispatch.RunAsync(() =>
+                {
+                    themeService.RefreshAppearance();
+                    return Task.CompletedTask;
+                }));
             RunOptionalStartupStep("quick-capture-clipboard", () => RefreshQuickCaptureClipboardService());
 
             // Parallel: independent UI setup. The tray is the lifeline: once its
@@ -2046,7 +2070,8 @@ public partial class App : Application
             {
                 _hookHealthWatchdog = new HookHealthWatchdog(
                     UiDispatcherQueue,
-                    static message => Log(message));
+                    static message => Log(message),
+                    static message => LogVerbose(message));
                 _hookHealthWatchdog.Watch(() => GlobalHotkeyService);
                 _hookHealthWatchdog.Watch(() => _searchHotkeyService);
                 _hookHealthWatchdog.Watch(() => DesktopDoubleClickActivationService);

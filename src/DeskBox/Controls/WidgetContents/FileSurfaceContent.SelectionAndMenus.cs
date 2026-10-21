@@ -758,6 +758,33 @@ public sealed partial class FileSurfaceContent
         }
     }
 
+    /// <summary>
+    /// The popover is a no-activate window: DeskBox is not the foreground
+    /// process at right-click, which voids the AllowSetForegroundWindow
+    /// grant the native proxy needs for its menu — the menu tracked beneath
+    /// the popover and died on the next click (1.5.9 Win10 VM acceptance
+    /// 2026-10-20, fg=0 in the proxy timing log; main-surface menus all
+    /// ran fg=1). The right-click is the last input event, so the transfer
+    /// to the popover is permitted; the grant issued inside ShowAsync then
+    /// becomes effective and the menu lands above the popover.
+    /// </summary>
+    private void TryBringStackPopoverToForeground()
+    {
+        try
+        {
+            if (_stackPopoverHostWindow is { WindowHandle: var handle } &&
+                handle != IntPtr.Zero)
+            {
+                _ = Win32Helper.SetForegroundWindow(handle);
+            }
+        }
+        catch
+        {
+            // Best-effort: without the transfer the menu still opens, it
+            // just keeps the background-owner dismissal quirks.
+        }
+    }
+
     private async Task ShowSystemContextMenuAsync(WidgetItem item)
     {
         if (TryBlockTransferOpen(item))
@@ -775,6 +802,7 @@ public sealed partial class FileSurfaceContent
             // proxy-owned HWND.
             _stackPopoverContextMenuOpen = true;
             _stackPopoverSystemContextMenuOpen = true;
+            TryBringStackPopoverToForeground();
         }
 
         try

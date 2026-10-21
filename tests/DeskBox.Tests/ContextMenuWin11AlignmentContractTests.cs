@@ -219,9 +219,14 @@ public sealed class ContextMenuWin11AlignmentContractTests
         // 2026-10-16 crash pins: interface-method arrays default to
         // SAFEARRAY marshaling and the SafeArray marshaler hard-crashes the
         // CLR on IntPtr[]; Invoke requires a real IDataObject obtained via
-        // BindToHandler(BHID_DataObject).
+        // BindToHandler(BHID_DataObject). The 2026-10-20 AOT migration
+        // replaced the ComImport declaration with raw vtable delegates
+        // (classic RCW marshaling does not exist on NativeAOT — the retail
+        // Open With submenu shipped empty), so the array guard now pins the
+        // delegate shape: a plain IntPtr[] parameter never engages the
+        // SAFEARRAY marshaler.
         Assert.Contains(
-            "[MarshalAs(UnmanagedType.LPArray), Out] IntPtr[] rgelt",
+            "IntPtr self, uint celt, IntPtr[] rgelt, out uint pceltFetched",
             openWithInterop,
             StringComparison.Ordinal);
         Assert.Contains(

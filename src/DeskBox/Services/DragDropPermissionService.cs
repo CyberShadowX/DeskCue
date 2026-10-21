@@ -700,47 +700,101 @@ public static class DragDropPermissionService
 
     private const uint SldfRunAsUser = 0x0000_2000;
 
-    /// <summary>
-    /// Standalone COM reader for a shortcut's "Run as administrator" flag.
-    /// Deliberately independent of the TryReadShortcut backend split: the
-    /// flag lives in the link header (IShellLinkDataList::GetFlags /
-    /// SLDF_RUNAS_USER), not in target/arguments, and ComImport interop
-    /// compiles in NativeAOT (same shape as JumpListService). A .lnk with
-    /// this bit relaunches DeskBox elevated on every open, which the
-    /// registry-based AppCompat scan cannot see.
-    /// </summary>
-    [ComImport]
-    [Guid("00021401-0000-0000-C000-000000000046")]
-    private sealed class ShellLinkForFlagProbe
-    {
-    }
+    // Standalone COM reader for a shortcut's "Run as administrator" flag,
+    // deliberately independent of the TryReadShortcut backend split: the
+    // flag lives in the link header (IShellLinkDataList::GetFlags /
+    // SLDF_RUNAS_USER), not in target/arguments, and a .lnk with this bit
+    // relaunches DeskBox elevated on every open, which the registry-based
+    // AppCompat scan cannot see.
+    //
+    // Raw vtable slots throughout (see ComVtable): the old ComImport form
+    // died twice — the co-class constructor was an InvalidProgramException
+    // under NativeAOT (retail acceptance 2026-10-20), and the interface
+    // declaration was missing CopyDataBlock, so GetFlags sat on
+    // RemoveDataBlock's slot and never returned a flags value even on JIT
+    // (real order per ShObjIdl_core.h: AddDataBlock 3, CopyDataBlock 4,
+    // RemoveDataBlock 5, GetFlags 6, SetFlags 7).
+    //
+    // IPersistFile order per objidl.h: GetClassID 3, IsDirty 4, Load 5,
+    // Save 6, SaveCompleted 7, GetCurFile 8.
+    private static readonly Guid s_clsid_ShellLink =
+        new("00021401-0000-0000-C000-000000000046");
 
-    [ComImport]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    [Guid("45E2B4AE-B1C3-11D0-B92F-00A0C90312E1")]
-    private interface IShellLinkDataList
-    {
-        void AddDataBlock(IntPtr pDataBlock);
-        void RemoveDataBlock(IntPtr pDataBlock);
-        [PreserveSig]
-        int GetFlags(out uint dwFlags);
-        void SetFlags(uint dwFlags);
-    }
+    private static readonly Guid s_iid_IPersistFile =
+        new("0000010b-0000-0000-C000-000000000046");
+
+    private static readonly Guid s_iid_IShellLinkDataList =
+        new("45E2B4AE-B1C3-11D0-B92F-00A0C90312E1");
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate int PersistFileLoadInvoker(
+        IntPtr self,
+        [MarshalAs(UnmanagedType.LPWStr)] string fileName,
+        uint mode);
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate int ShellLinkDataListGetFlagsInvoker(
+        IntPtr self, out uint dwFlags);
 
     internal static bool TryGetShortcutRunAsFlag(string shortcutPath)
     {
+        IntPtr shellLink = IntPtr.Zero;
         try
         {
-            var shellLink = (IShellLinkDataList)(object)new ShellLinkForFlagProbe();
-            ((System.Runtime.InteropServices.ComTypes.IPersistFile)shellLink).Load(shortcutPath, 0);
-            return shellLink.GetFlags(out uint flags) == 0 &&
-                (flags & SldfRunAsUser) != 0;
+            Guid clsid = s_clsid_ShellLink;
+            Guid persistFileIid = s_iid_IPersistFile;
+            if (!ComVtable.TryCreateInProcessInstance(
+                    ref clsid,
+                    ref persistFileIid,
+                    out shellLink))
+            {
+                return false;
+            }
+
+            int loadHr = ComVtable.Slot<PersistFileLoadInvoker>(shellLink, 5)(
+                shellLink,
+                shortcutPath,
+                0);
+            if (loadHr < 0)
+            {
+                return false;
+            }
+
+            Guid dataListIid = s_iid_IShellLinkDataList;
+            int qiHr = ComVtable.QueryInterface(
+                shellLink,
+                ref dataListIid,
+                out IntPtr dataList);
+            if (qiHr < 0 || dataList == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            try
+            {
+                int flagsHr =
+                    ComVtable.Slot<ShellLinkDataListGetFlagsInvoker>(
+                        dataList,
+                        6)(dataList, out uint flags);
+                return flagsHr == 0 && (flags & SldfRunAsUser) != 0;
+            }
+            finally
+            {
+                Marshal.Release(dataList);
+            }
         }
         catch (Exception ex)
         {
             App.Log(
                 $"[DragDropPermission] Run-as flag probe failed for '{shortcutPath}': {ex.Message}");
             return false;
+        }
+        finally
+        {
+            if (shellLink != IntPtr.Zero)
+            {
+                Marshal.Release(shellLink);
+            }
         }
     }
 

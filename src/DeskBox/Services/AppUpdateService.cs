@@ -348,6 +348,7 @@ public sealed partial class AppUpdateService : IAppUpdateService
             LocalizationService.LanguageArabic => "arabic",
             LocalizationService.LanguageBengali => "bengali",
             LocalizationService.LanguageRussian => "russian",
+            LocalizationService.LanguageKorean => "korean",
             _ => null,
         };
     }

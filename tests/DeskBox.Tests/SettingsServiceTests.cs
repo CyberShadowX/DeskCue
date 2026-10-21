@@ -1606,10 +1606,13 @@ public sealed class SettingsServiceTests : IDisposable
     }
 
     [Fact]
-    public void WidgetResizeMinimum_IsFiftyByFifty()
+    public void WidgetResizeMinimum_IsTwentyFiveByTwentyFive()
     {
-        Assert.Equal(50, SettingsService.MinWidgetWidth);
-        Assert.Equal(50, SettingsService.MinWidgetHeight);
+        // Halved from 50 so expanded widgets resize smaller; must stay
+        // above WidgetElasticLayout.AbsoluteMinWidgetSizeDips (20) so the
+        // elastic projection never fights the gates.
+        Assert.Equal(25, SettingsService.MinWidgetWidth);
+        Assert.Equal(25, SettingsService.MinWidgetHeight);
     }
 
     [Theory]

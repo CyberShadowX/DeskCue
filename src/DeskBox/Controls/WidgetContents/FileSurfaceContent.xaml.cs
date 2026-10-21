@@ -5902,6 +5902,32 @@ public sealed partial class FileSurfaceContent :
                 "file-import-blocked-undisplayable"));
     }
 
+    /// <summary>
+    /// Reports a drop the native OLE layer accepted but whose deferred
+    /// extraction produced zero importable items (contract ⑫): the hover
+    /// promised a link the extraction could not honor, so the silence gets
+    /// an explanation instead of nothing. The source kept everything.
+    /// </summary>
+    internal void NotifyNativeDropZeroResult()
+    {
+        ShowFeedback(new(
+            _localizationService.Format("Widget.ImportZeroResult"),
+            WidgetFeedbackSeverity.Warning,
+            "file-import-zero-result"));
+    }
+
+    /// <summary>
+    /// Reports a drop refused because the import pipeline was still busy;
+    /// the source kept everything (contract ⑫).
+    /// </summary>
+    internal void NotifyNativeDropImportBusy()
+    {
+        ShowFeedback(new(
+            _localizationService.Format("Widget.ImportBlockedBusy"),
+            WidgetFeedbackSeverity.Warning,
+            "file-import-blocked-busy"));
+    }
+
     public void Dispose()
     {
         if (_isDisposed)

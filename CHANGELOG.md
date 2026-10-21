@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.5.9 - 2026-10-20
+
+### English
+
+#### New features
+
+- **Windows 11-native right-click menus for files.** An icon strip (cut/copy/rename/delete) plus Microsoft-terminology text rows; an "Open with" submenu lists real associated apps — including UWP ones — with their icons and a "Choose another app" fallback; the blank-area menu gains a "New" submenu (folder plus ShellNew-registered types) and separate "View"/"Sort by" submenus; native ZIP support covers compress (with tar variants and multi-select) and extract-all.
+- **Drag Shell locations into boxes to create shortcuts.** Dropping Recycle Bin, This PC, and similar Explorer locations onto a box now creates a working shortcut, with toast feedback when the source has nothing to offer or is busy.
+- **A redesigned first-run experience.** The onboarding opens with a three-piece logo assembly animation and a file-drop scene, and shows the real managed storage path with move/paste hints.
+- **Expanded widgets can shrink twice as small** — the minimum size drops from 50 to 25 DIP.
+- **Korean language support.** The interface, installer, and first-run experience now ship in Korean alongside the existing 12 languages; the system locale is honored automatically.
+
+#### Fixes
+
+- A short widget docked to the screen edge no longer jumps to a corner on every reveal: the "wildly offscreen" test now measures the work-area overlap, so edge-docked bars and strips are not mistaken for lost windows.
+- Widget positions survive display-topology changes: a stale layout snapshot can no longer overwrite the user's latest placement, and fallback "shelter" geometry is never promoted to authoritative intent.
+- Switching group tabs no longer leaves the capsule slow to expand on re-entry: the swapped-in member's expansion layout is warmed at urgent priority while the capsule settles, and the hover-expand wait has a real hard cap again.
+- Hover-revealed buttons are removed from the Tab order — an invisible focus ring can no longer trigger them with the spacebar.
+- Shortcut "Open file location" now opens the target's location; executables no longer offer an "Open with" the system would reject; the "Choose another app" dialog actually opens, and the app-enumeration crash behind it is fixed.
+- Right-click menu positioning lands on the cursor across edge, lower-screen, and centered scenarios without drifting or covering the icon.
+
+### 中文
+
+#### 新功能
+
+- **文件右键菜单换装 Windows 11 原生形态。** 图标条（剪切/复制/重命名/删除）+ 微软术语文字行；「打开方式」子菜单列出真实关联应用（含 UWP）并带图标，尾部「选择其他应用」兜底；空白处菜单新增「新建」子菜单（文件夹 + ShellNew 注册表同源项），「查看」「排序」拆分独立子菜单；原生 ZIP 支持压缩（含 tar 变体与多选打包）与全部解压缩。
+- **Shell 位置拖入格子即建快捷方式。** 回收站、此电脑等资源管理器位置拖到格子上直接创建可用快捷方式；来源无内容或正忙时给出 toast 提示。
+- **开屏引导全新改版。** 三块拼片 logo 组装动画开场，文件投放场景演示，展示真实托管存储路径及移动/粘贴提示。
+- **展开格子可缩得更小**——最小尺寸从 50 降至 25 DIP。
+- **新增韩语界面。** 界面、安装器与开屏引导新增韩语，与既有 12 种语言并列；系统区域设置为韩语时自动跟随。
+
+#### 修复
+
+- 贴屏幕边缘的矮格子不再每次唤出跳到角落：「严重离屏」判定改为按工作区交集测量，贴边的长条/窄条不再被误认成丢失窗口。
+- 格子位置扛得住显示器拓扑变化：过期布局快照无法再覆盖用户最近一次手动摆放，兜底"避难"几何也永不冒充用户意图。
+- 切换分组标签后胶囊不再迟迟不展开：换入成员的展开布局在胶囊落定期间以紧急优先级预热，悬停展开的等待重新有了真正的硬上限。
+- 悬停才显现的按钮移出 Tab 键序——不可见的焦点环不再能凭空格误触发。
+- 快捷方式「打开文件位置」改为打开目标所在位置；可执行文件不再展示注定被系统拒绝的「打开方式」；「选择其他应用」切实可用，其背后的枚举硬崩溃一并修复。
+- 右键菜单定位在贴边、下屏、居中等场景都落在光标处，不再漂移或遮盖图标。
+
 ## 1.5.8 - 2026-10-14
 
 ### English

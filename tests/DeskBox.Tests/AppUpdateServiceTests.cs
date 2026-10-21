@@ -496,6 +496,7 @@ public sealed class AppUpdateServiceTests : IDisposable
         { LocalizationService.LanguageArabic, "arabic" },
         { LocalizationService.LanguageBengali, "bengali" },
         { LocalizationService.LanguageRussian, "russian" },
+        { LocalizationService.LanguageKorean, "korean" },
     };
 
     [Theory]

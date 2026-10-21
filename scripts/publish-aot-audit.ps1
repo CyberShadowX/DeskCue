@@ -3344,6 +3344,7 @@ $stage5B4ARequiredLocalePatterns = @(
     '"ar-SA"',
     '"bn-BD"',
     '"ru-RU"',
+    '"ko-KR"',
     'Window.Settings.Title',
     'Search.Action.OpenSettings'
 )
