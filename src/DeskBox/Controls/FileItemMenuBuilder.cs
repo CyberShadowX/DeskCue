@@ -62,7 +62,7 @@ public static class FileItemMenuBuilder
         WidgetItem item,
         FileItemMenuActions actions)
     {
-        var flyout = CreateMenuWithMaterial();
+        var flyout = CreateMenu();
 
         AddOpenRow(flyout, item, actions);
         AddOpenWithRow(flyout, item, actions);
@@ -167,7 +167,7 @@ public static class FileItemMenuBuilder
     public static MenuFlyout CreateMultiSelectionFlyout(
         FileItemMenuActions actions)
     {
-        var flyout = CreateMenuWithMaterial();
+        var flyout = CreateMenu();
 
         flyout.Items.Add(CreateRow(
             actions,
@@ -368,13 +368,6 @@ public static class FileItemMenuBuilder
         // should matter (flip at screen edges, glued to the click point).
         ShouldConstrainToRootBounds = false
     };
-
-    private static MenuFlyout CreateMenuWithMaterial()
-    {
-        MenuFlyout flyout = CreateMenu();
-        MenuFlyoutMaterial.Attach(flyout);
-        return flyout;
-    }
 
     private static void AddCompressToZipRow(
         MenuFlyout flyout,

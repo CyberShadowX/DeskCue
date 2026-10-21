@@ -28,7 +28,6 @@ public partial class App
         var localization = LocalizationService;
         var contextMenu = new MenuFlyout();
         contextMenu.ShouldConstrainToRootBounds = false;
-        Controls.MenuFlyoutMaterial.Attach(contextMenu);
         var organizeDesktopItem = new MenuFlyoutItem
         {
             Text = localization.T("Tray.OrganizeDesktop"),

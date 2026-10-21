@@ -17,14 +17,6 @@
 
             <ResourceDictionary.ThemeDictionaries>
                                 <ResourceDictionary x:Key="Light">
-                    <!-- Menu first-paint base: fully opaque so the first frame
-                         reads complete with no bare text; MenuFlyoutMaterial
-                         fades it out after open to reveal the presenter's
-                         DesktopAcrylicBackdrop (HighContrast below never
-                         fades). The retired two-window flyout had no backdrop
-                         on its row window at all, which forced the permanent
-                         solid rollback. -->
-                    <SolidColorBrush x:Key="DeskBoxMenuFallbackBackgroundBrush" Color="#F3F3F3" />
                     <SolidColorBrush x:Key="WidgetDragHandleBrush" Color="#6B6B6B" />
                     <SolidColorBrush x:Key="WidgetOverlaySurfaceBrush" Color="#FBFCFD" />
                     <SolidColorBrush x:Key="WidgetOverlayInputSurfaceBrush" Color="#FFFFFF" />
@@ -52,7 +44,6 @@
                     <Thickness x:Key="ComboBoxDropdownContentMargin">4</Thickness>
                 </ResourceDictionary>
                                 <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush x:Key="DeskBoxMenuFallbackBackgroundBrush" Color="#2B2B2B" />
                     <SolidColorBrush x:Key="WidgetDragHandleBrush" Color="#D6D6D6" />
                     <SolidColorBrush x:Key="WidgetOverlaySurfaceBrush" Color="#2A3038" />
                     <SolidColorBrush x:Key="WidgetOverlayInputSurfaceBrush" Color="#222830" />
@@ -76,7 +67,6 @@
                      inert outside high contrast; HighContrast below owns the
                      system-owned contrast mapping. -->
                                 <ResourceDictionary x:Key="Default">
-                    <SolidColorBrush x:Key="DeskBoxMenuFallbackBackgroundBrush" Color="#2B2B2B" />
                     <SolidColorBrush x:Key="WidgetDragHandleBrush" Color="#D6D6D6" />
                     <SolidColorBrush x:Key="WidgetOverlaySurfaceBrush" Color="#2A3038" />
                     <SolidColorBrush x:Key="WidgetOverlayInputSurfaceBrush" Color="#222830" />
@@ -110,9 +100,6 @@
                      element ActualTheme (Light/Dark only) and are mirrored
                      solely to keep the four dictionaries' key sets identical. -->
                                 <ResourceDictionary x:Key="HighContrast">
-                    <SolidColorBrush x:Key="DeskBoxMenuFallbackBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
-                    <!-- HighContrast stays fully opaque on purpose: the
-                         acrylic mix must not thin system contrast colors. -->
                     <SolidColorBrush x:Key="WidgetDragHandleBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
                     <SolidColorBrush x:Key="WidgetOverlaySurfaceBrush" Color="{ThemeResource SystemColorWindowColor}" />
                     <SolidColorBrush x:Key="WidgetOverlayInputSurfaceBrush" Color="{ThemeResource SystemColorWindowColor}" />
@@ -264,13 +251,14 @@
             <Style TargetType="MenuFlyoutPresenter" BasedOn="{StaticResource DefaultMenuFlyoutPresenterStyle}">
                 <Setter Property="FontFamily" Value="{StaticResource DeskBoxMenuFontFamily}" />
                 <Setter Property="Padding" Value="{StaticResource DeskBoxMenuPresenterPadding}" />
-                <!-- Background is the opaque first-paint base; MenuFlyoutMaterial
-                     fades it out after open to reveal the acrylic backdrop set
-                     here. MenuFlyout is a single window, so the material covers
-                     the whole menu — the reason the CommandBarFlyout rollback
-                     could be lifted. The default SystemBackdrop is null, which
-                     is why the acrylic must be set explicitly. -->
-                <Setter Property="Background" Value="{ThemeResource DeskBoxMenuFallbackBackgroundBrush}" />
+                <!-- Direct acrylic: the explicit DesktopAcrylicBackdrop (the
+                     default SystemBackdrop is null, which reads as solid)
+                     plus the platform's own default menu background, which
+                     is a near-transparent tint designed to sit on a
+                     backdrop. No first-paint solid override — the retired
+                     two-stage fade was removed by choice (2026-10-21); if
+                     first-frame bare text ever shows up, the lever is a
+                     constant low-alpha Background here, not an animation. -->
                 <Setter Property="SystemBackdrop">
                     <Setter.Value>
                         <media:DesktopAcrylicBackdrop />

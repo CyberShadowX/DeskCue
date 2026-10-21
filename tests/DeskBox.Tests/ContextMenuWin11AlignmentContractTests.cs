@@ -142,23 +142,23 @@ public sealed class ContextMenuWin11AlignmentContractTests
     }
 
     [Fact]
-    public void MenuMaterial_TwoStageAcrylicReveal()
+    public void MenuMaterial_DirectAcrylic()
     {
-        // The two-stage material: an explicit DesktopAcrylicBackdrop on the
-        // implicit presenter style (the default SystemBackdrop is null,
-        // which reads as solid) plus the MenuFlyoutMaterial first-frame
-        // fade. The retired static ~90% brush approach could never reveal
-        // the backdrop — the fade is the mechanism.
+        // Direct acrylic: an explicit DesktopAcrylicBackdrop on the implicit
+        // presenter style (the default SystemBackdrop is null, which reads
+        // as solid) with the platform's own near-transparent default
+        // background. No first-paint solid override and no reveal animation
+        // — both retired by choice (2026-10-21); if first-frame bare text
+        // ever shows up, the lever is a constant low-alpha Background, not
+        // an animation.
         string appXaml = ReadRepositoryFile("src/DeskBox/App.xaml");
         Assert.Contains(
             "<media:DesktopAcrylicBackdrop />",
             appXaml,
             StringComparison.Ordinal);
-        string builder = ReadRepositoryFile(
-            "src/DeskBox/Controls/FileItemMenuBuilder.cs");
-        Assert.Contains(
-            "MenuFlyoutMaterial.Attach(flyout);",
-            builder,
+        Assert.DoesNotContain(
+            "DeskBoxMenuFallbackBackgroundBrush",
+            appXaml,
             StringComparison.Ordinal);
     }
 
