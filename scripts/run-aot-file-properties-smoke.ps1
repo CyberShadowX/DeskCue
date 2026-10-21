@@ -581,9 +581,9 @@ try {
             [long]$dialog.rootOwnerWindowHandle -or
         -not [bool]$dialog.rootOwner.isWindow -or
         [string]$dialog.className -cne "#32770" -or
-        -not ([string]$dialog.title).Contains(
+        -not (([string]$dialog.title).IndexOf(
             $targetName,
-            [System.StringComparison]::OrdinalIgnoreCase) -or
+            [System.StringComparison]::OrdinalIgnoreCase) -ge 0) -or
         -not [bool]$dialog.visibleBeforeClose -or
         -not [bool]$dialog.closePosted -or
         -not [bool]$dialog.windowDestroyedAfterClose) {
