@@ -142,6 +142,27 @@ public sealed class ContextMenuWin11AlignmentContractTests
     }
 
     [Fact]
+    public void MenuMaterial_TwoStageAcrylicReveal()
+    {
+        // The two-stage material: an explicit DesktopAcrylicBackdrop on the
+        // implicit presenter style (the default SystemBackdrop is null,
+        // which reads as solid) plus the MenuFlyoutMaterial first-frame
+        // fade. The retired static ~90% brush approach could never reveal
+        // the backdrop — the fade is the mechanism.
+        string appXaml = ReadRepositoryFile("src/DeskBox/App.xaml");
+        Assert.Contains(
+            "<media:DesktopAcrylicBackdrop />",
+            appXaml,
+            StringComparison.Ordinal);
+        string builder = ReadRepositoryFile(
+            "src/DeskBox/Controls/FileItemMenuBuilder.cs");
+        Assert.Contains(
+            "MenuFlyoutMaterial.Attach(flyout);",
+            builder,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ContentAreaMenu_SplitsViewAndSort_AndAddsNewSubmenu()
     {
         string surface = ReadRepositoryFile(

@@ -985,6 +985,7 @@ public sealed partial class FileSurfaceContent
             // grid window is too small to host the menu near its edges.
             ShouldConstrainToRootBounds = false
         };
+        Controls.MenuFlyoutMaterial.Attach(flyout);
         string? mappedFolderPath = ViewModel.CurrentFolderPath;
         bool hasMappedFolder =
             !string.IsNullOrWhiteSpace(mappedFolderPath);
@@ -1575,6 +1576,7 @@ public sealed partial class FileSurfaceContent
             // Monitor-bounds-only placement, same as the other grid menus.
             ShouldConstrainToRootBounds = false
         };
+        Controls.MenuFlyoutMaterial.Attach(flyout);
         MenuFlyoutItem toggle = new()
         {
             Text = T(stack.IsExpanded
