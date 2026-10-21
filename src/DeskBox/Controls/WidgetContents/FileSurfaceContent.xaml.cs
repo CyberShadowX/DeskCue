@@ -3359,6 +3359,87 @@ public sealed partial class FileSurfaceContent :
         _dragPayloadSnapshot?.IsDeskBoxFileDrag == true;
 
     /// <summary>
+    /// Recycles dropped files for the Recycle Bin namespace tile — the tile's
+    /// native desktop verb inside the grid. The Shell delete asks its own
+    /// "move to the recycle bin?" confirmation per the user's Explorer
+    /// settings; declining leaves every file untouched.
+    /// </summary>
+    private async Task DeleteDroppedFilesForBinAsync(
+        IReadOnlyList<string> paths,
+        string binShortcutPath)
+    {
+        try
+        {
+            FileDeleteBatchResult result =
+                await ViewModel.DeleteDroppedPathsForBinAsync(
+                    paths
+                        .Where(path => !string.Equals(
+                            path,
+                            binShortcutPath,
+                            StringComparison.OrdinalIgnoreCase))
+                        .ToArray(),
+                    _hostWindowHandle);
+            UpdateEmptyState();
+            if (result.DeletedCount > 0)
+            {
+                // The bin gained contents: its state-aware icon must
+                // re-render even though the shortcut file never changed.
+                await RefreshRecycleBinItemIconsAsync();
+                ShowFeedback(new WidgetFeedbackRequest(
+                    _localizationService.Format(
+                        "Widget.MovedToRecycleBin",
+                        result.DeletedCount),
+                    WidgetFeedbackSeverity.Success,
+                    "recycle-bin-drop"));
+            }
+            else if (result.Failures.Count > 0)
+            {
+                ShowFeedback(new WidgetFeedbackRequest(
+                    _localizationService.Format(
+                        "Widget.DeletePartialResult",
+                        result.DeletedCount,
+                        result.Failures.Count,
+                        result.Failures[0].Name),
+                    WidgetFeedbackSeverity.Error,
+                    "recycle-bin-drop-partial"));
+            }
+        }
+        catch (Exception ex)
+        {
+            App.Log(
+                $"[RecycleBinDrop] delete failed widget={WidgetId}: {ex.Message}");
+            ShowFeedback(new WidgetFeedbackRequest(
+                T("Widget.Error.OperationIncomplete"),
+                WidgetFeedbackSeverity.Warning,
+                "recycle-bin-drop"));
+        }
+    }
+
+    /// <summary>
+    /// Re-extracts the icons of every Recycle Bin namespace tile in this
+    /// surface — the bin renders its empty or full graphic for the same
+    /// PIDL, and the .lnk file never changes on state transitions, so the
+    /// caches (and the freshness ledger) never invalidate on their own.
+    /// </summary>
+    private async Task RefreshRecycleBinItemIconsAsync()
+    {
+        try
+        {
+            List<WidgetItem> binItems = ViewModel.Items
+                .Where(item => NamespaceShortcutHelper.ResolveKind(item) ==
+                    NamespaceShortcutKind.RecycleBin)
+                .ToList();
+            await ViewModel.RefreshItemIconsAsync(binItems);
+        }
+        catch (Exception ex)
+        {
+            App.LogVerbose(
+                $"[RecycleBinDrop] icon refresh failed widget={WidgetId}: " +
+                ex.Message);
+        }
+    }
+
+    /// <summary>
     /// Uses the OLE IDropTarget screen coordinate as a fallback for routed
     /// DragLeave and external insertion preview. WinUI can omit or delay a
     /// child leave while the pointer moves quickly or the host is resizing;
@@ -3404,6 +3485,17 @@ public sealed partial class FileSurfaceContent :
         {
             ClearExternalDropPreviewPlacement();
             ApplyNativeStackDropTarget(nativeStack);
+            return;
+        }
+
+        // The Recycle Bin namespace tile is a delete drop target; it rides
+        // the same child-target visual the launch tiles use.
+        if (nativeTarget is { } nativeBin &&
+            NamespaceShortcutHelper.ResolveKind(nativeBin) ==
+                NamespaceShortcutKind.RecycleBin)
+        {
+            ClearExternalDropPreviewPlacement();
+            ApplyNativeFolderDropTarget(nativeBin);
             return;
         }
 
@@ -4110,6 +4202,20 @@ public sealed partial class FileSurfaceContent :
         if (_isDisposed || _isImportBusy)
         {
             return false;
+        }
+
+        // The Recycle Bin namespace tile owns its drop: recycle the files
+        // instead of importing them. Drag-session visuals clear before the
+        // Shell confirmation can go modal — the OLE Drop never sends a
+        // DragLeave after the fact, so a hover state left here would strand
+        // until the next pointer pass (the 1.5.9 popover red-tint lesson).
+        if (targetItem is { } binTile &&
+            NamespaceShortcutHelper.ResolveKind(binTile) ==
+                NamespaceShortcutKind.RecycleBin)
+        {
+            ClearDragSessionVisualState();
+            await DeleteDroppedFilesForBinAsync(paths, binTile.Path);
+            return true;
         }
 
         NoteImportStartedForProtocol("native");

@@ -294,6 +294,22 @@ public sealed partial class ContentWidgetWindow
                 : new NativeDropDescriptionText("%1", openWith);
         }
 
+        // The Recycle Bin namespace tile recycles the drop: its description
+        // must say so, or the generic per-widget move/copy caption would
+        // advertise an import that never happens.
+        if (CurrentContent is FileWidgetContentAdapter &&
+            _nativeFileDropItemTarget is { } descriptionBinCandidate &&
+            ItemDropBehaviorPolicy.Resolve(descriptionBinCandidate) ==
+                ItemDropBehavior.RecycleBinDelete)
+        {
+            string binMessage = ToShellDropDescriptionMessage(
+                App.Current.LocalizationService.T(
+                    "Widget.DropOnRecycleBinHint"));
+            return binMessage.Contains("%1", StringComparison.Ordinal)
+                ? new NativeDropDescriptionText(binMessage, string.Empty)
+                : new NativeDropDescriptionText("%1", binMessage);
+        }
+
         if (CurrentContent is FileWidgetContentAdapter &&
             _nativeFileDropItemTarget is WidgetStackItem stack)
         {
@@ -888,7 +904,8 @@ public sealed partial class ContentWidgetWindow
                 : ItemDropBehavior.None;
             WidgetItem? nativeTarget = hitBehavior is
                 ItemDropBehavior.FolderImport or
-                ItemDropBehavior.StackImport
+                ItemDropBehavior.StackImport or
+                ItemDropBehavior.RecycleBinDelete
                     ? hitItem
                     : null;
             _nativeFileDropItemTarget = nativeTarget;
@@ -1850,7 +1867,8 @@ public sealed partial class ContentWidgetWindow
         return item is { } candidate &&
             ItemDropBehaviorPolicy.Resolve(candidate) is
                 ItemDropBehavior.FolderImport or
-                ItemDropBehavior.StackImport
+                ItemDropBehavior.StackImport or
+                ItemDropBehavior.RecycleBinDelete
             ? item
             : null;
     }

@@ -1595,6 +1595,7 @@
   "Widget.DeleteFolderNoteMany": "इसमें {0} फ़ोल्डर शामिल हैं। फ़ोल्डर की सामग्री भी रीसायकल बिन में जाएगी।",
   "Widget.MoveToRecycleBin": "हटाएँ",
   "Widget.EmptyRecycleBin": "रीसायकल बिन खाली करें",
+  "Widget.DropOnRecycleBinHint": "रीसायकल बिन में ले जाएँ",
   "Widget.MovedToRecycleBin": "{0} आइटम को रीसायकल बिन में ले जाया गया",
   "Widget.PermanentlyDeletedCount": "{0} आइटम स्थायी रूप से हटाए गए",
   "Widget.DeletePartialResult": "{0} आइटम हटाए गए; {1} नहीं हट सके (उदाहरण: {2})।",

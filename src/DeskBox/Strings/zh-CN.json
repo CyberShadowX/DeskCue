@@ -1593,6 +1593,7 @@
   "Settings.QuickCapture.ClipboardReason.Enabled": "等待复制内容",
   "Widget.MoveToRecycleBin": "删除",
   "Widget.EmptyRecycleBin": "清空回收站",
+  "Widget.DropOnRecycleBinHint": "移入回收站",
   "Widget.Stack.UseDefaultGrouping": "使用默认分组方式",
   "Settings.Todo.Tabs.Title": "顶部分类",
   "Todo.ItemsLeft": "剩余 {0} 项",

@@ -1595,6 +1595,7 @@
   "Widget.DeleteFolderNoteMany": "Среди выбранных есть папки ({0}); их содержимое тоже попадёт в корзину.",
   "Widget.MoveToRecycleBin": "Удалить",
   "Widget.EmptyRecycleBin": "Очистить корзину",
+  "Widget.DropOnRecycleBinHint": "Переместить в корзину",
   "Widget.MovedToRecycleBin": "Перемещено в корзину: {0}",
   "Widget.PermanentlyDeletedCount": "Безвозвратно удалено элементов: {0}",
   "Widget.DeletePartialResult": "Удалено элементов: {0}; не удалось удалить: {1} (например, {2}).",

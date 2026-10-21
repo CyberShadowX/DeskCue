@@ -1583,6 +1583,7 @@
   "Widget.DeleteFolderNoteMany": "{0} 個のフォルダーが含まれます。フォルダーの内容物もごみ箱に移動されます。",
   "Widget.MoveToRecycleBin": "削除",
   "Widget.EmptyRecycleBin": "ごみ箱を空にする",
+  "Widget.DropOnRecycleBinHint": "ごみ箱に移動します",
   "Widget.MovedToRecycleBin": "{0} 件のアイテムをごみ箱に移動しました",
   "Widget.PermanentlyDeletedCount": "{0} 件を完全に削除しました",
   "Widget.DeletePartialResult": "{0} 件を削除しました。{1} 件は削除できませんでした（例: {2}）。",

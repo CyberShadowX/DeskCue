@@ -847,7 +847,13 @@ public sealed partial class FileSurfaceContent
                     T("Widget.Error.OperationIncomplete"),
                     WidgetFeedbackSeverity.Warning,
                     "empty-recycle-bin"));
+                return;
             }
+
+            // The bin just emptied: its state-aware icon (empty vs. full
+            // graphic for the same PIDL) must re-render even though the
+            // shortcut file never changed.
+            await RefreshRecycleBinItemIconsAsync();
         }
         catch (Exception ex)
         {

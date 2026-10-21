@@ -1583,6 +1583,7 @@
   "Widget.DeleteFolderNoteMany": "Isso inclui {0} pasta(s). O conteúdo da pasta também irá para a Lixeira.",
   "Widget.MoveToRecycleBin": "Excluir",
   "Widget.EmptyRecycleBin": "Esvaziar Lixeira",
+  "Widget.DropOnRecycleBinHint": "Mover para a Lixeira",
   "Widget.MovedToRecycleBin": "{0} item(ns) movido(s) para a Lixeira",
   "Widget.PermanentlyDeletedCount": "{0} item(ns) excluído(s) permanentemente",
   "Widget.DeletePartialResult": "{0} item(ns) excluído(s); não foi possível excluir {1} (por exemplo, {2}).",

@@ -314,6 +314,49 @@ public partial class WidgetViewModel
     }
 
     /// <summary>
+    /// Re-extracts the icons of specific items, bypassing the icon caches.
+    /// For state-aware namespace icons (the Recycle Bin renders its empty or
+    /// full graphic for the same PIDL) the file never changes, so neither
+    /// the freshness ledger nor the cache key ever invalidates on its own —
+    /// emptying the bin must drop the cached bytes explicitly.
+    /// </summary>
+    internal async Task RefreshItemIconsAsync(
+        IEnumerable<WidgetItem> items)
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        List<WidgetItem> targets = items
+            .Where(item => item is not null &&
+                !string.IsNullOrWhiteSpace(item.Path) &&
+                Items.Contains(item))
+            .Distinct()
+            .ToList();
+        if (targets.Count == 0)
+        {
+            return;
+        }
+
+        foreach (WidgetItem item in targets)
+        {
+            await _fileService.ClearIconCacheAsync(
+                item.Path,
+                _hideShortcutArrowOverlay,
+                _showImageFilesAsIcons,
+                resetTransientFailures: true);
+            item.Icon = null;
+            // Unstamped icons compare stale in the refresh merge, so a
+            // redundant re-fetch after this extraction is the steady state.
+            item.HydratedIconFileSize = -1;
+            item.HydratedIconStamp = default;
+        }
+
+        StartItemHydration();
+    }
+
+    /// <summary>
     /// True while an item-hydration pass (icons, folder counts, shortcut
     /// targets, shell kinds) is still running for the current items.
     /// Callers that treat "no icon loaded yet" as a failure must wait for

@@ -1595,6 +1595,7 @@
   "Widget.DeleteFolderNoteMany": "এর মধ্যে রয়েছে {0} ফোল্ডার(গুলি)। ফোল্ডারের বিষয়বস্তু রিসাইকেল বিনেও যাবে।",
   "Widget.MoveToRecycleBin": "মুছুন",
   "Widget.EmptyRecycleBin": "রিসাইকেल বिन খালি করুন",
+  "Widget.DropOnRecycleBinHint": "রিসাইকেল বিনে সরান",
   "Widget.MovedToRecycleBin": "রিসাইকেল বিনে {0} আইটেম(গুলি) সরানো হয়েছে",
   "Widget.PermanentlyDeletedCount": "{0}টি আইটেম স্থায়ীভাবে মুছে ফেলা হয়েছে",
   "Widget.DeletePartialResult": "{0}টি আইটেম মুছে ফেলা হয়েছে; {1}টি মুছতে পারেনি (যেমন {2})।",

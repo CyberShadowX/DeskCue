@@ -377,6 +377,7 @@ public sealed class ContextMenuWin11AlignmentContractTests
             "Widget.OpenWith.ChooseApp",
             "Widget.ExtractAll",
             "Widget.EmptyRecycleBin",
+            "Widget.DropOnRecycleBinHint",
             "Widget.CompressTo",
             "Widget.CompressTo.Zip",
             "Widget.CompressTo.Tar",

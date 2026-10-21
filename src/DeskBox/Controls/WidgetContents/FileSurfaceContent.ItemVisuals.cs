@@ -171,6 +171,12 @@ public sealed partial class FileSurfaceContent
     {
         if (!TryGetFolderDropTarget(sender, out Border border, out WidgetItem targetFolder))
         {
+            if (TryGetRecycleBinDropTarget(sender, out Border binBorder, out WidgetItem binTile))
+            {
+                HandleRecycleBinDragOver(e, binBorder, binTile);
+                return;
+            }
+
             TryHandleLaunchTargetDragOver(sender, e);
             return;
         }
@@ -260,6 +266,15 @@ public sealed partial class FileSurfaceContent
     {
         if (!TryGetFolderDropTarget(sender, out Border border, out _))
         {
+            // A recycle-bin tile rides the folder drop-target visual, and the
+            // root feedback path only clears the recorded folder target: the
+            // bin must drop its highlight when the pointer really leaves.
+            if (TryGetRecycleBinDropTarget(sender, out Border binBorder, out _) &&
+                !IsPointerInsideDropElement(binBorder, e))
+            {
+                ClearFolderDropTarget();
+            }
+
             // A shortcut tile stays the recorded release target while the
             // pointer is still over it: refreshing a ListView container during
             // the real-time reorder preview can raise DragLeave even though the
@@ -295,6 +310,12 @@ public sealed partial class FileSurfaceContent
     {
         if (!TryGetFolderDropTarget(sender, out _, out WidgetItem targetFolder))
         {
+            if (TryGetRecycleBinDropTarget(sender, out _, out WidgetItem binTile))
+            {
+                await HandleRecycleBinDropAsync(e, binTile);
+                return;
+            }
+
             await TryHandleLaunchTargetDropAsync(sender, e);
             return;
         }
@@ -967,6 +988,119 @@ public sealed partial class FileSurfaceContent
         border = null!;
         launchTarget = null!;
         return false;
+    }
+
+    private static bool TryGetRecycleBinDropTarget(
+        object sender,
+        out Border border,
+        out WidgetItem binTile)
+    {
+        if (sender is FileItemSurface surface &&
+            surface.DataContext is WidgetItem item &&
+            ItemDropBehaviorPolicy.Resolve(item) ==
+                ItemDropBehavior.RecycleBinDelete)
+        {
+            border = surface.InteractiveBorder;
+            binTile = item;
+            return true;
+        }
+
+        border = null!;
+        binTile = null!;
+        return false;
+    }
+
+    /// <summary>
+    /// DragOver on the Recycle Bin namespace tile: the bin's own desktop
+    /// verb inside the grid. The tile claims the gesture (cancelling any
+    /// root insertion preview like the folder target) and advertises a move
+    /// so the release recycles the dragged files.
+    /// </summary>
+    private void HandleRecycleBinDragOver(
+        DragEventArgs e,
+        Border binBorder,
+        WidgetItem binTile)
+    {
+        DragPayloadSnapshot payload = GetDragPayload(e.DataView);
+        if (payload.IsStackPopoverMemberDrag)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        // An explicit destination cancels any insertion preview the root
+        // produced, so DragItemsCompleted cannot commit a stale reorder.
+        if (_isSurfaceReorderDragActive ||
+            _surfaceReorderInsertionIndex >= 0)
+        {
+            PersistSurfaceReorder();
+        }
+        ClearExternalDropPreviewPlacement();
+
+        if (_isImportBusy ||
+            !payload.HasSurfacePathData ||
+            payload.Paths.Contains(
+                binTile.Path,
+                StringComparer.OrdinalIgnoreCase))
+        {
+            // Dropping the bin on itself, or nothing usable to recycle.
+            e.AcceptedOperation = DataPackageOperation.None;
+            ClearFolderDropTarget();
+            return;
+        }
+
+        e.AcceptedOperation =
+            e.AllowedOperations.HasFlag(DataPackageOperation.Move)
+                ? DataPackageOperation.Move
+                : e.AllowedOperations.HasFlag(DataPackageOperation.Copy)
+                    ? DataPackageOperation.Copy
+                    : DataPackageOperation.None;
+        if (e.AcceptedOperation == DataPackageOperation.None)
+        {
+            ClearFolderDropTarget();
+            return;
+        }
+
+        SetFolderDropTarget(binBorder);
+        if (payload.IsDeskBoxFileDrag)
+        {
+            ApplyDeskBoxFileDragFeedback(
+                e,
+                e.AcceptedOperation,
+                T("Widget.DropOnRecycleBinHint"));
+        }
+    }
+
+    private async Task HandleRecycleBinDropAsync(
+        DragEventArgs e,
+        WidgetItem binTile)
+    {
+        e.Handled = true;
+        // The destination deletes; never complete the drag with a transfer
+        // result. Source-side cleanup is watcher-driven, the same contract
+        // folder imports keep after their own transfer.
+        e.AcceptedOperation = DataPackageOperation.None;
+        ClearFolderDropTarget();
+        PersistSurfaceReorder();
+        ApplyDropVisual(FileDropVisualState.None);
+
+        DragPayloadSnapshot payload = GetDragPayload(e.DataView);
+        TraceTargetDropEntered("recycle-bin", payload, e);
+        if (_isImportBusy || !payload.HasSurfacePathData)
+        {
+            ResetDragPayloadCache();
+            return;
+        }
+
+        var deferral = e.GetDeferral();
+        try
+        {
+            await DeleteDroppedFilesForBinAsync(payload.Paths, binTile.Path);
+        }
+        finally
+        {
+            deferral.Complete();
+        }
     }
 
     /// <summary>
