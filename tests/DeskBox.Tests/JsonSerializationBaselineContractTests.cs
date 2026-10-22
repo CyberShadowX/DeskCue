@@ -13,7 +13,7 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void ProductionInventory_IsFrozenAtFortyOneFilesAndNinetyFiveCalls()
+    public void ProductionInventory_IsFrozenAtFortyOneFilesAndNinetySixCalls()
     {
         var expected = new Dictionary<string, int>(StringComparer.Ordinal)
         {
@@ -29,7 +29,9 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             ["src/DeskBox/App.AotTodoNotificationLifecycleSmoke.cs"] = 1,
             ["src/DeskBox/App.AotTodoNotificationActivationSmoke.cs"] = 1,
             ["src/DeskBox/App.AotTodoNotificationForwardingSmoke.cs"] = 1,
-            ["src/DeskBox/Services/AppUpdateService.cs"] = 2,
+            // 3: update-check manifest, GitHub release fallback, and the
+            // display-only content-manifest fetch (release-notes window).
+            ["src/DeskBox/Services/AppUpdateService.cs"] = 3,
             ["src/DeskBox/Services/CitySearchService.cs"] = 1,
             ["src/DeskBox/Services/DeskBoxAttachmentHealthService.cs"] = 1,
             ["src/DeskBox/Services/DeskBoxDataBackupService.cs"] = 12,
@@ -83,7 +85,7 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
         }
 
         Assert.Equal(41, actual.Count);
-        Assert.Equal(95, actual.Values.Sum());
+        Assert.Equal(96, actual.Values.Sum());
 
         string[] expectedContextOwners =
         [
@@ -168,7 +170,6 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
 
         string[] expectedTypeInfoReferences =
         [
-            "AppUpdateJsonContext.Default.UpdateManifest",
             "AppUpdateJsonContext.Default.GitHubRelease",
             "WeatherJsonContext.Default.PredefinedCityList",
             "WeatherJsonContext.Default.GeocodingResult",
@@ -190,6 +191,12 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             Assert.Single(
                 Regex.Matches(allPhaseOneSources, Regex.Escape(reference)).Cast<Match>());
         }
+
+        // The update manifest deserializes twice: once for the installer
+        // check and once for the display-only content fetch.
+        Assert.Equal(
+            2,
+            Regex.Matches(allPhaseOneSources, Regex.Escape("AppUpdateJsonContext.Default.UpdateManifest")).Count);
 
         Assert.DoesNotContain("JsonSerializerOptions", allPhaseOneSources, StringComparison.Ordinal);
         Assert.DoesNotContain(

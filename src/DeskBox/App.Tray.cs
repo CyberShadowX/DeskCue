@@ -1347,6 +1347,7 @@ public partial class App
         var settingsWindow = _settingsWindow ?? CreateSettingsWindow();
         settingsWindow.ShowWindow();
         settingsWindow.ShowSection("About");
+        settingsWindow.BringUpdateStatusIntoView();
     }
 
     private void OpenManagedStorageFromTray()

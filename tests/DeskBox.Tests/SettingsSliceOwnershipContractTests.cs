@@ -42,7 +42,10 @@ public sealed class SettingsSliceOwnershipContractTests
         // 238 = batch-51 level (236) plus widgetGroupSwitchAnimationStyle
         // (group member-switch transition style) plus
         // musicHideTimelineWhenUnavailable (music timeline-row hiding).
-        Assert.Equal(238, FacadeProperties.Length);
+        // +4 = showReleaseNotesAfterUpdate + lastRunVersion + autoDownloadUpdates
+        // + showUpdateToastNotification (post-update release-notes window and
+        // background auto-download/toast toggles).
+        Assert.Equal(242, FacadeProperties.Length);
 
         foreach (PropertyInfo facade in FacadeProperties)
         {
@@ -228,7 +231,7 @@ public sealed class SettingsSliceOwnershipContractTests
         ["src/DeskBox/App.DiagnosticsBundle.cs"] = 6,
         ["src/DeskBox/App.ImmediateHiddenWorkingSetTrim.cs"] = 2,
         ["src/DeskBox/App.Tray.cs"] = 3,
-        ["src/DeskBox/App.xaml.cs"] = 28,
+        ["src/DeskBox/App.xaml.cs"] = 35,
         ["src/DeskBox/Controls/DesktopOrganizationPreviewCard.xaml.cs"] = 11,
         ["src/DeskBox/Controls/DesktopOrganizationTaskView.Appearance.cs"] = 1,
         ["src/DeskBox/Controls/DesktopOrganizationTaskView.xaml.cs"] = 1,
@@ -368,7 +371,7 @@ public sealed class SettingsSliceOwnershipContractTests
         ["src/DeskBox/ViewModels/SettingsViewModel.HotkeyAndStorage.cs"] = 6,
         ["src/DeskBox/ViewModels/SettingsViewModel.RuntimeDiagnostics.cs"] = 1,
         ["src/DeskBox/ViewModels/SettingsViewModel.SettingsSync.cs"] = 7,
-        ["src/DeskBox/ViewModels/SettingsViewModel.cs"] = 16,
+        ["src/DeskBox/ViewModels/SettingsViewModel.cs"] = 19,
         ["src/DeskBox/ViewModels/TodoWidgetViewModel.DetailAndAttachments.cs"] = 1,
         ["src/DeskBox/ViewModels/TodoWidgetViewModel.FilteringAndAppearance.cs"] = 21,
         ["src/DeskBox/ViewModels/TodoWidgetViewModel.cs"] = 12,
