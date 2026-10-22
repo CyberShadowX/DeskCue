@@ -520,11 +520,14 @@ public sealed class ModuleBoundaryContractTests
         // folder after moving its contents back to the desktop (#112
         // migration rollback work in progress).
         ["src/DeskBox/Services/WidgetManager.Storage.cs"] = 5,
-        // 4: the title-icon asset store manages its own app-data surface
+        // 6: the title-icon asset store manages its own app-data surface
         // only (data/widget-assets): stale-replace delete, icon delete,
-        // widget-asset directory cleanup, and the recent-emoji tmp+move
-        // atomic write. No user-file mutation.
-        ["src/DeskBox/Services/WidgetTitleIconAssetStore.cs"] = 4,
+        // widget-asset directory cleanup, the recent-emoji tmp+move atomic
+        // write, and the copy's tmp+move atomic replace plus its temp
+        // cleanup — the copy can no longer truncate the live file under a
+        // concurrent backup snapshot or streamed decode. No user-file
+        // mutation.
+        ["src/DeskBox/Services/WidgetTitleIconAssetStore.cs"] = 6,
         ["src/DeskBox/ViewModels/TodoWidgetViewModel.DetailAndAttachments.cs"] = 1,
         // 2026-10-14: the VirtualDrops temp-root delete moved verbatim from
         // ContentWidgetWindow.NativeDragDrop.cs (entry removed) into the
