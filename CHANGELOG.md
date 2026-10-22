@@ -6,7 +6,9 @@
 
 #### New features
 
-- **Windows 11-native right-click menus for files.** An icon strip (cut/copy/rename/delete) plus Microsoft-terminology text rows; an "Open with" submenu lists real associated apps — including UWP ones — with their icons and a "Choose another app" fallback; the blank-area menu gains a "New" submenu (folder plus ShellNew-registered types) and separate "View"/"Sort by" submenus; native ZIP support covers compress (with tar variants and multi-select) and extract-all.
+- **A recovery offer when your configuration gets wiped.** If DeskBox starts with missing or corrupted settings and a valid automatic backup survived, a one-time prompt shows the backup's date and widget count and offers to restore it or start fresh; closing the prompt also counts as starting fresh, and the question never returns. Until you choose, scheduled automatic backups stay paused (manual "back up now" keeps working, and the pending backup cannot be pushed out of retention) with a reminder at most once per app run, and the settings page now discloses that snapshots in a custom backup folder must be restored manually after a wipe.
+- **Windows 11-native right-click menus for files.** A single-column menu whose rows each carry an inline icon, laid out in Explorer's classic order and rendered directly on acrylic (the tray menu shares the material); an "Open with" submenu lists real associated apps — including UWP ones — with their icons and a "Choose another app" fallback; the blank-area menu gains a "New" submenu (folder plus ShellNew-registered types) and separate "View"/"Sort by" submenus; native ZIP support covers compress (with tar variants and multi-select) and extract-all. Namespace shortcuts (This PC, Recycle Bin, Control Panel) inherit their target's verbs — the Recycle Bin shortcut can be emptied right from its menu (greyed out when already empty), every item gains "Create shortcut", and options Windows never offered there (Open file location, Compress) are hidden.
+- **The Recycle Bin shortcut in a box accepts drops as deletes.** Drag files onto it — from the desktop, Explorer, or another box — and they go to the Recycle Bin with the same confirmation Windows itself would show; the shortcut's empty/full icon updates right after you empty the bin or drop something in.
 - **Drag Shell locations into boxes to create shortcuts.** Dropping Recycle Bin, This PC, and similar Explorer locations onto a box now creates a working shortcut, with toast feedback when the source has nothing to offer or is busy.
 - **A redesigned first-run experience.** The onboarding opens with a three-piece logo assembly animation and a file-drop scene, and shows the real managed storage path with move/paste hints.
 - **Expanded widgets can shrink twice as small** — the minimum size drops from 50 to 25 DIP.
@@ -14,18 +16,23 @@
 
 #### Fixes
 
+- Drags no longer freeze the app in callback-heavy moments — tray commands, virtual-file drops, shortcut launch drags; the right-click drag chooser no longer loses its "Open with" entry, and drag-launched shortcuts only accept command lines that point to files on disk.
 - A short widget docked to the screen edge no longer jumps to a corner on every reveal: the "wildly offscreen" test now measures the work-area overlap, so edge-docked bars and strips are not mistaken for lost windows.
 - Widget positions survive display-topology changes: a stale layout snapshot can no longer overwrite the user's latest placement, and fallback "shelter" geometry is never promoted to authoritative intent.
 - Switching group tabs no longer leaves the capsule slow to expand on re-entry: the swapped-in member's expansion layout is warmed at urgent priority while the capsule settles, and the hover-expand wait has a real hard cap again.
 - Hover-revealed buttons are removed from the Tab order — an invisible focus ring can no longer trigger them with the spacebar.
 - Shortcut "Open file location" now opens the target's location; executables no longer offer an "Open with" the system would reject; the "Choose another app" dialog actually opens, and the app-enumeration crash behind it is fixed.
 - Right-click menu positioning lands on the cursor across edge, lower-screen, and centered scenarios without drifting or covering the icon.
+- Revealing a widget shortly after hiding it no longer stutters: the memory trim that follows a hide now waits 30 seconds instead of 3 and skips small gains, so a quick hide-and-show round trip stops paying the quarter-second page-in.
+- Idle memory reclaim behaves again: the first trim of each idle stretch lands seconds after you stop interacting, and repeat trims inside the same stretch back off to a five-minute safety cadence — ending the twenty-second trim-and-refault churn that could sit on a noticeable slice of a CPU core with widgets on screen.
 
 ### 中文
 
 #### 新功能
 
-- **文件右键菜单换装 Windows 11 原生形态。** 图标条（剪切/复制/重命名/删除）+ 微软术语文字行；「打开方式」子菜单列出真实关联应用（含 UWP）并带图标，尾部「选择其他应用」兜底；空白处菜单新增「新建」子菜单（文件夹 + ShellNew 注册表同源项），「查看」「排序」拆分独立子菜单；原生 ZIP 支持压缩（含 tar 变体与多选打包）与全部解压缩。
+- **配置被清空后的恢复提议。** DeskBox 启动时若发现设置缺失或损坏、且有一份有效的自动备份幸存，会弹出一次性询问窗（列明备份时间与格子数量）：可从备份恢复，也可全新开始；直接关窗同样视为全新开始，此后不再追问。做出选择前定时自动备份保持暂停（手动“立即备份”不受影响，待决议的备份也不会被保留策略挤出），每次运行至多提醒一次；设置页同时披露：自定义备份目录中的快照不会被自动提议，需手动从“备份与还原 > 本机快照”恢复。
+- **文件右键菜单换装 Windows 11 原生形态。** 单竖列菜单、每行行内图标，按资源管理器经典序排列，直出毛玻璃材质（托盘菜单同享）；「打开方式」子菜单列出真实关联应用（含 UWP）并带图标，尾部「选择其他应用」兜底；空白处菜单新增「新建」子菜单（文件夹 + ShellNew 注册表同源项），「查看」「排序」拆分独立子菜单；原生 ZIP 支持压缩（含 tar 变体与多选打包）与全部解压缩。命名空间快捷方式（此电脑/回收站/控制面板）继承目标动词——回收站快捷方式可直接「清空回收站」（已空时置灰），全部条目新增「创建快捷方式」，Windows 本就不提供的目标选项（打开文件位置、压缩）相应隐藏。
+- **格子内的回收站快捷方式成为删除投放目标。** 从桌面、资源管理器或其它格子把文件拖到回收站快捷方式上即移入回收站（确认框与 Windows 一致）；清空回收站或投放后，快捷方式的空/满图标即时刷新。
 - **Shell 位置拖入格子即建快捷方式。** 回收站、此电脑等资源管理器位置拖到格子上直接创建可用快捷方式；来源无内容或正忙时给出 toast 提示。
 - **开屏引导全新改版。** 三块拼片 logo 组装动画开场，文件投放场景演示，展示真实托管存储路径及移动/粘贴提示。
 - **展开格子可缩得更小**——最小尺寸从 50 降至 25 DIP。
@@ -33,12 +40,15 @@
 
 #### 修复
 
+- 拖拽不再在回调密集场景卡死（托盘命令、虚拟文件投放、快捷方式拖启动）；右键拖放选择菜单不再丢失「打开方式」选项；拖启动的快捷方式只接受指向磁盘真实存在文件的命令行。
 - 贴屏幕边缘的矮格子不再每次唤出跳到角落：「严重离屏」判定改为按工作区交集测量，贴边的长条/窄条不再被误认成丢失窗口。
 - 格子位置扛得住显示器拓扑变化：过期布局快照无法再覆盖用户最近一次手动摆放，兜底"避难"几何也永不冒充用户意图。
 - 切换分组标签后胶囊不再迟迟不展开：换入成员的展开布局在胶囊落定期间以紧急优先级预热，悬停展开的等待重新有了真正的硬上限。
 - 悬停才显现的按钮移出 Tab 键序——不可见的焦点环不再能凭空格误触发。
 - 快捷方式「打开文件位置」改为打开目标所在位置；可执行文件不再展示注定被系统拒绝的「打开方式」；「选择其他应用」切实可用，其背后的枚举硬崩溃一并修复。
 - 右键菜单定位在贴边、下屏、居中等场景都落在光标处，不再漂移或遮盖图标。
+- 隐藏后马上唤出不再卡顿：隐藏后的内存修剪宽限从 3 秒放宽到 30 秒并跳过小额修剪，快速隐藏/唤出的来回不再付出约四分之一秒的内存回迁。
+- 闲置内存回收回到“停手几秒就降”：每个闲置时段的首次修剪在安静期后立刻执行，同时段内的后续修剪退为 5 分钟兜底节律——终结此前约 20 秒一次“修剪—回迁”空转（常驻格子时可吃掉可观的 CPU）。
 
 ## 1.5.8 - 2026-10-14
 
