@@ -3977,7 +3977,14 @@ public partial class App : Application
             "BackupRestoreSettings");
     }
 
-    private void ShowSettingsNotification(
+    /// <summary>
+    /// Shows a settings deep-linking notification: toast first, tray
+    /// balloon fallback. Returns true only when at least one channel
+    /// actually displayed — one-time notices (the fully-elevated informed
+    /// notice) ack on this verdict so a machine with toasts disabled and no
+    /// tray yet retries next launch instead of swallowing the notice.
+    /// </summary>
+    private bool ShowSettingsNotification(
         string titleKey,
         string bodyKey,
         NotificationIcon icon,
@@ -3985,7 +3992,7 @@ public partial class App : Application
     {
         if (LocalizationService is null || IsShuttingDown)
         {
-            return;
+            return false;
         }
 
         // Failure notices deep-link their body click into the owning settings
@@ -4000,9 +4007,14 @@ public partial class App : Application
             };
         string title = LocalizationService.T(titleKey);
         string message = LocalizationService.T(bodyKey);
-        if (_nativeNotificationService?.TryShow(title, message, arguments) == true || _trayIcon is null)
+        if (_nativeNotificationService?.TryShow(title, message, arguments) == true)
         {
-            return;
+            return true;
+        }
+
+        if (_trayIcon is null)
+        {
+            return false;
         }
 
         try
@@ -4017,10 +4029,12 @@ public partial class App : Application
                 respectQuietTime: true,
                 realtime: false,
                 timeout: TimeSpan.FromSeconds(10));
+            return true;
         }
         catch (Exception ex)
         {
             Log($"[SettingsService] Persistence notification failed: {ex.Message}");
+            return false;
         }
     }
 
@@ -4704,36 +4718,106 @@ public partial class App : Application
             candidate.BackupSchemaVersion);
 
     /// <summary>
-    /// Shows the elevated-launch notice once startup has produced a usable
+    /// Shows the elevation notice once startup has produced a usable
     /// surface. Skipped for unattended launches (the constructor already
     /// attempted a silent unelevated relaunch; nobody is watching a dialog)
-    /// and on shutdown. Only the asymmetric mismatch warns: on a fully
-    /// elevated desktop (company machines, UAC-off) DeskBox and the shell
-    /// share an integrity level, drag works, and a "running as
-    /// administrator" warning would be a false alarm.
+    /// and on shutdown. The asymmetric mismatch keeps its every-time notice
+    /// (self-healable, the user should act each elevated launch); since
+    /// 2026-10-22 the same-level elevated desktop — silent for years — gets
+    /// a one-time informed notice instead, because WinUI forbids XAML
+    /// drag-out in an elevated process: the session is degraded in a way
+    /// only a system-level change fixes, and the user deserves to know.
+    /// Acknowledgement persists in settings, so the interruption is once
+    /// per install, not once per launch.
     /// </summary>
     private void ShowElevationNoticeIfNeeded()
     {
         if (!_startupElevationAssessment.IsCurrentProcessElevated ||
-            _startupElevationAssessment.Mismatch != ShellIntegrityMismatch.AppAboveShell ||
-            IsStartupMode ||
             IsShuttingDown ||
             _elevationNoticeWindow is not null)
         {
             return;
         }
 
-        // Persisted RUNASADMIN-style compatibility layers keep relaunching
-        // DeskBox elevated, so scrub them while the notice is up — whether
-        // the user exits via the button or the window X, their next normal
-        // launch must be able to land unelevated. Failures log only.
-        _ = DragDropPermissionService.ClearElevationCompatibilityFlags();
+        if (_startupElevationAssessment.Mismatch == ShellIntegrityMismatch.AppAboveShell)
+        {
+            if (IsStartupMode)
+            {
+                return;
+            }
+
+            // Persisted RUNASADMIN-style compatibility layers keep relaunching
+            // DeskBox elevated, so scrub them while the notice is up — whether
+            // the user exits via the button or the window X, their next normal
+            // launch must be able to land unelevated. Failures log only.
+            _ = DragDropPermissionService.ClearElevationCompatibilityFlags();
+
+            _elevationNoticeWindow = new ElevationNoticeWindow(LocalizationService, _startupElevationAssessment);
+            _elevationNoticeWindow.Closed += (_, _) => _elevationNoticeWindow = null;
+            ThemeService.TrackWindow(_elevationNoticeWindow);
+            _elevationNoticeWindow.Activate();
+            Log("[Elevation] Notice shown for interactive elevated launch");
+            return;
+        }
+
+        // Same-level elevated desktop (built-in Administrator / UAC off).
+        if (_startupElevationAssessment.FullyElevatedAttribution == FullyElevatedSessionAttribution.None ||
+            SettingsService.Settings.Core.FullyElevatedNoticeAcknowledgedUtcTicks is not null)
+        {
+            return;
+        }
+
+        if (IsStartupMode)
+        {
+            ShowFullyElevatedNoticeToast();
+            return;
+        }
 
         _elevationNoticeWindow = new ElevationNoticeWindow(LocalizationService, _startupElevationAssessment);
         _elevationNoticeWindow.Closed += (_, _) => _elevationNoticeWindow = null;
         ThemeService.TrackWindow(_elevationNoticeWindow);
         _elevationNoticeWindow.Activate();
-        Log("[Elevation] Notice shown for interactive elevated launch");
+        // Ack on show: the window being seen completes the notice's job.
+        MarkFullyElevatedNoticeAcknowledged();
+        Log("[Elevation] Fully-elevated informed notice shown for interactive launch");
+    }
+
+    /// <summary>
+    /// Unattended form of the fully-elevated informed notice: a toast (or
+    /// tray balloon fallback) deep-linking into the compatibility diagnostic
+    /// section, shown once per install. Ack only when at least one channel
+    /// displayed — see <see cref="ShowSettingsNotification"/>.
+    /// </summary>
+    private void ShowFullyElevatedNoticeToast()
+    {
+        bool shown = ShowSettingsNotification(
+            "Tray.FullyElevatedNotice.Title",
+            "Tray.FullyElevatedNotice.Message",
+            NotificationIcon.Info,
+            "CompatibilityDiagnosticsSettings");
+        if (shown)
+        {
+            MarkFullyElevatedNoticeAcknowledged();
+        }
+
+        Log($"[Elevation] Fully-elevated toast shown={shown}");
+    }
+
+    private void MarkFullyElevatedNoticeAcknowledged()
+    {
+        try
+        {
+            // Slice-direct access: new settings code reads the slice, keeping
+            // the App.xaml.cs facade-access ratchet from growing.
+            SettingsService.Settings.Core.FullyElevatedNoticeAcknowledgedUtcTicks =
+                DateTimeOffset.UtcNow.UtcTicks;
+            _ = SettingsService.SaveCheckedAsync();
+        }
+        catch (Exception ex)
+        {
+            // A failed persist only means the notice reappears next launch.
+            Log($"[Elevation] Failed to persist fully-elevated notice ack: {ex.Message}");
+        }
     }
 
     /// <summary>

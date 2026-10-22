@@ -112,4 +112,12 @@ public sealed class CoreSettingsSlice
     /// This remains true after the user deletes or disables every file widget.
     /// </summary>
     public bool HasResolvedInitialFileWidgetSetup { get; set; }
+
+    /// <summary>
+    /// When the one-time fully-elevated-desktop informed notice (built-in
+    /// Administrator / UAC-off desktops) was last acknowledged, in UTC ticks.
+    /// Null means it has not been acknowledged yet. Runtime state: resetting
+    /// defaults must not re-arm the notice into a repeat interruption.
+    /// </summary>
+    public long? FullyElevatedNoticeAcknowledgedUtcTicks { get; set; }
 }

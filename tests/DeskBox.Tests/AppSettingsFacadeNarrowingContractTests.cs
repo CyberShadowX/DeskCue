@@ -57,6 +57,9 @@ public sealed class AppSettingsFacadeNarrowingContractTests
         // transition style; additive, absent files deserialize to Auto).
         // +1 = musicHideTimelineWhenUnavailable (music timeline-row hiding;
         // additive, absent files deserialize to the hide default true).
+        // +1 = fullyElevatedNoticeAcknowledgedUtcTicks (one-time
+        // fully-elevated-desktop notice ack; nullable, additive — absent
+        // files deserialize as null, carried by Migration_14_To_15).
         // +2 = showReleaseNotesAfterUpdate + lastRunVersion (post-update
         // release-notes window; additive — absent files deserialize to the
         // show default true and a null previous version, which the policy
@@ -64,7 +67,7 @@ public sealed class AppSettingsFacadeNarrowingContractTests
         // +2 = autoDownloadUpdates + showUpdateToastNotification (background
         // auto-download and update toasts; additive — both deserialize to
         // the enabled default true).
-        Assert.Equal(242, Passthroughs.Length);
+        Assert.Equal(243, Passthroughs.Length);
         Assert.Equal(13, SliceAccessors.Length);
     }
 
@@ -72,7 +75,7 @@ public sealed class AppSettingsFacadeNarrowingContractTests
     public void EveryPassthrough_IsAFrozenSchemaMember_AndViceVersa()
     {
         // The facade IS the schema: with the WhenWritingNull member forced on,
-        // the serialized member set is exactly schemaVersion plus the 242
+        // the serialized member set is exactly schemaVersion plus the 243
         // passthrough wire names (camelCase unless a JsonPropertyName
         // overrides it). This proves there is no dead passthrough sitting
         // outside the wire, and no wire member without a passthrough owner.
@@ -82,8 +85,8 @@ public sealed class AppSettingsFacadeNarrowingContractTests
         expected.Add("schemaVersion");
         Assert.True(
             SerializedMemberNames.SetEquals(expected),
-            "Serialized member set must equal schemaVersion + the 242 passthrough wire names.");
-        Assert.Equal(243, SerializedMemberNames.Count);
+            "Serialized member set must equal schemaVersion + the 243 passthrough wire names.");
+        Assert.Equal(244, SerializedMemberNames.Count);
     }
 
     [Fact]

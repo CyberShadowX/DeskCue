@@ -39,13 +39,16 @@ public sealed class SettingsSliceOwnershipContractTests
     [Fact]
     public void EveryFacadeProperty_MapsToExactlyOneSliceProperty()
     {
-        // 238 = batch-51 level (236) plus widgetGroupSwitchAnimationStyle
+        // 241 = batch-51 level (236) plus widgetGroupSwitchAnimationStyle
         // (group member-switch transition style) plus
-        // musicHideTimelineWhenUnavailable (music timeline-row hiding).
-        // +4 = showReleaseNotesAfterUpdate + lastRunVersion + autoDownloadUpdates
-        // + showUpdateToastNotification (post-update release-notes window and
-        // background auto-download/toast toggles).
-        Assert.Equal(242, FacadeProperties.Length);
+        // musicHideTimelineWhenUnavailable (music timeline-row hiding) plus
+        // fullyElevatedNoticeAcknowledgedUtcTicks (one-time
+        // fully-elevated-desktop notice ack; nullable long, schema v15)
+        // plus the parallel update-UX batch's showReleaseNotesAfterUpdate
+        // and lastRunVersion.
+        // +2 = autoDownloadUpdates + showUpdateToastNotification (background
+        // auto-download and update toasts).
+        Assert.Equal(243, FacadeProperties.Length);
 
         foreach (PropertyInfo facade in FacadeProperties)
         {
@@ -172,6 +175,8 @@ public sealed class SettingsSliceOwnershipContractTests
             return 0.137;
         if (type == typeof(long))
             return 638000000000000000L;
+        if (type == typeof(long?))
+            return 638000000000000000L;
         if (type == typeof(DateTimeOffset?))
             return new DateTimeOffset(2030, 1, 2, 3, 4, 5, TimeSpan.Zero);
         if (type.IsEnum)
@@ -231,7 +236,7 @@ public sealed class SettingsSliceOwnershipContractTests
         ["src/DeskBox/App.DiagnosticsBundle.cs"] = 6,
         ["src/DeskBox/App.ImmediateHiddenWorkingSetTrim.cs"] = 2,
         ["src/DeskBox/App.Tray.cs"] = 3,
-        ["src/DeskBox/App.xaml.cs"] = 35,
+        ["src/DeskBox/App.xaml.cs"] = 36,
         ["src/DeskBox/Controls/DesktopOrganizationPreviewCard.xaml.cs"] = 11,
         ["src/DeskBox/Controls/DesktopOrganizationTaskView.Appearance.cs"] = 1,
         ["src/DeskBox/Controls/DesktopOrganizationTaskView.xaml.cs"] = 1,

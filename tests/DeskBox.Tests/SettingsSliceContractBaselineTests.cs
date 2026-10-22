@@ -349,6 +349,7 @@ public sealed class SettingsSliceContractBaselineTests
         "onboardingStepIndex",
         "completedOnboardingVersion",
         "hasResolvedInitialFileWidgetSetup",
+        "fullyElevatedNoticeAcknowledgedUtcTicks",
         "defaultWidgetWidth",
         "defaultWidgetHeight",
         "widgetOpacity",

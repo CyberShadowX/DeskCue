@@ -337,6 +337,9 @@ public class AppSettings
     /// <inheritdoc cref="CoreSettingsSlice.HasResolvedInitialFileWidgetSetup"/>
     public bool HasResolvedInitialFileWidgetSetup { get => Core.HasResolvedInitialFileWidgetSetup; set => Core.HasResolvedInitialFileWidgetSetup = value; }
 
+    /// <inheritdoc cref="CoreSettingsSlice.FullyElevatedNoticeAcknowledgedUtcTicks"/>
+    public long? FullyElevatedNoticeAcknowledgedUtcTicks { get => Core.FullyElevatedNoticeAcknowledgedUtcTicks; set => Core.FullyElevatedNoticeAcknowledgedUtcTicks = value; }
+
     /// <inheritdoc cref="WidgetShellSettingsSlice.DefaultWidgetWidth"/>
     public double DefaultWidgetWidth { get => WidgetShell.DefaultWidgetWidth; set => WidgetShell.DefaultWidgetWidth = value; }
 
