@@ -25,6 +25,7 @@
 - Right-click menu positioning lands on the cursor across edge, lower-screen, and centered scenarios without drifting or covering the icon.
 - Revealing a widget shortly after hiding it no longer stutters: the memory trim that follows a hide now waits 30 seconds instead of 3 and skips small gains, so a quick hide-and-show round trip stops paying the quarter-second page-in.
 - Idle memory reclaim behaves again: the first trim of each idle stretch lands seconds after you stop interacting, and repeat trims inside the same stretch back off to a five-minute safety cadence — ending the twenty-second trim-and-refault churn that could sit on a noticeable slice of a CPU core with widgets on screen.
+- Right-clicking a todo item and hovering into the color submenu no longer terminates the app on Windows 11 25H2: the unselected color dot is now drawn as pure geometry instead of a glyph pinned to a font whose file 25H2 removed while leaving its registration behind — the first measure of that menu failed fatally.
 
 ### 中文
 
@@ -49,6 +50,7 @@
 - 右键菜单定位在贴边、下屏、居中等场景都落在光标处，不再漂移或遮盖图标。
 - 隐藏后马上唤出不再卡顿：隐藏后的内存修剪宽限从 3 秒放宽到 30 秒并跳过小额修剪，快速隐藏/唤出的来回不再付出约四分之一秒的内存回迁。
 - 闲置内存回收回到“停手几秒就降”：每个闲置时段的首次修剪在安静期后立刻执行，同时段内的后续修剪退为 5 分钟兜底节律——终结此前约 20 秒一次“修剪—回迁”空转（常驻格子时可吃掉可观的 CPU）。
+- 待办格子右键「颜色标记」子菜单不再在 Windows 11 25H2 上闪退：未选中的颜色圆点改为纯几何绘制，不再钉在 25H2 已删除文件却残留注册表项的字体上——该菜单首次度量即致命失败并终止进程。
 
 ## 1.5.8 - 2026-10-14
 
