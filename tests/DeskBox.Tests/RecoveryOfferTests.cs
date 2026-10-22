@@ -161,15 +161,18 @@ public sealed class RecoveryOfferTests : IDisposable
     [Fact]
     public async Task GetLatestValidRecoverySnapshotAsync_CountsLegacyLayoutInsideSettings()
     {
-        // Pre device-split archives carry the widget list inside settings.json.
+        // Pre-split archives (v1.3.8–v1.5.4) carry the widget list as
+        // TOP-LEVEL settings keys; a "widgetLayout" wrapper never existed in
+        // any serialized era (the shape is pinned by hand, not by the live
+        // serializer, so facade evolution cannot silently change it).
         WriteSnapshot(
             "DeskBox-Auto-20260101-000000.zip",
             mtimeUtc: DateTimeOffset.UtcNow.ToUniversalTime() - TimeSpan.FromDays(30),
             settingsJson: SettingsJson(
                 hasResolved: true,
                 extraJson:
-                    "\"widgetLayout\":{\"widgets\":[{\"id\":\"w1\"},{\"id\":\"w2\"},{\"id\":\"w3\"}]," +
-                    "\"deletedWidgetIds\":[\"w2\"]}"),
+                    "\"widgets\":[{\"id\":\"w1\"},{\"id\":\"w2\"},{\"id\":\"w3\"}]," +
+                    "\"deletedWidgetIds\":[\"w2\"]"),
             layoutWidgets: null);
 
         var service = new DeskBoxDataBackupService(_appDataRoot);
@@ -178,6 +181,25 @@ public sealed class RecoveryOfferTests : IDisposable
 
         Assert.NotNull(candidate);
         Assert.Equal(2, candidate!.WidgetCount);
+    }
+
+    [Fact]
+    public async Task GetLatestValidRecoverySnapshotAsync_RejectsManifestMissingRequiredMembers()
+    {
+        // The restore validator's typed manifest record requires
+        // kind/createdAtUtc/appVersion; an archive lacking them must be
+        // refused up front instead of being proposed and failing at
+        // restore time on every attempt.
+        WriteSnapshot(
+            "DeskBox-Auto-20260101-000001.zip",
+            mtimeUtc: DateTimeOffset.UtcNow.ToUniversalTime() - TimeSpan.FromDays(30),
+            settingsJson: SettingsJson(hasResolved: true),
+            layoutWidgets: ["w1"],
+            manifestJson:
+                "{\"schemaVersion\":2,\"kind\":\"automatic\",\"createdAtUtc\":\"2026-10-19T22:11:00Z\"}");
+
+        var service = new DeskBoxDataBackupService(_appDataRoot);
+        Assert.Null(await service.GetLatestValidRecoverySnapshotAsync(DateTimeOffset.UtcNow));
     }
 
     [Fact]
@@ -365,6 +387,48 @@ public sealed class RecoveryOfferTests : IDisposable
     }
 
     [Fact]
+    public void App_PinsOfferSemanticsAndRaceGuards()
+    {
+        string app = File.ReadAllText(TestPaths.FromRepository("src/DeskBox/App.xaml.cs"));
+
+        // Semantics A: closing the window routes through the implicit
+        // fresh-start handler WITHOUT the explicit button's policy relaxation.
+        Assert.Contains(
+            "HandleRecoveryOfferFreshStartAsync(relaxDefaultWidgetPolicy: false)",
+            app,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "HandleRecoveryOfferFreshStartAsync(relaxDefaultWidgetPolicy: true)",
+            app,
+            StringComparison.Ordinal);
+
+        // The restore-transaction guard: once a relaunch is scheduled, a
+        // later failure must not cancel the confirmed restore.
+        Assert.Contains("if (!restartScheduled)", app, StringComparison.Ordinal);
+
+        // Outcome propagation: a second surface in the same session gets the
+        // recorded decision back instead of NotOffered.
+        Assert.Contains(
+            "return _lastRecoveryOfferOutcome;",
+            app,
+            StringComparison.Ordinal);
+
+        // RestoreScheduled is pre-recorded so activations arriving while the
+        // restore transaction is preparing never run the first-run flows.
+        Assert.Contains(
+            "_lastRecoveryOfferOutcome = outcome;",
+            app,
+            StringComparison.Ordinal);
+
+        // The pending offer's referenced snapshot is pinned against retention
+        // pruning until the decision lands.
+        Assert.Contains(
+            "SetRecoverySnapshotRetentionPin(",
+            app,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ScheduledSnapshots_PauseWhileARecoveryDecisionIsPending()
     {
         string data = Directory.CreateDirectory(Path.Combine(_appDataRoot, "data")).FullName;
@@ -390,9 +454,94 @@ public sealed class RecoveryOfferTests : IDisposable
         LocalBackupResult forced = await service.CreateAutomaticSnapshotResultAsync(force: true);
         Assert.Equal(BackupOutcome.Succeeded, forced.Outcome);
 
+        // The forced archive is seconds old; a scheduled leg would be
+        // throttled by the interval check (latest snapshot < IntervalMinutes,
+        // default 1440 — see CreateAutomaticSnapshotResultAsync). Remove it so
+        // the leg below proves the pause lifted, not that the interval
+        // elapsed. Use the returned path: same-second collisions get a -2
+        // suffix the constructed name would miss.
+        File.Delete(forced.ArchivePath!);
+
         await store.ClearAsync();
-        LocalBackupResult resumed = await service.CreateAutomaticSnapshotResultAsync(force: true);
+        LocalBackupResult resumed = await service.CreateAutomaticSnapshotResultAsync(force: false);
         Assert.Equal(BackupOutcome.Succeeded, resumed.Outcome);
+    }
+
+    [Fact]
+    public async Task ForcedSnapshots_NeverEvictThePendingRecoveryReference()
+    {
+        string data = Directory.CreateDirectory(Path.Combine(_appDataRoot, "data")).FullName;
+        await File.WriteAllTextAsync(Path.Combine(data, "settings.json"), "{}");
+
+        // Pre-wipe pool: the pinned newest plus three older archives, mtimes
+        // a day apart so ordering never ties with the forced storm (= now).
+        string pinned = WriteSnapshot(
+            "DeskBox-Auto-20260101-000000.zip",
+            mtimeUtc: DateTimeOffset.UtcNow.ToUniversalTime() - TimeSpan.FromDays(4),
+            settingsJson: SettingsJson(hasResolved: true),
+            layoutWidgets: ["w1", "w2"]);
+        string[] older =
+        [
+            WriteSnapshot(
+                "DeskBox-Auto-20251229-000000.zip",
+                mtimeUtc: DateTimeOffset.UtcNow.ToUniversalTime() - TimeSpan.FromDays(10),
+                settingsJson: SettingsJson(hasResolved: true),
+                layoutWidgets: ["w1"]),
+            WriteSnapshot(
+                "DeskBox-Auto-20251230-000000.zip",
+                mtimeUtc: DateTimeOffset.UtcNow.ToUniversalTime() - TimeSpan.FromDays(8),
+                settingsJson: SettingsJson(hasResolved: true),
+                layoutWidgets: ["w1"]),
+            WriteSnapshot(
+                "DeskBox-Auto-20251231-000000.zip",
+                mtimeUtc: DateTimeOffset.UtcNow.ToUniversalTime() - TimeSpan.FromDays(6),
+                settingsJson: SettingsJson(hasResolved: true),
+                layoutWidgets: ["w1"])
+        ];
+
+        var store = new RecoveryOfferStore(data);
+        await store.WriteAsync(new RecoveryOfferMarker(
+            pinned,
+            DateTimeOffset.UtcNow,
+            "1.5.9",
+            2,
+            DateTimeOffset.UtcNow));
+
+        var service = new DeskBoxDataBackupService(_appDataRoot);
+        service.SetRecoveryOfferPauseProbe(() => store.TryRead() is not null);
+        service.SetRecoverySnapshotRetentionPin(() => store.TryRead()?.SnapshotPath);
+
+        // A forced-storm of manual backups beyond the default retention (7)
+        // must prune the OLDEST pre-wipe archives — never the pinned
+        // reference, which does not consume a retention slot.
+        for (int i = 0; i < 7; i++)
+        {
+            LocalBackupResult forced = await service.CreateAutomaticSnapshotResultAsync(force: true);
+            Assert.Equal(BackupOutcome.Succeeded, forced.Outcome);
+        }
+
+        Assert.True(File.Exists(pinned), "The pinned recovery reference was evicted.");
+        string directory = Path.GetDirectoryName(pinned)!;
+        Assert.Equal(
+            8,
+            Directory.EnumerateFiles(directory, "DeskBox-Auto-*.zip").Count());
+        Assert.DoesNotContain(older[0], Directory.EnumerateFiles(directory, "DeskBox-Auto-*.zip"));
+
+        // The offer itself still resolves to the pinned archive: the forced
+        // snapshots of the fresh-default profile fail the content gates.
+        RecoverySnapshotCandidate? candidate = await service.GetLatestValidRecoverySnapshotAsync(
+            DateTimeOffset.UtcNow.ToUniversalTime() - TimeSpan.FromDays(1));
+        Assert.NotNull(candidate);
+        Assert.Equal(pinned, candidate!.Path);
+
+        // After the decision (marker cleared) retention goes back to normal:
+        // one more forced run pushes past the quota and evicts the former
+        // pin like any other archive — the exemption ends with the marker.
+        await store.ClearAsync();
+        service.SetRecoverySnapshotRetentionPin(null);
+        LocalBackupResult finalForced = await service.CreateAutomaticSnapshotResultAsync(force: true);
+        Assert.Equal(BackupOutcome.Succeeded, finalForced.Outcome);
+        Assert.False(File.Exists(pinned), "The pin outlived the pending decision.");
     }
 
     [Fact]
@@ -429,7 +578,8 @@ public sealed class RecoveryOfferTests : IDisposable
         string fileName,
         DateTimeOffset mtimeUtc,
         string settingsJson,
-        string[]? layoutWidgets)
+        string[]? layoutWidgets,
+        string? manifestJson = null)
     {
         string directory = Path.Combine(
             Path.GetDirectoryName(_appDataRoot)!,
@@ -442,6 +592,7 @@ public sealed class RecoveryOfferTests : IDisposable
             WriteEntry(
                 archive,
                 "manifest.json",
+                manifestJson ??
                 "{\"schemaVersion\":2,\"kind\":\"automatic\",\"createdAtUtc\":\"2026-10-19T22:11:00Z\",\"appVersion\":\"1.5.9\"}");
             WriteEntry(archive, "data/settings.json", settingsJson);
             if (layoutWidgets is not null)

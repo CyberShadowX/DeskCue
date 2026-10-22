@@ -13,8 +13,9 @@ namespace DeskBox.Views;
 /// configuration with a surviving recovery snapshot. Shown only at an
 /// interactive activation — the process then holds the foreground rights a
 /// boot-time window cannot rely on (the same condition the elevation notice
-/// waits for). Closing the window without a choice counts as Dismissed: the
-/// pending marker survives and the offer returns on a later activation.
+/// waits for). Closing the window without a choice counts as an implicit
+/// fresh start (decision A): the pending marker is cleared and the offer
+/// never returns over the profile the user then rebuilds.
 /// </summary>
 public sealed partial class RecoveryOfferWindow : Window
 {

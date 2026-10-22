@@ -109,6 +109,20 @@ public sealed partial class DeskBoxDataBackupService
     /// </summary>
     public void SetRecoveryOfferPauseProbe(Func<bool>? isPending) => _isRecoveryOfferPending = isPending;
 
+    private Func<string?>? _recoverySnapshotRetentionPin;
+
+    /// <summary>
+    /// Wires the pending-recovery snapshot pin. While a wipe-recovery
+    /// decision is pending, the marker-referenced archive is exempt from
+    /// retention pruning (it does not consume a retention slot), so manual
+    /// "back up now" runs during the pending window cannot evict the
+    /// snapshot the offer restores from. The pin ends with the marker, the
+    /// same lifecycle <see cref="PrunePreRestoreBackups"/> gives its
+    /// safety-archive pin.
+    /// </summary>
+    public void SetRecoverySnapshotRetentionPin(Func<string?>? pinProvider) =>
+        _recoverySnapshotRetentionPin = pinProvider;
+
     private bool IsRecoveryOfferPauseActive =>
         _isRecoveryOfferPending?.Invoke() == true;
 
@@ -300,7 +314,10 @@ public sealed partial class DeskBoxDataBackupService
                 target.Directory,
                 $"DeskBox-Auto-{DateTime.Now:yyyyMMdd-HHmmss}.zip");
             await CreateArchiveCoreAsync(snapshotPath, "automatic", cancellationToken);
-            PruneAutomaticSnapshots(target.Directory, options.RetentionCount);
+            PruneAutomaticSnapshots(
+                target.Directory,
+                options.RetentionCount,
+                _recoverySnapshotRetentionPin?.Invoke());
             if (target.UsedFallback)
             {
                 string fallbackMessage =
@@ -3034,19 +3051,31 @@ public sealed partial class DeskBoxDataBackupService
         throw new IOException($"DeskBox data file changed while creating a backup snapshot: '{sourcePath}'.");
     }
 
-    private void PruneAutomaticSnapshots(string directory, int retentionCount)
+    private void PruneAutomaticSnapshots(
+        string directory,
+        int retentionCount,
+        string? pinnedPath = null)
     {
         if (!Directory.Exists(directory))
         {
             return;
         }
 
-        foreach (string obsoletePath in Directory
+        int kept = 0;
+        foreach (string candidatePath in Directory
                      .EnumerateFiles(directory, "DeskBox-Auto-*.zip")
-                     .OrderByDescending(File.GetLastWriteTimeUtc)
-                     .Skip(Math.Max(1, retentionCount)))
+                     .OrderByDescending(File.GetLastWriteTimeUtc))
         {
-            TryDeleteFile(obsoletePath);
+            if (pinnedPath is not null &&
+                string.Equals(candidatePath, pinnedPath, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (++kept > Math.Max(1, retentionCount))
+            {
+                TryDeleteFile(candidatePath);
+            }
         }
     }
 

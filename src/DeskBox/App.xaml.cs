@@ -466,6 +466,11 @@ public partial class App : Application
         // pre-wipe snapshots the offer restores from.
         DataBackupService.SetRecoveryOfferPauseProbe(
             () => RecoveryOfferStore.TryRead() is not null);
+        // The pending offer's referenced snapshot survives retention pruning
+        // (without consuming a slot) so manual backups during the pending
+        // window cannot evict the archive the offer restores from.
+        DataBackupService.SetRecoverySnapshotRetentionPin(
+            () => RecoveryOfferStore.TryRead()?.SnapshotPath);
         CloudBackupService = Services.GetRequiredService<CloudBackupService>();
         CloudBackupService.BackupRunCompleted += OnCloudBackupRunCompleted;
         _ = LegacySearchIndexCleanupService.TryCleanup();
@@ -4344,7 +4349,8 @@ public partial class App : Application
     /// While the recovery decision is pending, automatic snapshots are paused
     /// (see <see cref="DeskBoxDataBackupService.SetRecoveryOfferPauseProbe"/>);
     /// a silent pause is its own data risk, so the user gets at most one
-    /// reminder per day telling them a decision is waiting. Bounded nagging:
+    /// reminder per process run (the gate is in-memory; a fresh boot can
+    /// remind again) telling them a decision is waiting. Bounded nagging:
     /// the offer window and the pause end together as soon as they answer.
     /// </summary>
     private void ScheduleSnapshotPausedReminderIfNeeded()

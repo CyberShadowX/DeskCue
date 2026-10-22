@@ -102,8 +102,10 @@ internal enum RecoveryOfferOutcome
 {
     /// <summary>No marker, already shown this session, or no valid candidate.</summary>
     NotOffered,
-    /// <summary>Window closed without a choice; the marker stays and the offer
-    /// returns on a later interactive activation.</summary>
+    /// <summary>Window closed without a choice. Decision A: this counts as an
+    /// implicit fresh start — the marker is cleared (without the explicit
+    /// button's DefaultsAfterFailure policy relaxation) and the first-run
+    /// flows proceed in the same activation.</summary>
     Dismissed,
     /// <summary>User chose a fresh start; the marker is cleared and first-run
     /// flows (default widget, onboarding) proceed.</summary>
@@ -146,7 +148,15 @@ internal static class RecoverySnapshotPeekReader
                 createdAtUtc = ReadDateTimeOffset(manifest["createdAtUtc"]);
                 appVersion = ReadString(manifest["appVersion"]);
                 backupSchemaVersion = ReadInt32(manifest["schemaVersion"]) ?? 0;
-                manifestRead = true;
+                // The restore validator's typed manifest record requires
+                // kind/createdAtUtc/appVersion as positional members; an
+                // archive lacking any of them would pass the peek, get
+                // proposed, and then fail the restore on every attempt —
+                // refuse it up front by treating the manifest as unreadable.
+                manifestRead =
+                    ReadString(manifest["kind"]) is not null &&
+                    createdAtUtc is not null &&
+                    appVersion is not null;
             }
         }
 
@@ -163,11 +173,12 @@ internal static class RecoverySnapshotPeekReader
             settingsSchemaVersion = ReadInt32(settings["schemaVersion"]) ?? 0;
             hasResolvedInitialSetup = ReadBoolean(settings["hasResolvedInitialFileWidgetSetup"]);
 
-            // Legacy archives predate widget-layout.json; while a store was not
-            // authoritative the layout slice also lived inside settings.json.
+            // Pre-split archives (and post-split ones whose layout store was
+            // quarantined) carry the widget list as TOP-LEVEL settings keys —
+            // a "widgetLayout" wrapper never existed in any serialized era.
             liveWidgetCount = CountLiveWidgets(
-                settings["widgetLayout"]?["widgets"] as JsonArray,
-                ReadStringSet(settings["widgetLayout"]?["deletedWidgetIds"] as JsonArray));
+                settings["widgets"] as JsonArray,
+                ReadStringSet(settings["deletedWidgetIds"] as JsonArray));
         }
 
         ZipArchiveEntry? layoutEntry = FindEntry(archive, "data/widget-layout.json");
