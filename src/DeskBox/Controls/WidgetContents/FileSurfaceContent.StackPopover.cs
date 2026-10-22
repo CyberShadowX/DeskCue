@@ -593,6 +593,9 @@ public sealed partial class FileSurfaceContent
             _stackPopoverPopupClosing = false;
             _stackPopoverCleanupPending = false;
             _stackPopoverItemsView.SelectedItems.Clear();
+            // While the popover owns interaction, a lingering main-surface
+            // selection must not keep an expanded label under the popover.
+            CollapseMainSurfaceNameExpansion();
             bool switchingStacks =
                 _stackPopoverItems.Count > 0 &&
                 !string.Equals(
@@ -1057,6 +1060,10 @@ public sealed partial class FileSurfaceContent
         view.RightTapped += Items_RightTapped;
         view.SelectionChanged += Items_SelectionChanged;
         view.CharacterReceived += Root_CharacterReceived;
+        view.AddHandler(
+            UIElement.PointerWheelChangedEvent,
+            new PointerEventHandler(StackPopoverItems_PointerWheelDuringExpansion),
+            handledEventsToo: true);
         _stackPopoverPreviewKeyHandler =
             new KeyEventHandler(ItemsView_PreviewKeyDown);
         view.AddHandler(
@@ -1065,6 +1072,15 @@ public sealed partial class FileSurfaceContent
             handledEventsToo: true);
         RegisterScrollBarActivityTracking(view);
         return view;
+    }
+
+    private void StackPopoverItems_PointerWheelDuringExpansion(
+        object sender, PointerRoutedEventArgs e)
+    {
+        // The popover's expanded-label overlay is positioned against the
+        // popover viewport; wheel scrolling invalidates it, so collapse
+        // instead of chasing the item.
+        HideNameExpansion(isPopoverView: true);
     }
 
     private void StackPopoverItemsView_Loaded(
@@ -2036,6 +2052,11 @@ public sealed partial class FileSurfaceContent
             view.SelectedItems.Clear();
         }
 
+        // The popover no longer owns interaction, so a lingering main-surface
+        // sole selection may expand its label again; refresh from the now
+        // active main view.
+        UpdateItemSurfaceVisuals();
+
         if (_stackPopoverSurface is { } surface)
         {
             surface.DataContext = null;
@@ -2303,6 +2324,7 @@ public sealed partial class FileSurfaceContent
         _stackPopoverReorderIndicator = null;
         _stackPopoverSelectionOverlay = null;
         _stackPopoverSelectionRectangle = null;
+        ReleaseStackPopoverNameExpansionOverlay();
         _stackPopoverSelectionHost = null;
         _stackPopoverLayout = null;
         _stackPopoverReorderInsertionIndex = -1;

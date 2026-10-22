@@ -45,6 +45,14 @@ public sealed partial class FileSurfaceContent :
     private bool _isCommittingItemRename;
     private bool _isCancellingItemRename;
     private long _itemRenameOpenedAtTick;
+
+    // Slow-click rename: clicking the label of the already-sole-selected item
+    // arms a delayed rename; one system double-click window of grace lets a
+    // real double-click (open) disarm it via its DoubleTapped.
+    private DispatcherTimer? _slowClickRenameTimer;
+    private WidgetItem? _slowClickRenameItem;
+    private long _lastDoubleTapTick;
+    private const double SlowClickRenameGraceMs = 150;
     private bool _isSurfaceReorderDragActive;
     private string[] _surfaceReorderPaths = [];
     private string? _surfaceReorderStackKey;
@@ -894,6 +902,8 @@ public sealed partial class FileSurfaceContent :
         bool shiftPressed =
             Win32Helper.IsKeyPressed(VirtualKey.Shift);
 
+        TryStartSlowClickRename(sender, item, controlPressed || shiftPressed);
+
         if (!_settingsService.Settings.DoubleClickToOpen &&
             !controlPressed &&
             !shiftPressed)
@@ -909,6 +919,85 @@ public sealed partial class FileSurfaceContent :
                 CloseStackPopover(releaseImmediately: true);
             }
         }
+    }
+
+    private void TryStartSlowClickRename(
+        object sender,
+        WidgetItem item,
+        bool hasModifierKey)
+    {
+        CancelPendingSlowClickRename();
+
+        // Reading the selection here is the pre-click snapshot: the native
+        // selector commits this click's selection only after ItemClick (see
+        // ItemSurface_PointerPressed), so SelectedItems still reports what
+        // was selected before this click — exactly what the entry requires.
+        ListViewBase activeView = GetActiveItemsView();
+        bool wasSoleSelectedBeforeClick =
+            ReferenceEquals(sender, activeView) &&
+            activeView.SelectedItems.Count == 1 &&
+            ReferenceEquals(activeView.SelectedItems[0], item);
+        if (!SelectedNameExpansionPolicy.ShouldStartRenameFromItemClick(
+                _settingsService.Settings.FileWidget.DoubleClickToOpen,
+                hasModifierKey,
+                wasSoleSelectedBeforeClick,
+                _lastItemPressOnLabel))
+        {
+            return;
+        }
+
+        // Arm rather than start: this click may still be the second stroke
+        // of a double-click, which opens the item. One system double-click
+        // window plus grace; the DoubleTapped handler disarms within it.
+        _slowClickRenameItem = item;
+        _slowClickRenameTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(
+                Win32Helper.GetDoubleClickTime() + SlowClickRenameGraceMs)
+        };
+        _slowClickRenameTimer.Tick += OnSlowClickRenameTimerTick;
+        _slowClickRenameTimer.Start();
+    }
+
+    private void CancelPendingSlowClickRename()
+    {
+        _slowClickRenameTimer?.Stop();
+        _slowClickRenameTimer = null;
+        _slowClickRenameItem = null;
+    }
+
+    private void OnSlowClickRenameTimerTick(object? sender, object e)
+    {
+        WidgetItem? armedItem = _slowClickRenameItem;
+        CancelPendingSlowClickRename();
+        if (armedItem is null ||
+            _isDisposed ||
+            _itemRenameTarget is not null ||
+            IsStackPopoverItemRenameEditing)
+        {
+            return;
+        }
+
+        // A double-click whose DoubleTapped fired before this second ItemClick
+        // disarmed nothing (the arm happened after it); the recorded tick
+        // keeps that ordering from renaming an item that just opened.
+        long sinceDoubleTap = Environment.TickCount64 - _lastDoubleTapTick;
+        if (sinceDoubleTap >= 0 &&
+            sinceDoubleTap < Win32Helper.GetDoubleClickTime() + SlowClickRenameGraceMs)
+        {
+            return;
+        }
+
+        // Esc or a click elsewhere may have cleared the selection during the
+        // grace window; only a still-selected item enters rename.
+        ListViewBase activeView = GetActiveItemsView();
+        if (activeView.SelectedItems.Count != 1 ||
+            !ReferenceEquals(activeView.SelectedItems[0], armedItem))
+        {
+            return;
+        }
+
+        _ = RenameItemAsync(armedItem);
     }
 
     internal void OnWindowRevealCompleted()
@@ -960,6 +1049,11 @@ public sealed partial class FileSurfaceContent :
         object sender,
         DoubleTappedRoutedEventArgs e)
     {
+        // Any double tap disarms a pending slow-click rename and marks the
+        // window so a Tick racing this handler cannot rename either.
+        _lastDoubleTapTick = Environment.TickCount64;
+        CancelPendingSlowClickRename();
+
         if (!_settingsService.Settings.DoubleClickToOpen ||
             FindItemFromSource(e.OriginalSource) is not { } item)
         {
@@ -1125,6 +1219,7 @@ public sealed partial class FileSurfaceContent :
         {
             _stackPopoverDragActive = true;
         }
+        HideAllNameExpansions();
         _activeDragHandledAsStackMembership = false;
 
         // The container that owns the gesture started this drag through
@@ -1837,6 +1932,13 @@ public sealed partial class FileSurfaceContent :
                     _ => HorizontalAlignment.Left
                 };
             ItemRenameTextBox.TextWrapping = nameText.TextWrapping;
+            if (!ViewModel.IsListMode)
+            {
+                // The icon-mode editor grows downward; keep the text anchored
+                // to the label position instead of centering in the taller box.
+                ItemRenameTextBox.VerticalContentAlignment =
+                    VerticalAlignment.Top;
+            }
         }
         else
         {
@@ -1853,6 +1955,7 @@ public sealed partial class FileSurfaceContent :
         ItemRenameTextBox.Visibility = Visibility.Visible;
         ItemRenameTextBox.IsHitTestVisible = true;
         _itemRenameOpenedAtTick = Environment.TickCount64;
+        SetItemsViewScrollingSuspended(true);
         App.Current?.WidgetManager?.BeginWidgetInteraction(
             "surface-file-item-rename-opened");
 
@@ -1970,6 +2073,7 @@ public sealed partial class FileSurfaceContent :
         ItemRenameTextBox.Visibility = Visibility.Collapsed;
         ItemRenameTextBox.IsHitTestVisible = false;
         ItemRenameTextBox.Text = string.Empty;
+        SetItemsViewScrollingSuspended(false);
         if (_itemRenameNameText is not null)
         {
             _itemRenameNameText.Visibility = Visibility.Visible;
@@ -2025,9 +2129,28 @@ public sealed partial class FileSurfaceContent :
             height = Math.Min(
                 height,
                 Math.Max(20, contentHeight - offsetY - 4));
-
             if (!ViewModel.IsListMode)
             {
+                // Desktop-style rename: the editor keeps the label's width
+                // and grows downward instead, wrapping the full name until
+                // the surface bottom.
+                double labelMaxWidth =
+                    target is TextBlock nameTarget &&
+                    double.IsFinite(nameTarget.MaxWidth)
+                        ? nameTarget.MaxWidth
+                        : target.ActualWidth;
+                double fullTextHeight = MeasureRenameTextHeight(
+                    ItemRenameTextBox.Text,
+                    ItemRenameTextBox.FontSize,
+                    labelMaxWidth);
+                height = Math.Max(
+                    height,
+                    SelectedNameExpansionPolicy.ClampRenameEditorHeight(
+                        fullTextHeight + 6,
+                        target.ActualHeight + (2 * border),
+                        contentHeight - offsetY - 4,
+                        20));
+
                 // Icon labels are often narrower than the editor's minimum
                 // width. Growing only toward the right visibly detaches the
                 // editor from the icon, so keep both centers aligned and only
@@ -2051,6 +2174,61 @@ public sealed partial class FileSurfaceContent :
         ItemRenameTextBox.Height = height;
         ItemRenameTextBox.Margin =
             new Thickness(offsetX, offsetY, 0, 0);
+    }
+
+    /// <summary>
+    /// Measures how tall the full rename text wraps at the label's width.
+    /// The probe reuses the label's font size; a few pixels of editor chrome
+    /// are added by the callers.
+    /// </summary>
+    private static double MeasureRenameTextHeight(
+        string text,
+        double fontSize,
+        double maxWidth)
+    {
+        if (string.IsNullOrEmpty(text) || fontSize <= 0 || maxWidth <= 0)
+        {
+            return 0;
+        }
+
+        var probe = new TextBlock
+        {
+            FontSize = fontSize,
+            MaxWidth = maxWidth,
+            Text = text,
+            TextWrapping = TextWrapping.Wrap
+        };
+        probe.Measure(new Windows.Foundation.Size(
+            maxWidth,
+            double.PositiveInfinity));
+        return probe.DesiredSize.Height;
+    }
+
+    private void SetItemsViewScrollingSuspended(bool suspended)
+    {
+        SetItemsViewScrollSuspended(ItemsGrid, suspended);
+        SetItemsViewScrollSuspended(ItemsList, suspended);
+        if (_stackPopoverItemsView is { } popoverView)
+        {
+            SetItemsViewScrollSuspended(popoverView, suspended);
+        }
+    }
+
+    private static void SetItemsViewScrollSuspended(
+        ListViewBase itemsView,
+        bool suspended)
+    {
+        // The inline editor is positioned once when it opens. Wheel and
+        // Ctrl+wheel scrolling happen inside the template ScrollViewer before
+        // any bubbling handler could veto them, so the edit session disables
+        // the scroll modes instead. ListViewBase forwards these attached
+        // properties to its template ScrollViewer.
+        itemsView.SetValue(
+            ScrollViewer.VerticalScrollModeProperty,
+            suspended ? ScrollMode.Disabled : ScrollMode.Enabled);
+        itemsView.SetValue(
+            ScrollViewer.HorizontalScrollModeProperty,
+            suspended ? ScrollMode.Disabled : ScrollMode.Enabled);
     }
 
     private FrameworkElement? FindItemNameElement(WidgetItem item)
@@ -4510,6 +4688,7 @@ public sealed partial class FileSurfaceContent :
             }
 
             _isSurfaceReorderDragActive = true;
+            HideAllNameExpansions();
             _surfaceReorderStackKey = stackKey;
             _surfaceReorderPaths = [];
             UpdateSurfaceReorderPreview(position);
@@ -4548,6 +4727,7 @@ public sealed partial class FileSurfaceContent :
             }
 
             _isSurfaceReorderDragActive = true;
+            HideAllNameExpansions();
             _surfaceReorderPaths = paths;
             _surfaceReorderDraggedItem = draggedItems[0];
             _surfaceReorderDraggedItems = draggedItems;
@@ -6019,6 +6199,8 @@ public sealed partial class FileSurfaceContent :
         {
             CancelItemRename();
         }
+        SetItemsViewScrollingSuspended(false);
+        CancelPendingSlowClickRename();
         Loaded -= OnLoaded;
         Unloaded -= OnUnloaded;
         UnregisterRenderWindowTracking();
