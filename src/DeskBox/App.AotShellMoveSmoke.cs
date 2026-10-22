@@ -556,9 +556,11 @@ public partial class App
                     AotLocalFileSurfaceFixture.IsPathEqualOrInside(
                         paths.WidgetRoot,
                         path)) &&
-                // A failed entry records the EXPECTED move that never landed,
-                // so its destinations are deliberately empty (the failure
-                // writer has no destination to report); a successful entry's
+                // A failed entry carries no CONFIRMED destination — the
+                // failure writer has no destination to report (a physically
+                // completed item rides the exception into the undoable
+                // success entry instead, and the disk-level assertions pin
+                // that landing separately); a successful entry's
                 // destinations must sit inside the owned desktop root.
                 (history.IsFailed
                     ? history.DestinationPaths.All(string.IsNullOrEmpty)

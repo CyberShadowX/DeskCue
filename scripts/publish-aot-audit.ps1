@@ -3798,7 +3798,6 @@ $stage5B4B1RoutePatterns = @(
     '"AppearanceDensitySettings"',
     '"AppearanceWindowSettings"',
     '"AppearanceAnimationSettings"',
-    '"CapsuleMode"',
     '"CapsuleOverridesSettings"',
     '"BackupRestoreSettings"',
     '"DataHealthSettings"',
