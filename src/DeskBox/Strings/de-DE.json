@@ -409,7 +409,7 @@
   "Settings.Theme.Light": "Hell",
   "Settings.Theme.Dark": "Dunkel",
   "Settings.TrayIcon.Title": "Tray-Symbol",
-  "Settings.TrayIcon.Description": "Symbolstil im Taskleisten-Benachrichtigungsbereich wählen",
+  "Settings.TrayIcon.Description": "Symbolstil im Taskleisten-Benachrichtigungsbereich wählen. Bei „Ausgeblendet“ öffnet ein erneuter Start von DeskBox die Einstellungen, sodass der Stil jederzeit zurückgeändert werden kann; F7 zeigt die Widgets weiterhin an",
   "Settings.TrayIcon.System": "System folgen",
   "Settings.TrayIcon.Colorful": "Farbig",
   "Settings.TrayIcon.Black": "Weiß",

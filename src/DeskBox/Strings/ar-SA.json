@@ -423,7 +423,7 @@
   "Settings.Theme.Light": "فاتح",
   "Settings.Theme.Dark": "داكن",
   "Settings.TrayIcon.Title": "أيقونة منطقة الإعلام",
-  "Settings.TrayIcon.Description": "اختر نمط الرمز في منطقة الإعلام بشريط المهام",
+  "Settings.TrayIcon.Description": "اختر نمط الرمز في منطقة الإعلام بشريط المهام. إذا اخترت «مخفي»، فأعد تشغيل DeskBox لفتح الإعدادات وتغييره في أي وقت؛ ويظل زر F7 متاحًا",
   "Settings.TrayIcon.System": "اتبع النظام",
   "Settings.TrayIcon.Colorful": "ملون",
   "Settings.TrayIcon.Black": "أبيض",

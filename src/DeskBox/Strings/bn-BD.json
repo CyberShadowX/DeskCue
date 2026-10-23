@@ -423,7 +423,7 @@
   "Settings.Theme.Light": "হালকা",
   "Settings.Theme.Dark": "গাঢ়",
   "Settings.TrayIcon.Title": "ট্রে আইকন",
-  "Settings.TrayIcon.Description": "টাস্কবার বিজ্ঞপ্তি এলাকায় আইকন শৈলী চয়ন করুন",
+  "Settings.TrayIcon.Description": "টাস্কবার বিজ্ঞপ্তি এলাকায় আইকন শৈলী চয়ন করুন। «লুকানো» বেছে নিলে DeskBox আবার চালালেই সেটিংস খুলবে, যেকোনো সময় ফেরানো যাবে; F7 আগের মতোই কাজ করে",
   "Settings.TrayIcon.System": "সিস্টেম অনুসরণ করুন",
   "Settings.TrayIcon.Colorful": "রঙিন",
   "Settings.TrayIcon.Black": "সাদা",

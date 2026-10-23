@@ -423,7 +423,7 @@
   "Settings.Theme.Light": "Clair",
   "Settings.Theme.Dark": "Sombre",
   "Settings.TrayIcon.Title": "Icône de la zone de notification",
-  "Settings.TrayIcon.Description": "Choisissez le style d'icône dans la zone de notification de la barre des tâches",
+  "Settings.TrayIcon.Description": "Choisissez le style d'icône dans la zone de notification de la barre des tâches. Si vous choisissez « Masqué », relancez DeskBox pour rouvrir les paramètres et le changer à tout moment ; F7 affiche toujours les widgets",
   "Settings.TrayIcon.System": "Suivre le système",
   "Settings.TrayIcon.Colorful": "Coloré",
   "Settings.TrayIcon.Black": "Blanc",

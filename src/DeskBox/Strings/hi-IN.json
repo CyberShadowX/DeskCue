@@ -423,7 +423,7 @@
   "Settings.Theme.Light": "हल्का",
   "Settings.Theme.Dark": "गहरा",
   "Settings.TrayIcon.Title": "ट्रे आइकन",
-  "Settings.TrayIcon.Description": "टास्कबार अधिसूचना क्षेत्र में आइकन शैली चुनें",
+  "Settings.TrayIcon.Description": "टास्कबार अधिसूचना क्षेत्र में आइकन शैली चुनें। यदि आप «छिपा हुआ» चुनते हैं, तो DeskBox को फिर से चलाने पर सेटिंग्स खुल जाएँगी और इसे कभी भी बदला जा सकता है; F7 पहले की तरह काम करता है",
   "Settings.TrayIcon.System": "सिस्टम का पालन करें",
   "Settings.TrayIcon.Colorful": "रंगीन",
   "Settings.TrayIcon.Black": "सफ़ेद",

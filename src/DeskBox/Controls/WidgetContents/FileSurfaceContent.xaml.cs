@@ -814,7 +814,13 @@ public sealed partial class FileSurfaceContent :
             EmptyStateHelpButton,
             T("Widget.Empty.HelpTipTitle"));
 
-        if (!IsCurrentProcessElevatedCached())
+        // The elevated-mode hint is only true when DeskBox runs ABOVE the
+        // shell: drag-in from a normal Explorer is what UIPI blocks. On a
+        // same-level fully-elevated desktop drag-in works (only drag-out is
+        // limited — the informed-notice batch owns that story), so the bar
+        // must stay out of the way there.
+        if (!IsCurrentProcessElevatedCached() ||
+            App.Current.StartupElevation.Mismatch != ShellIntegrityMismatch.AppAboveShell)
         {
             return;
         }

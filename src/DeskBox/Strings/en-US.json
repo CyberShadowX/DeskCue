@@ -423,7 +423,7 @@
   "Settings.Theme.Light": "Light",
   "Settings.Theme.Dark": "Dark",
   "Settings.TrayIcon.Title": "Tray icon",
-  "Settings.TrayIcon.Description": "Choose the icon style in the taskbar notification area",
+  "Settings.TrayIcon.Description": "Choose the icon style in the taskbar notification area. If you pick Hidden, run DeskBox again to reopen settings and change it back anytime; F7 still shows the widgets",
   "Settings.TrayIcon.System": "Follow system",
   "Settings.TrayIcon.Colorful": "Colorful",
   "Settings.TrayIcon.Black": "White",

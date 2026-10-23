@@ -209,6 +209,14 @@ public partial class App : Application
     private DateTimeOffset? _lastBareExternalActivationAtUtc;
     private readonly bool _processStartupLaunchDetected;
     private readonly StartupElevationAssessment _startupElevationAssessment = new(false, false, false, false);
+
+    /// <summary>
+    /// Cached launch-time elevation snapshot. Same-level fully-elevated
+    /// sessions read <see cref="ShellIntegrityMismatch.None"/> here; surface
+    /// code uses the mismatch leg to tell "drag-in is blocked" (app above
+    /// shell) apart from same-level sessions where drag-in works.
+    /// </summary>
+    internal StartupElevationAssessment StartupElevation => _startupElevationAssessment;
     private bool _cloudBackupUnverifiedToastShown;
 
     public static new App Current => (App)Application.Current;
@@ -1667,7 +1675,9 @@ public partial class App : Application
                 "onboarding",
                 () => EnsureOnboardingAsync(isInteractiveLaunch: !IsStartupMode));
 
-            RunOptionalStartupStep("release-notes-after-update", ShowReleaseNotesAfterUpdateOnce);
+            RunOptionalStartupStep(
+                "release-notes-after-update",
+                () => ShowReleaseNotesAfterUpdateOnce());
 
             RunOptionalStartupStep("background-update-check", ScheduleBackgroundUpdateCheck);
             RunOptionalStartupStep("diagnostics-service", () =>
@@ -2395,11 +2405,15 @@ public partial class App : Application
     /// offline-failed, or instantly-closed showing never repeats on later
     /// launches. Unattended (logon-time) launches defer without stamping,
     /// leaving the window for the first interactive launch — the updater's
-    /// relaunch is interactive, so right after an update the window shows.
+    /// relaunch is interactive, so right after an update the window shows,
+    /// and an external activation of a still-running startup instance counts
+    /// as that first interactive launch (it cannot re-enter the startup
+    /// pipeline, so the activation hook calls this with
+    /// <paramref name="isInteractiveActivation"/>).
     /// </summary>
-    private void ShowReleaseNotesAfterUpdateOnce()
+    private void ShowReleaseNotesAfterUpdateOnce(bool isInteractiveActivation = false)
     {
-        if (IsStartupMode || IsShuttingDown)
+        if ((!isInteractiveActivation && IsStartupMode) || IsShuttingDown)
         {
             return;
         }
@@ -3643,6 +3657,12 @@ public partial class App : Application
                 {
                     continue;
                 }
+
+                // The first interactive activation of a startup-mode session
+                // stands in for the startup pipeline's deferred
+                // release-notes step (the recovery offer and onboarding
+                // above outrank it).
+                ShowReleaseNotesAfterUpdateOnce(isInteractiveActivation: true);
 
                 if (WidgetManager is not null)
                 {

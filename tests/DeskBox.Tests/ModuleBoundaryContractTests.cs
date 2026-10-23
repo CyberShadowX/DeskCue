@@ -478,7 +478,9 @@ public sealed class ModuleBoundaryContractTests
         ["src/DeskBox/App.xaml.cs"] = 3,
         ["src/DeskBox/Helpers/NativeDropTarget.cs"] = 5,
         ["src/DeskBox/Services/AotShellMoveFixture.cs"] = 1,
-        ["src/DeskBox/Services/AppUpdateService.cs"] = 5,
+        // +1: retiring a downloaded installer reclaims its version-scoped
+        // directory under the updates root (TryDeleteRetiredInstallerDirectory).
+        ["src/DeskBox/Services/AppUpdateService.cs"] = 6,
         ["src/DeskBox/Services/AttachmentStorageService.cs"] = 1,
         // Cloud backup orchestrator cleans up its own %TEMP% upload staging
         // directory — it never touches the data root (that stays inside

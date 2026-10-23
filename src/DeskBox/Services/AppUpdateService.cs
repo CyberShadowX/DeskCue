@@ -77,6 +77,44 @@ public sealed partial class AppUpdateService : IAppUpdateService
         _lastDownloadedVersion = null;
     }
 
+    // Retiring a downloaded installer must also reclaim its files: each
+    // download lives in a version-scoped folder under the updates root, and
+    // without this the folder grows by one installer with every release.
+    // The expected-path guard pins the delete to that layout even if the
+    // fields ever drift; the helper folder is never touched.
+    private void TryDeleteRetiredInstallerDirectory()
+    {
+        string? retiredPath = _lastDownloadedInstallerPath;
+        string? retiredVersion = _lastDownloadedVersion;
+        if (string.IsNullOrWhiteSpace(retiredPath) ||
+            string.IsNullOrWhiteSpace(retiredVersion))
+        {
+            return;
+        }
+
+        try
+        {
+            string expectedDirectory = Path.Combine(
+                _updateRootPath,
+                SanitizePathSegment(retiredVersion));
+            if (!string.Equals(
+                    Path.GetDirectoryName(retiredPath),
+                    expectedDirectory,
+                    StringComparison.OrdinalIgnoreCase) ||
+                !Directory.Exists(expectedDirectory))
+            {
+                return;
+            }
+
+            Directory.Delete(expectedDirectory, recursive: true);
+            App.Log($"[Update] Deleted retired installer directory '{expectedDirectory}'");
+        }
+        catch (Exception ex)
+        {
+            App.Log($"[Update] Failed to delete retired installer directory: {ex.Message}");
+        }
+    }
+
     public string ManifestUrl => _manifestUrl;
     public AppUpdateDeliveryKind DeliveryKind => AppUpdateDeliveryKind.DirectInstaller;
     internal static string CurrentInstallerArchitectureSuffix =>
@@ -771,10 +809,12 @@ public sealed partial class AppUpdateService : IAppUpdateService
         if (result.IsUpdateAvailable && result.Manifest is { } offered &&
             !string.Equals(offered.Version, _lastDownloadedVersion, StringComparison.Ordinal))
         {
+            TryDeleteRetiredInstallerDirectory();
             ClearLastDownloadedInstaller();
         }
         else if (result.Status == AppUpdateCheckStatus.UpToDate && _lastDownloadedInstallerPath is not null)
         {
+            TryDeleteRetiredInstallerDirectory();
             ClearLastDownloadedInstaller();
         }
 

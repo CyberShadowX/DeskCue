@@ -409,7 +409,7 @@
   "Settings.Theme.Light": "ライト",
   "Settings.Theme.Dark": "ダーク",
   "Settings.TrayIcon.Title": "トレイアイコン",
-  "Settings.TrayIcon.Description": "タスクバーの通知領域に表示されるアイコンのスタイルを選択します",
+  "Settings.TrayIcon.Description": "タスクバーの通知領域に表示されるアイコンのスタイルを選択します。「非表示」を選んだ場合、DeskBox をもう一度実行すると設定が開き、いつでも戻せます。F7 でウィジェットを表示できます",
   "Settings.TrayIcon.System": "システムに従う",
   "Settings.TrayIcon.Colorful": "カラー",
   "Settings.TrayIcon.Black": "ホワイト",

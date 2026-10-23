@@ -268,6 +268,7 @@ public partial class App
         if (IsTrayIconHiddenByUserSetting())
         {
             Log("[Tray] Tray icon hidden by user setting; skipping icon creation");
+            RemoveTrayIconCreatedByLibraryLoad();
         }
         else
         {
@@ -1424,6 +1425,56 @@ public partial class App
                 }
             }
         });
+    }
+
+    // H.NotifyIcon's constructor subscribes its own Loaded handler that
+    // calls ForceCreate, so mounting the icon element into the tray host
+    // window creates a visible icon even when the user's style is Hidden —
+    // the hidden branch in CreateTrayIcon only stops OUR retry loop. Remove
+    // whatever that library handler created, and keep a late Loaded removal
+    // subscribed after the library's (multicast order) for a Loaded that
+    // fires after this point.
+    private void RemoveTrayIconCreatedByLibraryLoad()
+    {
+        if (_trayIcon is null)
+        {
+            return;
+        }
+
+        _trayIcon.Loaded += OnTrayIconLoadedWhileHidden;
+        RemoveHiddenTrayIconIfCreated("startup");
+    }
+
+    private void OnTrayIconLoadedWhileHidden(object sender, RoutedEventArgs e)
+    {
+        if (_trayIcon is null)
+        {
+            return;
+        }
+
+        _trayIcon.Loaded -= OnTrayIconLoadedWhileHidden;
+        if (IsTrayIconHiddenByUserSetting())
+        {
+            RemoveHiddenTrayIconIfCreated("library load");
+        }
+    }
+
+    private void RemoveHiddenTrayIconIfCreated(string reason)
+    {
+        if (_trayIcon is not { IsCreated: true })
+        {
+            return;
+        }
+
+        try
+        {
+            _trayIcon.TrayIcon.TryRemove();
+            Log($"[Tray] Removed the hidden tray icon created by the library ({reason})");
+        }
+        catch (Exception ex)
+        {
+            Log($"[Tray] Failed to remove the hidden tray icon created by the library ({reason}): {ex.Message}");
+        }
     }
 
     private void UpdateTrayIconAppearance()

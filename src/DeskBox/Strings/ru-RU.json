@@ -423,7 +423,7 @@
   "Settings.Theme.Light": "Светлая",
   "Settings.Theme.Dark": "Тёмная",
   "Settings.TrayIcon.Title": "Значок в трее",
-  "Settings.TrayIcon.Description": "Выберите стиль значков в области уведомлений панели задач.",
+  "Settings.TrayIcon.Description": "Выберите стиль значков в области уведомлений панели задач. Если выбрать «Скрытый», повторный запуск DeskBox откроет настройки, где стиль можно вернуть в любой момент; F7 по-прежнему показывает виджеты.",
   "Settings.TrayIcon.System": "Как в системе",
   "Settings.TrayIcon.Colorful": "Красочный",
   "Settings.TrayIcon.Black": "Белый",

@@ -1376,7 +1376,7 @@
   "WidgetContent.Tags.StatusDescription": "檔案標籤管理",
   "Settings.DataBackup.Snapshots.Automatic": "自動快照",
   "Settings.Capsule.WidthMode.Title": "展開後的寬度",
-  "Settings.TrayIcon.Description": "選擇工作列通知區域的圖示樣式",
+  "Settings.TrayIcon.Description": "選擇工作列通知區域的圖示樣式；選擇「隱藏」後，重新執行 DeskBox 可直接開啟設定隨時改回，F7 仍可喚起小工具",
   "Tray.TooltipNormal": "DeskBox 桌面收納 - 按一下滑鼠左鍵置頂小工具",
   "Settings.Todo.ReminderEnabled.Description": "DeskBox 執行時，在待辦事項截止前發送 Windows 系統通知",
   "Settings.HideShortcutArrow.Description": "只影響 DeskBox 小工具內的圖示顯示",

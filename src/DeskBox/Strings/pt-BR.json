@@ -409,7 +409,7 @@
   "Settings.Theme.Light": "Claro",
   "Settings.Theme.Dark": "Escuro",
   "Settings.TrayIcon.Title": "Ícone da bandeja",
-  "Settings.TrayIcon.Description": "Escolha o estilo do ícone na área de notificação da barra de tarefas",
+  "Settings.TrayIcon.Description": "Escolha o estilo do ícone na área de notificação da barra de tarefas. Se você escolher Oculto, execute o DeskBox novamente para reabrir as configurações e alterar quando quiser; a tecla F7 continua mostrando os widgets",
   "Settings.TrayIcon.System": "Seguir o sistema",
   "Settings.TrayIcon.Colorful": "Colorido",
   "Settings.TrayIcon.Black": "Branco",
