@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using DeskBox.Models;
 
 namespace DeskBox.Services;
@@ -103,6 +104,60 @@ public sealed class ReleaseNotesService
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
         {
             return new ReleaseNotesLoadResult(string.Empty, ErrorMessage: ex.Message);
+        }
+    }
+
+    private static readonly Regex CacheFileNamePattern = new(
+        @"^(?<version>.+)\.(?<locale>all|[A-Za-z]{2}(?:[-_][A-Za-z0-9]{2,8})?)\.md$",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    /// <summary>
+    /// Distinct versions that have an on-disk notes cache, newest first.
+    /// The release-notes window's version list is seeded from these plus the
+    /// versions it resolves live, so previously viewed versions stay
+    /// reachable (and offline-readable) after the feed moves on.
+    /// </summary>
+    public IReadOnlyList<string> GetCachedVersions()
+    {
+        try
+        {
+            if (!Directory.Exists(_cacheRootPath))
+            {
+                return [];
+            }
+
+            return Directory.GetFiles(_cacheRootPath, "*.md")
+                .Select(path => CacheFileNamePattern.Match(Path.GetFileName(path)))
+                .Where(match => match.Success)
+                .Select(match => match.Groups["version"].Value)
+                .Where(version => !string.IsNullOrWhiteSpace(version))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(version => version, CachedVersionComparer.Instance)
+                .ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
+
+    private sealed class CachedVersionComparer : IComparer<string>
+    {
+        public static readonly CachedVersionComparer Instance = new();
+
+        public int Compare(string? x, string? y)
+        {
+            if (Version.TryParse(x, out Version? xVersion) &&
+                Version.TryParse(y, out Version? yVersion))
+            {
+                int result = xVersion.CompareTo(yVersion);
+                if (result != 0)
+                {
+                    return result;
+                }
+            }
+
+            return string.CompareOrdinal(x, y);
         }
     }
 

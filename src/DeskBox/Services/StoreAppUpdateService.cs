@@ -18,8 +18,15 @@ public sealed class StoreAppUpdateService : IAppUpdateService
     public AppUpdateCheckResult? LastCheckResult { get; private set; }
     public DateTime? LastCheckTimeUtc { get; private set; }
     public event Action<AppUpdateCheckResult>? CheckCompleted;
+    // Store installs flow through the Store UI, so there is never a local
+    // installer this service downloaded.
+    public event Action<AppUpdateDownloadProgress>? DownloadProgressChanged;
+    public event Action<AppUpdateDownloadResult>? DownloadCompleted;
     public string ManifestUrl => string.Empty;
     public AppUpdateDeliveryKind DeliveryKind => AppUpdateDeliveryKind.MicrosoftStore;
+    public string? LastDownloadedInstallerPath => null;
+    public bool IsDownloadInProgress => false;
+    public void ClearLastDownloadedInstaller() { }
 
     public Task<AppUpdateCheckResult> CheckForUpdatesAsync(CancellationToken cancellationToken = default)
     {

@@ -415,8 +415,13 @@ public const int DefaultSearchMaxResults = 100;
                 [nameof(AppSettings.OnboardingStepIndex)] = DefaultPreferencePreservationReason.RuntimeState,
                 [nameof(AppSettings.CompletedOnboardingVersion)] = DefaultPreferencePreservationReason.RuntimeState,
                 [nameof(AppSettings.HasResolvedInitialFileWidgetSetup)] = DefaultPreferencePreservationReason.RuntimeState,
+                [nameof(AppSettings.FullyElevatedNoticeAcknowledgedUtcTicks)] = DefaultPreferencePreservationReason.RuntimeState,
                 [nameof(AppSettings.LastQuickCaptureFileWidgetId)] = DefaultPreferencePreservationReason.RuntimeState,
                 [nameof(AppSettings.LastUpdateCheckAt)] = DefaultPreferencePreservationReason.RuntimeState,
+                [nameof(AppSettings.ShowReleaseNotesAfterUpdate)] = DefaultPreferencePreservationReason.UserChoice,
+                [nameof(AppSettings.LastRunVersion)] = DefaultPreferencePreservationReason.RuntimeState,
+                [nameof(AppSettings.AutoDownloadUpdates)] = DefaultPreferencePreservationReason.UserChoice,
+                [nameof(AppSettings.ShowUpdateToastNotification)] = DefaultPreferencePreservationReason.UserChoice,
                 [nameof(AppSettings.SchemaVersion)] = DefaultPreferencePreservationReason.RuntimeState
             };
 

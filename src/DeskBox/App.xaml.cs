@@ -12,6 +12,10 @@ using DeskBox.Models;
 using DeskBox.Platform;
 using DeskBox.Services;
 using DeskBox.Views;
+// App carries DI instance members named Services and AppUpdateService, which
+// shadow the DeskBox.Services.AppUpdateService class name inside this file;
+// static calls go through this alias.
+using AppUpdateServiceStatic = DeskBox.Services.AppUpdateService;
 using System.Diagnostics;
 using H.NotifyIcon;
 using H.NotifyIcon.Core;
@@ -193,7 +197,9 @@ public partial class App : Application
     private SearchResultActionService? _searchActionService;
     private bool _widgetsRaisedFromTray;
     private bool _hasUpdateAvailable;
-    private bool _updateNotificationShown;
+    private string? _updateNotificationShownVersion;
+    private string? _updateReadyNotificationShownVersion;
+    private ReleaseNotesWindow? _appReleaseNotesWindow;
     private DateTimeOffset _lastSettingsPersistenceNotificationAt = DateTimeOffset.MinValue;
     private string _availableUpdateVersion = string.Empty;
     private int _externalStateRecoveryScheduled;
@@ -1661,6 +1667,8 @@ public partial class App : Application
                 "onboarding",
                 () => EnsureOnboardingAsync(isInteractiveLaunch: !IsStartupMode));
 
+            RunOptionalStartupStep("release-notes-after-update", ShowReleaseNotesAfterUpdateOnce);
+
             RunOptionalStartupStep("background-update-check", ScheduleBackgroundUpdateCheck);
             RunOptionalStartupStep("diagnostics-service", () =>
             {
@@ -2315,12 +2323,50 @@ public partial class App : Application
             return;
         }
 
-        _ = Task.Run(async () =>
+        _ = Task.Run(() => BackgroundUpdateCheckLoopAsync(
+            IsStartupMode ? TimeSpan.FromSeconds(45) : TimeSpan.FromSeconds(12)));
+    }
+
+    /// <summary>
+    /// Periodic update-check loop: a definitive answer waits a day, a failed
+    /// or inconclusive check retries in two hours. The wait targets a
+    /// wall-clock deadline and recomputes the remaining delay after every
+    /// wake because timers pause while the system sleeps — a blind
+    /// full-interval delay would silently stretch across suspend.
+    /// </summary>
+    private async Task BackgroundUpdateCheckLoopAsync(TimeSpan initialDelay)
+    {
+        DateTimeOffset nextCheckAt = DateTimeOffset.Now + initialDelay;
+        while (!IsShuttingDown)
         {
+            while (!IsShuttingDown)
+            {
+                TimeSpan remaining = nextCheckAt - DateTimeOffset.Now;
+                if (remaining <= TimeSpan.Zero)
+                {
+                    break;
+                }
+
+                await Task.Delay(remaining);
+            }
+
+            if (IsShuttingDown)
+            {
+                return;
+            }
+
+            // Re-read the toggle every cycle: turning auto-check off stops
+            // the loop for this session; the next launch reschedules it.
+            if (!SettingsService.Settings.AutoCheckForUpdates)
+            {
+                return;
+            }
+
+            AppUpdateCheckStatus? status = null;
             try
             {
-                await Task.Delay(IsStartupMode ? TimeSpan.FromSeconds(45) : TimeSpan.FromSeconds(12));
                 var result = await AppUpdateService.CheckForUpdatesAsync();
+                status = result.Status;
                 SettingsService.Settings.LastUpdateCheckAt = DateTimeOffset.Now;
                 SettingsService.SaveDebounced(notifySubscribers: false);
 
@@ -2337,7 +2383,132 @@ public partial class App : Application
             {
                 Log($"[Update] Background check crashed: {ex}");
             }
-        });
+
+            nextCheckAt = DateTimeOffset.Now + BackgroundUpdateCheckPolicy.GetDelayUntilNextCheck(status);
+        }
+    }
+
+    /// <summary>
+    /// Opens the release-notes window once per observed version change (the
+    /// PowerToys What's-New pattern). The marker is stamped unconditionally
+    /// on the first interactive run of a version, so a suppressed,
+    /// offline-failed, or instantly-closed showing never repeats on later
+    /// launches. Unattended (logon-time) launches defer without stamping,
+    /// leaving the window for the first interactive launch — the updater's
+    /// relaunch is interactive, so right after an update the window shows.
+    /// </summary>
+    private void ShowReleaseNotesAfterUpdateOnce()
+    {
+        if (IsStartupMode || IsShuttingDown)
+        {
+            return;
+        }
+
+        string currentVersion = AppUpdateServiceStatic.GetCurrentAppVersion();
+        try
+        {
+            if (ReleaseNotesAfterUpdatePolicy.ShouldShowWindow(
+                    SettingsService.Settings.ShowReleaseNotesAfterUpdate,
+                    SettingsService.Settings.HasCompletedOnboarding,
+                    SettingsService.Settings.LastRunVersion,
+                    currentVersion))
+            {
+                OpenAppReleaseNotesWindow(currentVersion);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"[Update] Post-update release notes failed: {ex.Message}");
+        }
+        finally
+        {
+            SettingsService.Settings.LastRunVersion = currentVersion;
+            SettingsService.SaveDebounced(notifySubscribers: false);
+        }
+    }
+
+    private void OpenAppReleaseNotesWindow(string version)
+    {
+        if (IsShuttingDown)
+        {
+            return;
+        }
+
+        try
+        {
+            if (_appReleaseNotesWindow is null)
+            {
+                var window = new ReleaseNotesWindow(
+                    manifest: null,
+                    version,
+                    ThemeService,
+                    LocalizationService,
+                    manifestLoader: cancellationToken => LoadReleaseNotesManifestForVersionAsync(version, cancellationToken));
+                _appReleaseNotesWindow = window;
+                window.Closed += (_, _) =>
+                {
+                    if (ReferenceEquals(_appReleaseNotesWindow, window))
+                    {
+                        _appReleaseNotesWindow = null;
+                    }
+                };
+            }
+
+            _appReleaseNotesWindow.ShowWindow();
+        }
+        catch (Exception ex)
+        {
+            Log($"[Update] Failed to open release-notes window: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Resolves notes for one exact version: the published content manifest
+    /// while it still describes that version (locale-aware inline notes, no
+    /// GitHub dependency), otherwise a display-only manifest pointing at the
+    /// GitHub release tag — which the loader converts to the API endpoint and
+    /// seeds the offline disk cache from.
+    /// </summary>
+    private async Task<AppUpdateManifest?> LoadReleaseNotesManifestForVersionAsync(
+        string version,
+        CancellationToken cancellationToken)
+    {
+        var contentManifest = await AppUpdateServiceStatic.FetchContentManifestAsync(cancellationToken);
+        if (contentManifest is not null &&
+            string.Equals(contentManifest.Version.Trim(), version.Trim(), StringComparison.Ordinal))
+        {
+            return contentManifest;
+        }
+
+        return AppUpdateServiceStatic.CreateReleaseNotesOnlyManifest(version);
+    }
+
+    private void ShowUpdateReleaseNotesFromReminder()
+    {
+        // Cold activation (toast clicked after the process exited) has no
+        // reminder state in memory; the About page still carries the notes.
+        if (string.IsNullOrWhiteSpace(_availableUpdateVersion))
+        {
+            OpenAboutSettingsFromTray();
+            return;
+        }
+
+        OpenAppReleaseNotesWindow(_availableUpdateVersion);
+    }
+
+    private async Task RunOneClickUpdateFromToastAsync()
+    {
+        try
+        {
+            if (_settingsWindow is not null)
+            {
+                await _settingsWindow.RunOneClickUpdateFlowAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"[Update] Toast-triggered one-click update failed: {ex.Message}");
+        }
     }
 
     internal void RefreshQuickCaptureClipboardService(bool captureCurrent = false)
@@ -2524,8 +2695,25 @@ public partial class App : Application
                      "update",
                      StringComparison.OrdinalIgnoreCase))
         {
-            // Same target as the tray's About entry, without the tray-flyout
-            // close delay the tray path waits out.
+            if (notificationArguments.TryGetValue("action", out string? updateAction))
+            {
+                if (string.Equals(updateAction, "start", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Same target as the tray's About entry, without the
+                    // tray-flyout close delay the tray path waits out; the
+                    // one-click flow then spares the user finding the button.
+                    OpenAboutSettingsFromTray();
+                    _ = RunOneClickUpdateFromToastAsync();
+                    return;
+                }
+
+                if (string.Equals(updateAction, "notes", StringComparison.OrdinalIgnoreCase))
+                {
+                    ShowUpdateReleaseNotesFromReminder();
+                    return;
+                }
+            }
+
             OpenAboutSettingsFromTray();
         }
         else if (notificationArguments.TryGetValue("type", out string? settingsNotificationType) &&
@@ -3102,6 +3290,7 @@ public partial class App : Application
         if (result.IsUpdateAvailable && result.Manifest is not null)
         {
             SetUpdateAvailableReminder(result.Manifest);
+            MaybeAutoDownloadUpdate(result.Manifest);
         }
         else if (result.Status == AppUpdateCheckStatus.UpToDate)
         {
@@ -3111,6 +3300,109 @@ public partial class App : Application
         _settingsWindow?.RefreshUpdateStateFromService();
     }
 
+    /// <summary>
+    /// Background auto-download (the PowerToys downloadUpdatesAutomatically
+    /// flow): after any check that offers an update, download it silently —
+    /// never on a metered connection, never twice at once, never when an
+    /// installer is already on disk. The ready-to-install toast follows.
+    /// </summary>
+    private void MaybeAutoDownloadUpdate(AppUpdateManifest manifest)
+    {
+        string? readyInstaller = AppUpdateService.LastDownloadedInstallerPath;
+        if (!UpdateAutoDownloadPolicy.ShouldAutoDownload(
+                SettingsService.Settings.AutoDownloadUpdates,
+                isDirectInstallerDelivery: !DistributionService.IsMicrosoftStore,
+                isMeteredConnection: UpdateNetworkCostPolicy.IsMeteredConnection(),
+                isDownloadInProgress: AppUpdateService.IsDownloadInProgress,
+                hasReadyInstaller: readyInstaller is not null && File.Exists(readyInstaller)))
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var result = await AppUpdateService.DownloadUpdateAsync(manifest);
+                if (result.Success)
+                {
+                    Log($"[Update] Auto-download finished: {manifest.Version}");
+                    if (UiDispatcherQueue is { } queue)
+                    {
+                        queue.TryEnqueue(() => SetUpdateReadyToInstallReminder(manifest));
+                    }
+                }
+                else if (result.FailureKind != AppUpdateDownloadFailureKind.Cancelled)
+                {
+                    Log($"[Update] Auto-download failed ({result.FailureKind}): {result.ErrorMessage}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"[Update] Auto-download crashed: {ex.Message}");
+            }
+        });
+    }
+
+    private void SetUpdateReadyToInstallReminder(AppUpdateManifest manifest)
+    {
+        if (IsShuttingDown)
+        {
+            return;
+        }
+
+        _hasUpdateAvailable = true;
+        _availableUpdateVersion = manifest.Version;
+        RefreshTrayMenuText();
+        RefreshTrayToolTipText();
+
+        if (_updateReadyNotificationShownVersion == manifest.Version ||
+            !SettingsService.Settings.ShowUpdateToastNotification)
+        {
+            return;
+        }
+
+        // The settings page shows the downloaded state live; a toast on top
+        // of it would repeat what is already on screen.
+        if (_settingsWindow is { IsVisibleToUser: true })
+        {
+            return;
+        }
+
+        string title = LocalizationService.T("Tray.UpdateAvailableTitle");
+        string message = LocalizationService.Format("Tray.UpdateDownloadedMessage", manifest.Version);
+        var updateNowArguments = new Dictionary<string, string>
+        {
+            ["type"] = "update",
+            ["action"] = "start"
+        };
+        var viewNotesArguments = new Dictionary<string, string>
+        {
+            ["type"] = "update",
+            ["action"] = "notes"
+        };
+        if (_nativeNotificationService?.TryShow(
+                title,
+                message,
+                updateNowArguments,
+                [
+                    new NativeAppNotificationAction(
+                        LocalizationService.T("Tray.UpdateInstallNow"),
+                        updateNowArguments),
+                    new NativeAppNotificationAction(
+                        LocalizationService.T("Tray.UpdateViewNotes"),
+                        viewNotesArguments)
+                ],
+                options: new NativeAppNotificationOptions(
+                    Tag: "update-available",
+                    Group: "update")) != true)
+        {
+            return;
+        }
+
+        _updateReadyNotificationShownVersion = manifest.Version;
+    }
+
     private void SetUpdateAvailableReminder(AppUpdateManifest manifest)
     {
         _hasUpdateAvailable = true;
@@ -3118,7 +3410,11 @@ public partial class App : Application
         RefreshTrayMenuText();
         RefreshTrayToolTipText();
 
-        if (_updateNotificationShown)
+        // One toast per version rather than per process: a re-check that
+        // still sees the same version stays silent, while a genuinely newer
+        // find (relevant once periodic checks exist) may notify again.
+        if (_updateNotificationShownVersion == manifest.Version ||
+            !SettingsService.Settings.ShowUpdateToastNotification)
         {
             return;
         }
@@ -3132,24 +3428,37 @@ public partial class App : Application
             return;
         }
 
-        var updateArguments = new Dictionary<string, string>
+        var openSettingsArguments = new Dictionary<string, string>
         {
             ["type"] = "update"
+        };
+        var updateNowArguments = new Dictionary<string, string>
+        {
+            ["type"] = "update",
+            ["action"] = "start"
+        };
+        var viewNotesArguments = new Dictionary<string, string>
+        {
+            ["type"] = "update",
+            ["action"] = "notes"
         };
         if (_nativeNotificationService?.TryShow(
                 title,
                 message,
-                updateArguments,
+                openSettingsArguments,
                 [
                     new NativeAppNotificationAction(
-                        LocalizationService.T("Tray.UpdateOpenSettings"),
-                        updateArguments)
+                        LocalizationService.T("Tray.UpdateInstallNow"),
+                        updateNowArguments),
+                    new NativeAppNotificationAction(
+                        LocalizationService.T("Tray.UpdateViewNotes"),
+                        viewNotesArguments)
                 ],
                 options: new NativeAppNotificationOptions(
                     Tag: "update-available",
                     Group: "update")) == true)
         {
-            _updateNotificationShown = true;
+            _updateNotificationShownVersion = manifest.Version;
             return;
         }
 
@@ -3170,7 +3479,7 @@ public partial class App : Application
                 respectQuietTime: true,
                 realtime: false,
                 timeout: TimeSpan.FromSeconds(8));
-            _updateNotificationShown = true;
+            _updateNotificationShownVersion = manifest.Version;
         }
         catch (Exception ex)
         {
@@ -3668,7 +3977,14 @@ public partial class App : Application
             "BackupRestoreSettings");
     }
 
-    private void ShowSettingsNotification(
+    /// <summary>
+    /// Shows a settings deep-linking notification: toast first, tray
+    /// balloon fallback. Returns true only when at least one channel
+    /// actually displayed — one-time notices (the fully-elevated informed
+    /// notice) ack on this verdict so a machine with toasts disabled and no
+    /// tray yet retries next launch instead of swallowing the notice.
+    /// </summary>
+    private bool ShowSettingsNotification(
         string titleKey,
         string bodyKey,
         NotificationIcon icon,
@@ -3676,7 +3992,7 @@ public partial class App : Application
     {
         if (LocalizationService is null || IsShuttingDown)
         {
-            return;
+            return false;
         }
 
         // Failure notices deep-link their body click into the owning settings
@@ -3691,9 +4007,14 @@ public partial class App : Application
             };
         string title = LocalizationService.T(titleKey);
         string message = LocalizationService.T(bodyKey);
-        if (_nativeNotificationService?.TryShow(title, message, arguments) == true || _trayIcon is null)
+        if (_nativeNotificationService?.TryShow(title, message, arguments) == true)
         {
-            return;
+            return true;
+        }
+
+        if (_trayIcon is null)
+        {
+            return false;
         }
 
         try
@@ -3708,10 +4029,12 @@ public partial class App : Application
                 respectQuietTime: true,
                 realtime: false,
                 timeout: TimeSpan.FromSeconds(10));
+            return true;
         }
         catch (Exception ex)
         {
             Log($"[SettingsService] Persistence notification failed: {ex.Message}");
+            return false;
         }
     }
 
@@ -4395,36 +4718,106 @@ public partial class App : Application
             candidate.BackupSchemaVersion);
 
     /// <summary>
-    /// Shows the elevated-launch notice once startup has produced a usable
+    /// Shows the elevation notice once startup has produced a usable
     /// surface. Skipped for unattended launches (the constructor already
     /// attempted a silent unelevated relaunch; nobody is watching a dialog)
-    /// and on shutdown. Only the asymmetric mismatch warns: on a fully
-    /// elevated desktop (company machines, UAC-off) DeskBox and the shell
-    /// share an integrity level, drag works, and a "running as
-    /// administrator" warning would be a false alarm.
+    /// and on shutdown. The asymmetric mismatch keeps its every-time notice
+    /// (self-healable, the user should act each elevated launch); since
+    /// 2026-10-22 the same-level elevated desktop — silent for years — gets
+    /// a one-time informed notice instead, because WinUI forbids XAML
+    /// drag-out in an elevated process: the session is degraded in a way
+    /// only a system-level change fixes, and the user deserves to know.
+    /// Acknowledgement persists in settings, so the interruption is once
+    /// per install, not once per launch.
     /// </summary>
     private void ShowElevationNoticeIfNeeded()
     {
         if (!_startupElevationAssessment.IsCurrentProcessElevated ||
-            _startupElevationAssessment.Mismatch != ShellIntegrityMismatch.AppAboveShell ||
-            IsStartupMode ||
             IsShuttingDown ||
             _elevationNoticeWindow is not null)
         {
             return;
         }
 
-        // Persisted RUNASADMIN-style compatibility layers keep relaunching
-        // DeskBox elevated, so scrub them while the notice is up — whether
-        // the user exits via the button or the window X, their next normal
-        // launch must be able to land unelevated. Failures log only.
-        _ = DragDropPermissionService.ClearElevationCompatibilityFlags();
+        if (_startupElevationAssessment.Mismatch == ShellIntegrityMismatch.AppAboveShell)
+        {
+            if (IsStartupMode)
+            {
+                return;
+            }
+
+            // Persisted RUNASADMIN-style compatibility layers keep relaunching
+            // DeskBox elevated, so scrub them while the notice is up — whether
+            // the user exits via the button or the window X, their next normal
+            // launch must be able to land unelevated. Failures log only.
+            _ = DragDropPermissionService.ClearElevationCompatibilityFlags();
+
+            _elevationNoticeWindow = new ElevationNoticeWindow(LocalizationService, _startupElevationAssessment);
+            _elevationNoticeWindow.Closed += (_, _) => _elevationNoticeWindow = null;
+            ThemeService.TrackWindow(_elevationNoticeWindow);
+            _elevationNoticeWindow.Activate();
+            Log("[Elevation] Notice shown for interactive elevated launch");
+            return;
+        }
+
+        // Same-level elevated desktop (built-in Administrator / UAC off).
+        if (_startupElevationAssessment.FullyElevatedAttribution == FullyElevatedSessionAttribution.None ||
+            SettingsService.Settings.Core.FullyElevatedNoticeAcknowledgedUtcTicks is not null)
+        {
+            return;
+        }
+
+        if (IsStartupMode)
+        {
+            ShowFullyElevatedNoticeToast();
+            return;
+        }
 
         _elevationNoticeWindow = new ElevationNoticeWindow(LocalizationService, _startupElevationAssessment);
         _elevationNoticeWindow.Closed += (_, _) => _elevationNoticeWindow = null;
         ThemeService.TrackWindow(_elevationNoticeWindow);
         _elevationNoticeWindow.Activate();
-        Log("[Elevation] Notice shown for interactive elevated launch");
+        // Ack on show: the window being seen completes the notice's job.
+        MarkFullyElevatedNoticeAcknowledged();
+        Log("[Elevation] Fully-elevated informed notice shown for interactive launch");
+    }
+
+    /// <summary>
+    /// Unattended form of the fully-elevated informed notice: a toast (or
+    /// tray balloon fallback) deep-linking into the compatibility diagnostic
+    /// section, shown once per install. Ack only when at least one channel
+    /// displayed — see <see cref="ShowSettingsNotification"/>.
+    /// </summary>
+    private void ShowFullyElevatedNoticeToast()
+    {
+        bool shown = ShowSettingsNotification(
+            "Tray.FullyElevatedNotice.Title",
+            "Tray.FullyElevatedNotice.Message",
+            NotificationIcon.Info,
+            "CompatibilityDiagnosticsSettings");
+        if (shown)
+        {
+            MarkFullyElevatedNoticeAcknowledged();
+        }
+
+        Log($"[Elevation] Fully-elevated toast shown={shown}");
+    }
+
+    private void MarkFullyElevatedNoticeAcknowledged()
+    {
+        try
+        {
+            // Slice-direct access: new settings code reads the slice, keeping
+            // the App.xaml.cs facade-access ratchet from growing.
+            SettingsService.Settings.Core.FullyElevatedNoticeAcknowledgedUtcTicks =
+                DateTimeOffset.UtcNow.UtcTicks;
+            _ = SettingsService.SaveCheckedAsync();
+        }
+        catch (Exception ex)
+        {
+            // A failed persist only means the notice reappears next launch.
+            Log($"[Elevation] Failed to persist fully-elevated notice ack: {ex.Message}");
+        }
     }
 
     /// <summary>
