@@ -19,9 +19,12 @@ public sealed class StoreAppUpdateService : IAppUpdateService
     public DateTime? LastCheckTimeUtc { get; private set; }
     public event Action<AppUpdateCheckResult>? CheckCompleted;
     // Store installs flow through the Store UI, so there is never a local
-    // installer this service downloaded.
+    // installer this service downloaded; the two download events are
+    // interface requirements that can never fire here.
+#pragma warning disable CS0067
     public event Action<AppUpdateDownloadProgress>? DownloadProgressChanged;
     public event Action<AppUpdateDownloadResult>? DownloadCompleted;
+#pragma warning restore CS0067
     public string ManifestUrl => string.Empty;
     public AppUpdateDeliveryKind DeliveryKind => AppUpdateDeliveryKind.MicrosoftStore;
     public string? LastDownloadedInstallerPath => null;

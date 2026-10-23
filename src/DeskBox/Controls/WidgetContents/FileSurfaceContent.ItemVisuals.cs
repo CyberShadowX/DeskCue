@@ -309,8 +309,15 @@ public sealed partial class FileSurfaceContent
         visual.StartAnimation("Opacity", animation);
     }
 
-    private static void StopNameExpansionFadeIn(Border overlay)
+    private static void StopNameExpansionFadeIn(Border? overlay)
     {
+        if (overlay is null)
+        {
+            // HideNameExpansion also runs for the suppression-only case,
+            // where the overlay is gone but the tile still needs restoring.
+            return;
+        }
+
         ElementCompositionPreview.GetElementVisual(overlay)
             .StopAnimation("Opacity");
     }

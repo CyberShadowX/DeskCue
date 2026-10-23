@@ -161,6 +161,22 @@ public sealed class ReleaseNotesService
         }
     }
 
+    /// <summary>
+    /// Every version with a published GitHub release, newest first, from the
+    /// bilingual-notes era (v1.4.0) onward. The release-notes window unions
+    /// this with the local cache so every machine shows the same version
+    /// rail regardless of which notes it happened to cache; versions
+    /// without a release (v1.4.4 never existed, v1.4.5 was tag-only) stay
+    /// out because their notes cannot resolve. Append the new version at
+    /// release time.
+    /// </summary>
+    public static readonly IReadOnlyList<string> KnownReleaseVersions =
+    [
+        "1.5.9", "1.5.8", "1.5.7", "1.5.6", "1.5.5", "1.5.4", "1.5.3", "1.5.2",
+        "1.5.1", "1.5.0", "1.4.9", "1.4.8", "1.4.7", "1.4.6", "1.4.3", "1.4.2",
+        "1.4.1", "1.4.0",
+    ];
+
     internal static Uri GetContentSourceUri(string releaseNotesUrl)
     {
         if (!Uri.TryCreate(releaseNotesUrl, UriKind.Absolute, out Uri? uri) ||

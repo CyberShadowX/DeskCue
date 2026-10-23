@@ -114,9 +114,11 @@ public sealed partial class ReleaseNotesWindow : Window
 
     /// <summary>
     /// Rebuilds the version navigation rail: the version currently shown
-    /// first, then every version with an on-disk notes cache, newest first.
-    /// The rail stays collapsed while only one version is reachable so the
-    /// single-version experience is unchanged.
+    /// first, then every published release, then any extra versions with an
+    /// on-disk notes cache, newest first — the published list keeps the rail
+    /// identical across machines, while the cache keeps viewed-but-unlisted
+    /// versions reachable. The rail stays collapsed while only one version
+    /// is reachable so the single-version experience is unchanged.
     /// </summary>
     private void RebuildVersionList()
     {
@@ -129,6 +131,14 @@ public sealed partial class ReleaseNotesWindow : Window
             _selectedVersion = target;
 
             var versions = new List<string> { target };
+            foreach (string known in Services.ReleaseNotesService.KnownReleaseVersions)
+            {
+                if (!versions.Contains(known, StringComparer.OrdinalIgnoreCase))
+                {
+                    versions.Add(known);
+                }
+            }
+
             foreach (string cached in _releaseNotesService.GetCachedVersions())
             {
                 if (!versions.Contains(cached, StringComparer.OrdinalIgnoreCase))
