@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.5.9 - 2026-10-20
+## 1.5.9 - 2026-10-23
 
 ### English
 
@@ -12,7 +12,11 @@
 - **Drag Shell locations into boxes to create shortcuts.** Dropping Recycle Bin, This PC, and similar Explorer locations onto a box now creates a working shortcut, with toast feedback when the source has nothing to offer or is busy.
 - **A redesigned first-run experience.** The onboarding opens with a three-piece logo assembly animation and a file-drop scene, and shows the real managed storage path with move/paste hints.
 - **Expanded widgets can shrink twice as small** — the minimum size drops from 50 to 25 DIP.
+- **Selected file names expand like the desktop.** In double-click-to-open mode, the trimmed name of the one selected file grows downward right where it is — no tile moves, and the expanded label is what stays selected. One more click on that expanded name starts an inline rename, just like a slow click on the Windows desktop.
 - **Korean language support.** The interface, installer, and first-run experience now ship in Korean alongside the existing 12 languages; the system locale is honored automatically.
+- **A calmer, more capable updater.** Update checks run once a day on a wall-clock anchor that survives sleep, and back off for two hours after a failure. The update toast's buttons now act: "Update now" goes straight into the one-click flow and "What's new" opens the release notes, which also open automatically after an update (inline release copy first, the GitHub tag as fallback). Updates can download in the background — metered connections are skipped — with a ready toast when the package is local, a status badge that follows each stage, version navigation across the full published history in the update log (identical on every machine, offline-readable once viewed), and an activity card in the corner of the settings window while anything is in flight; background download and update notifications each get their own switch (on by default).
+- **A clear notice on fully elevated desktops.** When the whole desktop runs with administrator privileges — UAC disabled, the built-in Administrator account, or a company-managed machine — a one-time startup notice explains that dragging files out of widgets is a Windows-level limitation in that state (dragging in works) and shows the exact way back: the secpol.msc policy on Pro, the FilterAdministratorToken registry value on Home, or signing in with a standard account, with a copyable command and a toast fallback. The drag-drop diagnostics in settings attribute the same situation, and an acknowledged notice never returns.
+- **The tray icon can be hidden.** A "Hidden" style joins the tray icon options: no icon is created at startup, a runtime switch takes effect immediately, and the icon stays gone through taskbar recreation.
 
 #### Fixes
 
@@ -26,6 +30,8 @@
 - Revealing a widget shortly after hiding it no longer stutters: the memory trim that follows a hide now waits 30 seconds instead of 3 and skips small gains, so a quick hide-and-show round trip stops paying the quarter-second page-in.
 - Idle memory reclaim behaves again: the first trim of each idle stretch lands seconds after you stop interacting, and repeat trims inside the same stretch back off to a five-minute safety cadence — ending the twenty-second trim-and-refault churn that could sit on a noticeable slice of a CPU core with widgets on screen.
 - Right-clicking a todo item and hovering into the color submenu no longer terminates the app on Windows 11 25H2: the unselected color dot is now drawn as pure geometry instead of a glyph pinned to a font whose file 25H2 removed while leaving its registration behind — the first measure of that menu failed fatally.
+- Menus opened from a stack popover no longer render beneath it: while such a flyout is open, its bridge window is lifted into the topmost band alongside the popover, so the menu stays clickable.
+- Per-widget backgrounds and title icons no longer keep showing the previous image after being changed: assets now load through a stream backed by a source-keyed cache, sidestepping the framework's URI-keyed image cache that has no eviction.
 
 ### 中文
 
@@ -37,7 +43,11 @@
 - **Shell 位置拖入格子即建快捷方式。** 回收站、此电脑等资源管理器位置拖到格子上直接创建可用快捷方式；来源无内容或正忙时给出 toast 提示。
 - **开屏引导全新改版。** 三块拼片 logo 组装动画开场，文件投放场景演示，展示真实托管存储路径及移动/粘贴提示。
 - **展开格子可缩得更小**——最小尺寸从 50 降至 25 DIP。
+- **选中文件名像桌面一样展开。** 双击打开模式下，唯一选中文件的截断名称就地向下展开——格子布局纹丝不动，展开层即选中区；再点击一次展开的名称即进入就地重命名，与 Windows 桌面上的慢双击重命名一致。
 - **新增韩语界面。** 界面、安装器与开屏引导新增韩语，与既有 12 种语言并列；系统区域设置为韩语时自动跟随。
+- **更从容的更新体验。** 更新检查以墙钟锚点每天一次（睡眠后不漂移），失败后退避两小时；更新 Toast 的按钮真正可点——「立即更新」直达一键流程、「查看更新内容」直开更新日志，更新完成后下次启动自动弹出更新内容（官网内联优先、GitHub tag 兜底）。更新支持后台下载（计费网络自动跳过），下载完成弹就绪 Toast，状态徽章全程跟随，更新日志窗可按版本浏览完整发布历史（所有机器一致，看过的版本离线可读），设置窗右下角在更新进行时显示活动浮层；后台下载与更新通知各有独立开关（默认开启）。
+- **全提权桌面的清晰告知。** 当整个桌面以管理员权限运行——UAC 关闭、内置 Administrator 账户或公司管理的电脑——启动时一次性弹窗说明此状态下「拖出格子」是 Windows 层限制（拖入不受影响），并给出确切恢复路径：专业版的 secpol.msc 策略、家庭版的 FilterAdministratorToken 注册表值或改用标准账户登录，附可复制的命令与 toast 兜底；设置里的拖放诊断同步给出同类归因，已确认的通知不再打扰。
+- **托盘图标可以隐藏。** 托盘图标样式新增「隐藏」：启动即不创建图标，运行时切换立即生效，任务栏重建后也不会复活。
 
 #### 修复
 
@@ -51,6 +61,8 @@
 - 隐藏后马上唤出不再卡顿：隐藏后的内存修剪宽限从 3 秒放宽到 30 秒并跳过小额修剪，快速隐藏/唤出的来回不再付出约四分之一秒的内存回迁。
 - 闲置内存回收回到“停手几秒就降”：每个闲置时段的首次修剪在安静期后立刻执行，同时段内的后续修剪退为 5 分钟兜底节律——终结此前约 20 秒一次“修剪—回迁”空转（常驻格子时可吃掉可观的 CPU）。
 - 待办格子右键「颜色标记」子菜单不再在 Windows 11 25H2 上闪退：未选中的颜色圆点改为纯几何绘制，不再钉在 25H2 已删除文件却残留注册表项的字体上——该菜单首次度量即致命失败并终止进程。
+- 叠放弹窗上打开的菜单不再被压在弹窗下面：弹窗内菜单打开期间，其桥接窗口被抬入置顶带与弹窗同层，菜单始终可点。
+- 每格背景与标题图标换图后不再残留旧图：资产图片改为经流式加载并按来源键缓存，绕开框架按键缓存且无法逐出的 URI 图像缓存。
 
 ## 1.5.8 - 2026-10-14
 

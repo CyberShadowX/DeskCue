@@ -133,8 +133,10 @@ Every release publishes a matching `.sha256` sidecar for each installer. Code si
 ## What's new in 1.5.9
 
 - **Korean language support.** The interface, installer, and first-run experience now ship in Korean alongside the existing 12 languages.
-- **Windows 11-native right-click menus.** An icon strip plus Microsoft-terminology rows, an "Open with" submenu with real associated apps (UWP included), "New"/"View"/"Sort by" submenus on the blank area, and native ZIP compress/extract.
-- **Steadier widgets.** Positions survive display-topology changes, edge-docked bars no longer jump to a corner on reveal, group-tab capsules expand promptly on re-entry, and expanded widgets can shrink twice as small.
+- **Windows 11-native right-click menus.** A single column of inline-icon rows in Explorer's classic order, an "Open with" submenu with real associated apps (UWP included), "New"/"View"/"Sort by" submenus on the blank area, and native ZIP compress/extract.
+- **A calmer, more capable updater** — background downloads that skip metered connections, actionable update-toast buttons, and release notes that open automatically after an update.
+- **A recovery offer after a configuration wipe**, a clear notice on fully elevated desktops, and a hideable tray icon.
+- **Steadier widgets.** Positions survive display-topology changes, edge-docked bars no longer jump to a corner on reveal, group-tab capsules expand promptly on re-entry, expanded widgets can shrink twice as small, and the todo color submenu no longer crash-closes the app on Windows 11 25H2.
 
 Read the complete [changelog](CHANGELOG.md) or the [1.5.9 release notes](docs/releases/v1.5.9.md).
 
