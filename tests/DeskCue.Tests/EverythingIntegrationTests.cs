@@ -1,4 +1,7 @@
+using System.Diagnostics;
+using System.Reflection;
 using System.Security.Cryptography;
+using DeskCue.Contracts;
 using DeskCue.Services;
 
 namespace DeskCue.Tests;
@@ -28,6 +31,129 @@ public sealed class EverythingIntegrationTests
         double expected)
     {
         Assert.Equal(expected, EverythingSearchService.ComputeRelevance(fileName, query));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Dispose_LeavesSdkReusableAcrossProviderInstances(bool initializeBeforeDispose)
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            "DeskCue-EverythingLifecycle-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var settings = new SettingsService(root);
+            for (int iteration = 0; iteration < 3; iteration++)
+            {
+                var provider = new EverythingSearchService(settings);
+                if (initializeBeforeDispose)
+                {
+                    AssertSdkReusable($"before-dispose-{iteration}");
+                }
+
+                provider.Dispose();
+                provider.Dispose();
+
+                using var nextProvider = new EverythingSearchService(settings);
+                AssertSdkReusable($"next-provider-{iteration}");
+            }
+        }
+        finally
+        {
+            EverythingNativeMethods.Reset();
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Dispose_RejectsNewWorkWithoutMutatingConnectionState()
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            "DeskCue-EverythingDisposed-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var settings = new SettingsService(root);
+            settings.Settings.SearchEverythingExecutablePath = "keep.exe";
+            var provider = new EverythingSearchService(settings);
+            EverythingConnectionSnapshot before = provider.CurrentSnapshot;
+            int changes = 0;
+            provider.ConnectionChanged += _ => changes++;
+            provider.Dispose();
+            provider.Dispose();
+
+            await Assert.ThrowsAsync<ObjectDisposedException>(
+                () => provider.RefreshConnectionAsync(allowIpcProbe: false));
+            await Assert.ThrowsAsync<ObjectDisposedException>(
+                () => provider.UseAutomaticDetectionAsync());
+            await Assert.ThrowsAsync<ObjectDisposedException>(
+                () => provider.SetExecutablePathAsync("new.exe"));
+            Assert.Same(SearchFileQueryPage.Empty,
+                await provider.SearchPageAsync("unused", 0, 10));
+            Assert.Equal("keep.exe", settings.Settings.SearchEverythingExecutablePath);
+            Assert.Equal(before, provider.CurrentSnapshot);
+            Assert.Equal(0, changes);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Dispose_DrainsInFlightWorkAndLeavesItsGateUsable()
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            "DeskCue-EverythingDrain-" + Guid.NewGuid().ToString("N"));
+        var provider = new EverythingSearchService(new SettingsService(root));
+        const BindingFlags privateInstance = BindingFlags.Instance | BindingFlags.NonPublic;
+        var gate = Assert.IsType<SemaphoreSlim>(typeof(EverythingSearchService)
+            .GetField("_nativeGate", privateInstance)!.GetValue(provider));
+        FieldInfo disposed = typeof(EverythingSearchService)
+            .GetField("_isDisposed", privateInstance)!;
+        await gate.WaitAsync();
+        bool workOwnsGate = true;
+        Task disposal = Task.Factory.StartNew(provider.Dispose, CancellationToken.None,
+            TaskCreationOptions.LongRunning, TaskScheduler.Default);
+        try
+        {
+            // Hold the same lease as an active native transaction. Observe that
+            // Dispose has entered before checking that it waits for that work.
+            var started = Stopwatch.StartNew();
+            while (!(bool)disposed.GetValue(provider)!)
+            {
+                Assert.True(started.Elapsed < TimeSpan.FromSeconds(5), "Dispose did not start.");
+                await Task.Delay(1);
+            }
+
+            Assert.NotSame(disposal, await Task.WhenAny(disposal, Task.Delay(100)));
+            gate.Release();
+            workOwnsGate = false;
+            await disposal.WaitAsync(TimeSpan.FromSeconds(5));
+
+            // Do not invalidate the gate: continuations from already-started
+            // work may still acquire or release it after the drain completes.
+            Assert.True(await gate.WaitAsync(TimeSpan.FromSeconds(1)));
+            gate.Release();
+        }
+        finally
+        {
+            if (workOwnsGate)
+            {
+                gate.Release();
+            }
+
+            await disposal.WaitAsync(TimeSpan.FromSeconds(5));
+            Directory.Delete(root, recursive: true);
+        }
     }
 
     [Fact]
@@ -91,5 +217,13 @@ public sealed class EverythingIntegrationTests
     {
         using FileStream stream = File.OpenRead(TestPaths.FromRepository(relativePath));
         return Convert.ToHexString(SHA256.HashData(stream));
+    }
+
+    private static void AssertSdkReusable(string search)
+    {
+        // Exercise the actual SDK's process state without contacting Everything.
+        EverythingNativeMethods.Reset();
+        EverythingNativeMethods.SetSearch(search);
+        Assert.Equal(0u, EverythingNativeMethods.GetNumResults());
     }
 }

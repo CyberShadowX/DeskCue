@@ -1,5 +1,5 @@
 diff --git a/src/DeskCue/DeskCue.csproj b/src/DeskCue/DeskCue.csproj
-index 524e7583..246e3962 100644
+index 6a870c59..7e496867 100644
 --- a/src/DeskCue/DeskCue.csproj
 +++ b/src/DeskCue/DeskCue.csproj
 @@ -39,6 +39,11 @@
@@ -15,7 +15,7 @@ index 524e7583..246e3962 100644
      Opt-in Native AOT audit profile. Keep ordinary Debug/Release behavior
      unchanged until the application-level AOT compatibility work is complete.
 diff --git a/src/DeskCue/Services/AppUpdateService.cs b/src/DeskCue/Services/AppUpdateService.cs
-index b73383e9..8b317b3c 100644
+index b73383e9..37d2f43f 100644
 --- a/src/DeskCue/Services/AppUpdateService.cs
 +++ b/src/DeskCue/Services/AppUpdateService.cs
 @@ -593,9 +593,12 @@ public sealed partial class AppUpdateService : IAppUpdateService
@@ -32,7 +32,35 @@ index b73383e9..8b317b3c 100644
      }
  
      /// <summary>
-@@ -671,16 +674,12 @@ public sealed partial class AppUpdateService : IAppUpdateService
+@@ -651,15 +654,25 @@ public sealed partial class AppUpdateService : IAppUpdateService
+     /// the body locally for offline viewing. Used when no full manifest is
+     /// reachable or when the published manifest already moved on to a newer
+     /// version than the one that needs showing.
++    /// Known three-part releases predate the fork and keep their original
++    /// upstream notes source. This content-only choice never grants trust
++    /// to upstream installer downloads.
+     /// </summary>
+     public static AppUpdateManifest CreateReleaseNotesOnlyManifest(string version)
+     {
+         ArgumentException.ThrowIfNullOrWhiteSpace(version);
++        string normalizedVersion = version.Trim();
++        bool isKnownUpstreamVersion =
++            Version.TryParse(normalizedVersion, out Version? releaseVersion) &&
++            releaseVersion.Revision < 0 &&
++            ReleaseNotesService.KnownReleaseVersions.Contains(normalizedVersion, StringComparer.Ordinal);
++        string repository = isKnownUpstreamVersion ? "Tianyu199509/DeskBox" : "CyberShadowX/DeskCue";
++
+         return new AppUpdateManifest
+         {
+             Channel = "direct",
+-            Version = version.Trim(),
+-            ReleaseNotesUrl = $"https://github.com/CyberShadowX/DeskCue/releases/tag/v{version.Trim()}",
++            Version = normalizedVersion,
++            ReleaseNotesUrl = $"https://github.com/{repository}/releases/tag/{Uri.EscapeDataString($"v{normalizedVersion}")}",
+         };
+     }
+ 
+@@ -671,16 +684,12 @@ public sealed partial class AppUpdateService : IAppUpdateService
      /// </summary>
      private static bool IsTrustedInstallerDownloadUri(Uri uri)
      {
@@ -51,7 +79,7 @@ index b73383e9..8b317b3c 100644
          // GitHub hosts third-party repositories, so trusting the whole domain
          // would let a tampered manifest point at any attacker repository with
          // a matching hash. Only this project's own release downloads count;
-@@ -689,16 +688,10 @@ public sealed partial class AppUpdateService : IAppUpdateService
+@@ -689,16 +698,10 @@ public sealed partial class AppUpdateService : IAppUpdateService
          // which therefore must never be trusted as a manifest origin itself.
          return string.Equals(uri.Host, "github.com", StringComparison.OrdinalIgnoreCase) &&
              uri.AbsolutePath.StartsWith(
@@ -69,7 +97,7 @@ index b73383e9..8b317b3c 100644
      internal static bool TrySelectInstallerForArchitecture(
          AppUpdateManifest manifest,
          string architectureSuffix)
-@@ -884,15 +877,7 @@ public sealed partial class AppUpdateService : IAppUpdateService
+@@ -884,15 +887,7 @@ public sealed partial class AppUpdateService : IAppUpdateService
          }
  
          string fileName = Path.GetFileName(uri.LocalPath);
@@ -86,6 +114,46 @@ index b73383e9..8b317b3c 100644
      }
  
      private static string ExtractSha256FromDigest(string? digest)
+diff --git a/src/DeskCue/Services/EverythingSearchService.cs b/src/DeskCue/Services/EverythingSearchService.cs
+index d145225f..a1127508 100644
+--- a/src/DeskCue/Services/EverythingSearchService.cs
++++ b/src/DeskCue/Services/EverythingSearchService.cs
+@@ -569,28 +569,15 @@ public sealed class EverythingSearchService : IDisposable, ISearchConnectionClie
+         }
+ 
+         _isDisposed = true;
+-        bool acquired = _nativeGate.Wait(TimeSpan.FromSeconds(1));
+-        if (acquired)
++        // Preserve the bounded drain before a replacement provider can start.
++        if (_nativeGate.Wait(TimeSpan.FromSeconds(1)))
+         {
+-            try
+-            {
+-                try
+-                {
+-                    EverythingNativeMethods.CleanUp();
+-                }
+-                catch (Exception ex) when (
+-                    ex is DllNotFoundException or BadImageFormatException or EntryPointNotFoundException)
+-                {
+-                    // The provider may never have loaded in this process.
+-                }
+-            }
+-            finally
+-            {
+-                _nativeGate.Release();
+-            }
+-
+-            _nativeGate.Dispose();
++            _nativeGate.Release();
+         }
++
++        // The SDK owns process-wide state; its ARM64 CleanUp cannot be followed
++        // by another SDK call. QueryNative resets per-query buffers instead.
++        // Keep the instance gate alive for operations that are already in flight.
+     }
+ 
+     private sealed class EverythingIpcException(uint errorCode) : Exception
 diff --git a/src/DeskCue/Services/FeedbackService.cs b/src/DeskCue/Services/FeedbackService.cs
 index d5bef92c..2b783078 100644
 --- a/src/DeskCue/Services/FeedbackService.cs
@@ -1089,7 +1157,7 @@ index 44698235..350afc74 100644
          string rustToolchain = File.ReadAllText(TestPaths.FromRepository("rust-toolchain.toml"));
          Assert.Contains("channel = \"1.96.0\"", rustToolchain, StringComparison.Ordinal);
 diff --git a/tests/DeskCue.Tests/AppUpdateServiceTests.cs b/tests/DeskCue.Tests/AppUpdateServiceTests.cs
-index 4f7f9358..91e26c80 100644
+index 4f7f9358..ff2e95fb 100644
 --- a/tests/DeskCue.Tests/AppUpdateServiceTests.cs
 +++ b/tests/DeskCue.Tests/AppUpdateServiceTests.cs
 @@ -2,6 +2,8 @@ using System.Net;
@@ -1319,7 +1387,85 @@ index 4f7f9358..91e26c80 100644
              Sha256 = "00"
          }, cancellationToken: cancellation.Token);
  
-@@ -460,6 +491,17 @@ public sealed class AppUpdateServiceTests : IDisposable
+@@ -438,17 +469,72 @@ public sealed class AppUpdateServiceTests : IDisposable
+         Assert.Null(rejected);
+     }
+ 
+-    [Fact]
+-    public void ReleaseNotesOnlyManifest_PointsAtGitHubTagForExactVersion()
++    [Theory]
++    [InlineData("1.5.9")]
++    [InlineData("1.5.8")]
++    [InlineData("1.5.7")]
++    [InlineData("1.5.6")]
++    [InlineData("1.5.5")]
++    [InlineData("1.5.4")]
++    [InlineData("1.5.3")]
++    [InlineData("1.5.2")]
++    [InlineData("1.5.1")]
++    [InlineData("1.5.0")]
++    [InlineData("1.4.9")]
++    [InlineData("1.4.8")]
++    [InlineData("1.4.7")]
++    [InlineData("1.4.6")]
++    [InlineData("1.4.3")]
++    [InlineData("1.4.2")]
++    [InlineData("1.4.1")]
++    [InlineData("1.4.0")]
++    public void ReleaseNotesOnlyManifest_KnownUpstreamHistoryUsesReadOnlySource(string version)
+     {
+-        AppUpdateManifest manifest = AppUpdateService.CreateReleaseNotesOnlyManifest("1.5.9");
++        AppUpdateManifest manifest = AppUpdateService.CreateReleaseNotesOnlyManifest(version);
+ 
+-        Assert.Equal("1.5.9", manifest.Version);
++        Assert.Equal(version, manifest.Version);
+         Assert.Equal(
+-            "https://github.com/CyberShadowX/DeskCue/releases/tag/v1.5.9",
++            $"https://github.com/Tianyu199509/DeskBox/releases/tag/v{version}",
+             manifest.ReleaseNotesUrl);
+         Assert.True(AppUpdateManifest.IsSafeReleaseNotesUrl(manifest.ReleaseNotesUrl));
+         Assert.True(manifest.HasReleaseNotesOrUrl);
++        Assert.Empty(manifest.DownloadUrl);
++        Assert.Empty(manifest.Arm64DownloadUrl);
++        Assert.Empty(manifest.Sha256);
++        Assert.False(AppUpdateService.IsManifestUsable(manifest));
++    }
++
++    [Theory]
++    [InlineData("1.5.9.3")]
++    [InlineData("1.5.8.0")]
++    [InlineData("1.6.0")]
++    [InlineData("1.4.4")]
++    [InlineData("1.4.5")]
++    [InlineData("1.5.8-rc1")]
++    public void ReleaseNotesOnlyManifest_DeskCueAndUnknownVersionsStayOnFork(string version)
++    {
++        AppUpdateManifest manifest = AppUpdateService.CreateReleaseNotesOnlyManifest(version);
++
++        Assert.Equal(version, manifest.Version);
++        Assert.Equal(
++            $"https://github.com/CyberShadowX/DeskCue/releases/tag/v{version}",
++            manifest.ReleaseNotesUrl);
++        Assert.False(AppUpdateService.IsManifestUsable(manifest));
++    }
++
++    [Theory]
++    [InlineData("1.5.8/../../latest", "v1.5.8%2F..%2F..%2Flatest")]
++    [InlineData("1.5.8?download=1#latest", "v1.5.8%3Fdownload%3D1%23latest")]
++    public void ReleaseNotesOnlyManifest_MalformedVersionsCannotChangeForkTagPath(string version, string tag)
++    {
++        AppUpdateManifest manifest = AppUpdateService.CreateReleaseNotesOnlyManifest(version);
++
++        Assert.Equal(
++            $"https://github.com/CyberShadowX/DeskCue/releases/tag/{tag}",
++            manifest.ReleaseNotesUrl);
++        var uri = new Uri(manifest.ReleaseNotesUrl);
++        Assert.Empty(uri.Query);
++        Assert.Empty(uri.Fragment);
+         Assert.False(AppUpdateService.IsManifestUsable(manifest));
+     }
+ 
+@@ -460,6 +546,17 @@ public sealed class AppUpdateServiceTests : IDisposable
          }
      }
  
@@ -1337,7 +1483,7 @@ index 4f7f9358..91e26c80 100644
      private static HttpClient CreateHttpClient(Func<HttpRequestMessage, HttpResponseMessage> handler)
      {
          return new HttpClient(new StubHttpMessageHandler(handler));
-@@ -481,9 +523,9 @@ public sealed class AppUpdateServiceTests : IDisposable
+@@ -481,9 +578,10 @@ public sealed class AppUpdateServiceTests : IDisposable
      }
  
      [Theory]
@@ -1347,10 +1493,11 @@ index 4f7f9358..91e26c80 100644
 +    [InlineData("https://deskbox.fun/update/DeskBox_Setup.exe", false)]
 +    [InlineData("https://cdn.deskbox.fun/DeskBox_Setup.exe", false)]
 +    [InlineData("https://github.com/CyberShadowX/DeskCue/releases/download/v1.5.2/DeskCue_Setup_1.5.2_x64.exe", true)]
++    [InlineData("https://github.com/Tianyu199509/DeskBox/releases/download/v1.5.8/DeskCue_Setup_1.5.8_x64.exe", false)]
      [InlineData("http://deskbox.fun/update/DeskBox_Setup.exe", false)]
      [InlineData("https://evil.example.com/DeskBox_Setup.exe", false)]
      [InlineData("https://deskbox.fun.evil.example.com/DeskBox_Setup.exe", false)]
-@@ -510,8 +552,8 @@ public sealed class AppUpdateServiceTests : IDisposable
+@@ -510,8 +608,8 @@ public sealed class AppUpdateServiceTests : IDisposable
          var manifest = new AppUpdateManifest
          {
              Version = "1.5.2.0",
@@ -1653,6 +1800,161 @@ index 9dd4f2bd..ab74f88c 100644
      }
  
      private async Task<DesktopOrganizationPlan> BuildPlanAsync(string desktop, string storage)
+diff --git a/tests/DeskCue.Tests/EverythingIntegrationTests.cs b/tests/DeskCue.Tests/EverythingIntegrationTests.cs
+index 6ba78223..74c3ae68 100644
+--- a/tests/DeskCue.Tests/EverythingIntegrationTests.cs
++++ b/tests/DeskCue.Tests/EverythingIntegrationTests.cs
+@@ -1,4 +1,7 @@
++using System.Diagnostics;
++using System.Reflection;
+ using System.Security.Cryptography;
++using DeskCue.Contracts;
+ using DeskCue.Services;
+ 
+ namespace DeskCue.Tests;
+@@ -30,6 +33,129 @@ public sealed class EverythingIntegrationTests
+         Assert.Equal(expected, EverythingSearchService.ComputeRelevance(fileName, query));
+     }
+ 
++    [Theory]
++    [InlineData(false)]
++    [InlineData(true)]
++    public void Dispose_LeavesSdkReusableAcrossProviderInstances(bool initializeBeforeDispose)
++    {
++        string root = Path.Combine(
++            Path.GetTempPath(),
++            "DeskCue-EverythingLifecycle-" + Guid.NewGuid().ToString("N"));
++        try
++        {
++            var settings = new SettingsService(root);
++            for (int iteration = 0; iteration < 3; iteration++)
++            {
++                var provider = new EverythingSearchService(settings);
++                if (initializeBeforeDispose)
++                {
++                    AssertSdkReusable($"before-dispose-{iteration}");
++                }
++
++                provider.Dispose();
++                provider.Dispose();
++
++                using var nextProvider = new EverythingSearchService(settings);
++                AssertSdkReusable($"next-provider-{iteration}");
++            }
++        }
++        finally
++        {
++            EverythingNativeMethods.Reset();
++            if (Directory.Exists(root))
++            {
++                Directory.Delete(root, recursive: true);
++            }
++        }
++    }
++
++    [Fact]
++    public async Task Dispose_RejectsNewWorkWithoutMutatingConnectionState()
++    {
++        string root = Path.Combine(
++            Path.GetTempPath(),
++            "DeskCue-EverythingDisposed-" + Guid.NewGuid().ToString("N"));
++        try
++        {
++            var settings = new SettingsService(root);
++            settings.Settings.SearchEverythingExecutablePath = "keep.exe";
++            var provider = new EverythingSearchService(settings);
++            EverythingConnectionSnapshot before = provider.CurrentSnapshot;
++            int changes = 0;
++            provider.ConnectionChanged += _ => changes++;
++            provider.Dispose();
++            provider.Dispose();
++
++            await Assert.ThrowsAsync<ObjectDisposedException>(
++                () => provider.RefreshConnectionAsync(allowIpcProbe: false));
++            await Assert.ThrowsAsync<ObjectDisposedException>(
++                () => provider.UseAutomaticDetectionAsync());
++            await Assert.ThrowsAsync<ObjectDisposedException>(
++                () => provider.SetExecutablePathAsync("new.exe"));
++            Assert.Same(SearchFileQueryPage.Empty,
++                await provider.SearchPageAsync("unused", 0, 10));
++            Assert.Equal("keep.exe", settings.Settings.SearchEverythingExecutablePath);
++            Assert.Equal(before, provider.CurrentSnapshot);
++            Assert.Equal(0, changes);
++        }
++        finally
++        {
++            if (Directory.Exists(root))
++            {
++                Directory.Delete(root, recursive: true);
++            }
++        }
++    }
++
++    [Fact]
++    public async Task Dispose_DrainsInFlightWorkAndLeavesItsGateUsable()
++    {
++        string root = Path.Combine(
++            Path.GetTempPath(),
++            "DeskCue-EverythingDrain-" + Guid.NewGuid().ToString("N"));
++        var provider = new EverythingSearchService(new SettingsService(root));
++        const BindingFlags privateInstance = BindingFlags.Instance | BindingFlags.NonPublic;
++        var gate = Assert.IsType<SemaphoreSlim>(typeof(EverythingSearchService)
++            .GetField("_nativeGate", privateInstance)!.GetValue(provider));
++        FieldInfo disposed = typeof(EverythingSearchService)
++            .GetField("_isDisposed", privateInstance)!;
++        await gate.WaitAsync();
++        bool workOwnsGate = true;
++        Task disposal = Task.Factory.StartNew(provider.Dispose, CancellationToken.None,
++            TaskCreationOptions.LongRunning, TaskScheduler.Default);
++        try
++        {
++            // Hold the same lease as an active native transaction. Observe that
++            // Dispose has entered before checking that it waits for that work.
++            var started = Stopwatch.StartNew();
++            while (!(bool)disposed.GetValue(provider)!)
++            {
++                Assert.True(started.Elapsed < TimeSpan.FromSeconds(5), "Dispose did not start.");
++                await Task.Delay(1);
++            }
++
++            Assert.NotSame(disposal, await Task.WhenAny(disposal, Task.Delay(100)));
++            gate.Release();
++            workOwnsGate = false;
++            await disposal.WaitAsync(TimeSpan.FromSeconds(5));
++
++            // Do not invalidate the gate: continuations from already-started
++            // work may still acquire or release it after the drain completes.
++            Assert.True(await gate.WaitAsync(TimeSpan.FromSeconds(1)));
++            gate.Release();
++        }
++        finally
++        {
++            if (workOwnsGate)
++            {
++                gate.Release();
++            }
++
++            await disposal.WaitAsync(TimeSpan.FromSeconds(5));
++            Directory.Delete(root, recursive: true);
++        }
++    }
++
+     [Fact]
+     public void LegacyCleanup_RemovesOnlyDeskCueOwnedIndexArtifacts()
+     {
+@@ -92,4 +218,12 @@ public sealed class EverythingIntegrationTests
+         using FileStream stream = File.OpenRead(TestPaths.FromRepository(relativePath));
+         return Convert.ToHexString(SHA256.HashData(stream));
+     }
++
++    private static void AssertSdkReusable(string search)
++    {
++        // Exercise the actual SDK's process state without contacting Everything.
++        EverythingNativeMethods.Reset();
++        EverythingNativeMethods.SetSearch(search);
++        Assert.Equal(0u, EverythingNativeMethods.GetNumResults());
++    }
+ }
 diff --git a/tests/DeskCue.Tests/GlanceCalendarAndImageServiceTests.cs b/tests/DeskCue.Tests/GlanceCalendarAndImageServiceTests.cs
 index 08b87094..690f0e0c 100644
 --- a/tests/DeskCue.Tests/GlanceCalendarAndImageServiceTests.cs
@@ -1697,6 +1999,84 @@ index 08b87094..690f0e0c 100644
      }
  
      [Fact]
+diff --git a/tests/DeskCue.Tests/ReleaseNotesTests.cs b/tests/DeskCue.Tests/ReleaseNotesTests.cs
+index 0dac191a..f85a7c60 100644
+--- a/tests/DeskCue.Tests/ReleaseNotesTests.cs
++++ b/tests/DeskCue.Tests/ReleaseNotesTests.cs
+@@ -155,6 +155,73 @@ public sealed class ReleaseNotesTests : IDisposable
+         Assert.Equal("## Latest\n- Fixed update content", result.Content);
+     }
+ 
++    [Fact]
++    public async Task ReleaseNotesService_SelectedUpstreamHistoryLoadsApiBodyAndPersistsForOfflineViewing()
++    {
++        const string notes = "## DeskBox v1.5.8\n- Historical upstream release";
++        using var onlineClient = new HttpClient(new StubHttpMessageHandler(request =>
++        {
++            if (request.RequestUri?.AbsoluteUri !=
++                "https://api.github.com/repos/Tianyu199509/DeskBox/releases/tags/v1.5.8")
++            {
++                return new HttpResponseMessage(HttpStatusCode.NotFound);
++            }
++
++            return new HttpResponseMessage(HttpStatusCode.OK)
++            {
++                Content = new StringContent(
++                    JsonSerializer.Serialize(new { tag_name = "v1.5.8", body = notes }),
++                    Encoding.UTF8,
++                    "application/json")
++            };
++        }));
++        var onlineService = new ReleaseNotesService(_cacheRoot, onlineClient);
++
++        ReleaseNotesLoadResult online = await onlineService.LoadAsync(
++            AppUpdateService.CreateReleaseNotesOnlyManifest("1.5.8"));
++
++        Assert.Equal(notes, online.Content);
++        Assert.False(online.IsFromCache);
++        Assert.Null(online.ErrorMessage);
++        Assert.Equal(notes, await File.ReadAllTextAsync(Path.Combine(_cacheRoot, "1.5.8.all.md")));
++
++        using var offlineClient = new HttpClient(new StubHttpMessageHandler(_ =>
++            throw new HttpRequestException("Offline")));
++        var offlineService = new ReleaseNotesService(_cacheRoot, offlineClient);
++
++        ReleaseNotesLoadResult offline = await offlineService.LoadAsync(
++            AppUpdateService.CreateReleaseNotesOnlyManifest("1.5.8"));
++
++        Assert.Equal(notes, offline.Content);
++        Assert.True(offline.IsFromCache);
++        Assert.Null(offline.ErrorMessage);
++        Assert.Contains("1.5.8", offlineService.GetCachedVersions());
++    }
++
++    [Fact]
++    public async Task ReleaseNotesService_SelectedDeskCueVersionLoadsOwnGitHubApiBody()
++    {
++        using var httpClient = new HttpClient(new StubHttpMessageHandler(request =>
++            request.RequestUri?.AbsoluteUri ==
++                "https://api.github.com/repos/CyberShadowX/DeskCue/releases/tags/v1.5.9.3"
++                ? new HttpResponseMessage(HttpStatusCode.OK)
++                {
++                    Content = new StringContent(
++                        """{"tag_name":"v1.5.9.3","body":"## DeskCue release"}""",
++                        Encoding.UTF8,
++                        "application/json")
++                }
++                : new HttpResponseMessage(HttpStatusCode.NotFound)));
++        var service = new ReleaseNotesService(_cacheRoot, httpClient);
++
++        ReleaseNotesLoadResult result = await service.LoadAsync(
++            AppUpdateService.CreateReleaseNotesOnlyManifest("1.5.9.3"));
++
++        Assert.Equal("## DeskCue release", result.Content);
++        Assert.False(result.IsFromCache);
++        Assert.Null(result.ErrorMessage);
++    }
++
+     public void Dispose()
+     {
+         try
 diff --git a/tests/DeskCue.Tests/SettingsAboutContactTests.cs b/tests/DeskCue.Tests/SettingsAboutContactTests.cs
 index 87492524..ffca19ac 100644
 --- a/tests/DeskCue.Tests/SettingsAboutContactTests.cs

@@ -654,15 +654,25 @@ public sealed partial class AppUpdateService : IAppUpdateService
     /// the body locally for offline viewing. Used when no full manifest is
     /// reachable or when the published manifest already moved on to a newer
     /// version than the one that needs showing.
+    /// Known three-part releases predate the fork and keep their original
+    /// upstream notes source. This content-only choice never grants trust
+    /// to upstream installer downloads.
     /// </summary>
     public static AppUpdateManifest CreateReleaseNotesOnlyManifest(string version)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(version);
+        string normalizedVersion = version.Trim();
+        bool isKnownUpstreamVersion =
+            Version.TryParse(normalizedVersion, out Version? releaseVersion) &&
+            releaseVersion.Revision < 0 &&
+            ReleaseNotesService.KnownReleaseVersions.Contains(normalizedVersion, StringComparer.Ordinal);
+        string repository = isKnownUpstreamVersion ? "Tianyu199509/DeskBox" : "CyberShadowX/DeskCue";
+
         return new AppUpdateManifest
         {
             Channel = "direct",
-            Version = version.Trim(),
-            ReleaseNotesUrl = $"https://github.com/CyberShadowX/DeskCue/releases/tag/v{version.Trim()}",
+            Version = normalizedVersion,
+            ReleaseNotesUrl = $"https://github.com/{repository}/releases/tag/{Uri.EscapeDataString($"v{normalizedVersion}")}",
         };
     }
 

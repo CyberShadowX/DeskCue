@@ -469,17 +469,72 @@ public sealed class AppUpdateServiceTests : IDisposable
         Assert.Null(rejected);
     }
 
-    [Fact]
-    public void ReleaseNotesOnlyManifest_PointsAtGitHubTagForExactVersion()
+    [Theory]
+    [InlineData("1.5.9")]
+    [InlineData("1.5.8")]
+    [InlineData("1.5.7")]
+    [InlineData("1.5.6")]
+    [InlineData("1.5.5")]
+    [InlineData("1.5.4")]
+    [InlineData("1.5.3")]
+    [InlineData("1.5.2")]
+    [InlineData("1.5.1")]
+    [InlineData("1.5.0")]
+    [InlineData("1.4.9")]
+    [InlineData("1.4.8")]
+    [InlineData("1.4.7")]
+    [InlineData("1.4.6")]
+    [InlineData("1.4.3")]
+    [InlineData("1.4.2")]
+    [InlineData("1.4.1")]
+    [InlineData("1.4.0")]
+    public void ReleaseNotesOnlyManifest_KnownUpstreamHistoryUsesReadOnlySource(string version)
     {
-        AppUpdateManifest manifest = AppUpdateService.CreateReleaseNotesOnlyManifest("1.5.9");
+        AppUpdateManifest manifest = AppUpdateService.CreateReleaseNotesOnlyManifest(version);
 
-        Assert.Equal("1.5.9", manifest.Version);
+        Assert.Equal(version, manifest.Version);
         Assert.Equal(
-            "https://github.com/CyberShadowX/DeskCue/releases/tag/v1.5.9",
+            $"https://github.com/Tianyu199509/DeskBox/releases/tag/v{version}",
             manifest.ReleaseNotesUrl);
         Assert.True(AppUpdateManifest.IsSafeReleaseNotesUrl(manifest.ReleaseNotesUrl));
         Assert.True(manifest.HasReleaseNotesOrUrl);
+        Assert.Empty(manifest.DownloadUrl);
+        Assert.Empty(manifest.Arm64DownloadUrl);
+        Assert.Empty(manifest.Sha256);
+        Assert.False(AppUpdateService.IsManifestUsable(manifest));
+    }
+
+    [Theory]
+    [InlineData("1.5.9.3")]
+    [InlineData("1.5.8.0")]
+    [InlineData("1.6.0")]
+    [InlineData("1.4.4")]
+    [InlineData("1.4.5")]
+    [InlineData("1.5.8-rc1")]
+    public void ReleaseNotesOnlyManifest_DeskCueAndUnknownVersionsStayOnFork(string version)
+    {
+        AppUpdateManifest manifest = AppUpdateService.CreateReleaseNotesOnlyManifest(version);
+
+        Assert.Equal(version, manifest.Version);
+        Assert.Equal(
+            $"https://github.com/CyberShadowX/DeskCue/releases/tag/v{version}",
+            manifest.ReleaseNotesUrl);
+        Assert.False(AppUpdateService.IsManifestUsable(manifest));
+    }
+
+    [Theory]
+    [InlineData("1.5.8/../../latest", "v1.5.8%2F..%2F..%2Flatest")]
+    [InlineData("1.5.8?download=1#latest", "v1.5.8%3Fdownload%3D1%23latest")]
+    public void ReleaseNotesOnlyManifest_MalformedVersionsCannotChangeForkTagPath(string version, string tag)
+    {
+        AppUpdateManifest manifest = AppUpdateService.CreateReleaseNotesOnlyManifest(version);
+
+        Assert.Equal(
+            $"https://github.com/CyberShadowX/DeskCue/releases/tag/{tag}",
+            manifest.ReleaseNotesUrl);
+        var uri = new Uri(manifest.ReleaseNotesUrl);
+        Assert.Empty(uri.Query);
+        Assert.Empty(uri.Fragment);
         Assert.False(AppUpdateService.IsManifestUsable(manifest));
     }
 
@@ -526,6 +581,7 @@ public sealed class AppUpdateServiceTests : IDisposable
     [InlineData("https://deskbox.fun/update/DeskBox_Setup.exe", false)]
     [InlineData("https://cdn.deskbox.fun/DeskBox_Setup.exe", false)]
     [InlineData("https://github.com/CyberShadowX/DeskCue/releases/download/v1.5.2/DeskCue_Setup_1.5.2_x64.exe", true)]
+    [InlineData("https://github.com/Tianyu199509/DeskBox/releases/download/v1.5.8/DeskCue_Setup_1.5.8_x64.exe", false)]
     [InlineData("http://deskbox.fun/update/DeskBox_Setup.exe", false)]
     [InlineData("https://evil.example.com/DeskBox_Setup.exe", false)]
     [InlineData("https://deskbox.fun.evil.example.com/DeskBox_Setup.exe", false)]

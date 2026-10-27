@@ -1,139 +1,123 @@
 # DeskCue migration handoff
 
-Status: workspace cutover complete; source9b local retail and GUI preflight
-verified; cross-environment fixes and first public1.5.9.2 delivery remain in progress.
+## Current checkpoint (2026-10-28)
 
-Rev2 candidate is now frozen and independently CODE-reviewedPASS0C/0I/0M.
-Fresh Controller management108/108 passed; version/fixture/reminder/architecture
-scoped reviews passed. Fresh LF generation exactly reproduced mechanicalBASE2
-fc0c25bd2c02a761fb2a3fcd3a4c49dbe7d39ede; complete patch121962bytes,
-SHA256E130AEB5882D53498367B12CD4820579822AFE025C5CC4F6B1D82E6AB7E68BC7,
-reproduces all1697 indexed productentries exactly after checkedapplication.
-The next clean commit must pass full local and dualarchitecture cloud gates;
-the earlier ARM search hang remains unproven until an actual diagnostic rerun.
+The main workspace is now the complete DeskBox-based DeskCue fork:
+`F:/AI/AIProjects/DeskCue`, branch `main`, own origin `CyberShadowX/DeskCue`.
+The next public candidate is **1.5.9.3**, branding revision 3. Its complete local
+retail build, native x64/ARM64 cloud delivery and final acceptance are pending.
+Earlier successful builds are not acceptance of this candidate.
 
-Current workspace is F:/AI/AIProjects/DeskCue onmain, trackingCyberShadowX/DeskCue.
-Legacy contents/history remain in F:/AI/AIProjects/DeskCue-legacy-20261027; the
-earlier separate bundle/EXE/SQLite backup is also preserved. Source9b full local
-publication passed5927/5927(5820C#+107helpers),0skips; actual WinUI settings
-rendered DeskCue1.5.9.1, single-instance forwarding and normal UIA trayExit passed.
-This is a preflight of9b, not acceptance of the later cache-fix candidate.
+Prior source `6b6195c2be230e6951860ae02c293598d7ecb508` (1.5.9.2)
+passed the actual local shared publisher: 5827 C# plus 108 management tests,
+5935 passed, no failures or skips; Release build 20 warnings, no errors.
+The full Native AOT payload has 394 files; installer and receipts are preserved.
+The EXE SHA256 was
+`cf0da26e93362d47e42c0c67f20ee7fdef6d9dcd5df9c0150dd3ef38348951f0`.
+Evidence: `.artifacts/v2-publication.log` and the retained corresponding run
+under `.artifacts/deskcue-release/win-x64/runs/`.
 
-Latest actual cloudCI40526959569 passed5820/0/0; delivery40526968013 did not
-publish. It revealed culture/drive fixture assumptions, x64-only ARMfixtures,
-and an actual stale reminder snapshot bug. Scoped corrections are verified;
-ARM's incomplete run also timed out with Search recommendation lastactive,
-which does not identify its rootcause. Failure diagnostics are being retained
-for the next actual run. Current authoritative task ledger:deskcue/progress.md.
+Actual CI40536288571 passed5827/5827. Delivery40536288591 completed its x64
+5935-test/AOT/installer build, but ARM64 aborted after4315 passing tests because
+of a native hang. That run produced no public release, version tag or feed.
 
-First public revision is1.5.9.2; the earlier validated1.5.9.1 artifacts remain
-immutable. Versionmetadata/replay/fullpublication/cloud/GUI must complete before
-the final acceptance sign-off below can be advanced.
+Native ARM64 minidump/SOS analysis and controlled run40546464968 identified
+Everything SDK CleanUp followed by another SDK call as the cause. The original
+ARM64 DLL matches the official SDK bytes and is not replaced. The minimal
+provider fix preserves the original bounded query drain, avoids process-global
+CleanUp per provider and leaves the gate usable by in-flight work. Independent
+round2 review passed0C/0I/0M; controlled drain RED, focused26/26 and five fresh
+hosts each4/4 passed. The original search test and timeout remain unchanged.
 
-First real retail attempt at f0a028d stopped in the Rust linker before tests or
-packaging: the frozen-source output path was 264 characters (LNK1104).
-The same source compiled successfully with a shorter Cargo output path.
-The builder now uses the guarded short checkout `.artifacts/b/<run-id>` while
-keeping canonical logs and receipts unchanged. All 34 focused builder fixtures
-passed in the Controller session; scoped independent re-review passed
-0 Critical / 0 Important / 0 Minor. A new complete retail attempt follows.
-No complete retail publication, stable EXE replacement or running-app
-acceptance is claimed yet.
+Fresh-data historical release notes were also routed to nonexistent fork tags.
+Only known three-part history now reads upstream notes; four-part fork releases
+and installer/feed/download trust stay fork-owned. Controlled RED21 -> GREEN
+116/116, no skips; independent re-review passed0C/0I/0M. Final source review
+identified no other durable blocking finding.
 
-At reviewed03bb09b, the second full local attempt passed its Release build but
-stopped on the historical 43200-second watcher-delay fixture (5819 passed,
-1 failed,0 skipped). Its cause is under controlled investigation. A separate
-private run passed FullNativeAOT publish, byte validation and Inno compilation
-(394 payload files,131.3MiB); it is diagnostic-only until all release gates pass.
-The own-main push succeeded. First actual cloud delivery run40521404850 passed
-candidate/helpers101 but both builders rejected ISCC's0.0.0.0 FileVersion;
-delivery was skipped. Inherited CI selected SDK10.0.403 and failed locked restore.
-Compiler-engine version detection and exact SDK selection are being corrected.
+Final complete patch:137807bytes, SHA256
+`c60e809e4b21a730d8a00cb513fbf14688bdba4c327b8acf63cec5a54437d5bf`.
+Fresh LF generation reproduced BASE3
+`32a8074efccc8da8d74ff91f693c80d3177f10bb`; checked patch application exactly
+reproduced all1697 indexed entries across src/tests/native/scripts/installer.
+Evidence: `.artifacts/v3-final-product-replay.json`. Controller helper108/108
+passed. Complete retail/native dualarch/cloud/runtime acceptance follows.
 
-Current retry source: the watcher timeout was reproduced with a real FSW
-Created/Changed delivery latch. A late Changed after the fixture's multi-hour
-clock jump correctly re-armed another full interval. The fix controls only the
-long-preset fixture's initial event pair; production is unchanged and live FSW
-tests remain. Focused4/4 and10repeat rounds40/40 passed, no skips; independent
-reviewPASS0C/0I/0M. The rejected Start-baseline proposal and all earlier failures
-remain in private evidence.
+The user normally exited the1.5.9.2 test app. A read-only check confirmed
+PID35212 absent/noDeskCue and the separate DeskBox PID45252 unchanged. This is
+manual user confirmation plus process evidence, not automated tray-exit coverage:
+`.artifacts/runtime-final/manual-exit-confirmation.json`.
 
-The complete checked patch now includes that fixture fix and the exact-SDK
-contract expectation:102536bytes,
-SHA2567D4321C47D4D80D1A55166EC12FDF06B958C18313B1E36CCB615D8069C576455.
-Fresh LF-source generation and application reproduced all1697 indexed product
-entries across src/tests/native/scripts/installer exactly. Cloud fixes preserve
-the strict6.7.1 engine pin, SDK10.0.402/rollForwarddisable, locked restore and
-owned CI/global.json overlays. Worker helper suite107/107 passed; Controller
-new probe fixtures5/5, actual engine probe and SDK-overlay candidate test passed.
-Full retail/cloud reruns follow the new reviewed commit.
+## Approved scope and ownership
 
-The full local720239d retry passed5819/5820; the sole failure was the inherited
-AotPublishContractTests expectation `latestPatch` after the intentional SDK
-policy changed to `disable`. The expectation is now corrected and included in
-the complete patch. A private-index checked application of the updated patch
-to the final mechanical base reproduces all1697 entries exactly. No failure
-was skipped or reclassified as a successful publication.
-The corrected contract passed a fresh Controller targeted run1/1,0 skipped;
-independent scoped re-reviewPASS0C/0I/0M. Both actual cloud native-builder/SDK/
-Inno engine gates passed at720239d. That old run is being cancelled before
-known stale contract work; a new clean source rerun will exercise all gates.
+On2026-10-27 the user approved full replacement with the exact execution phrase,
+including own-repository cloud releases and an explicit local fallback. Upstream
+is `Tianyu199509/DeskBox`; its local push URL is disabled. All remote writes go
+only to `CyberShadowX/DeskCue`. GPL-3.0-only, original copyright, third-party
+notices and explicit upstream attribution remain in the app and source.
 
-The final source review's two Important and two Minor policy findings are
-resolved: fork-owned security/conduct/support/contribution/signing policies,
-disabled legacy distribution jobs and the operator guide are now preserved
-across upstream replay. The policy re-review found no remaining C/I/M; real
-candidate replay and missing-policy rejection fixtures passed.
+Fixed distinct package/installer/notification/instance identities coexist with
+DeskBox. Updates accept only the fork's named installers and verified hashes.
+Feedback opens the fork's public Issues; the upstream private feedback, payment
+and Store identities are not adopted. Issues/Discussions were enabled and read
+back; no issue, comment or discussion content was posted.
 
-## Authorized scope
+Cloud delivery checks stable upstream releases every six hours and on manual
+dispatch. Candidates replay branding plus the required patch; native x64/ARM64
+must both pass before atomic source/tag promotion and verified publication.
+Frozen source/package bytes support publication retries. The app checks verified
+DeskCue releases rather than installing an unmodified upstream binary; it has
+no repository write credential. See [使用与更新](../deskcue/使用与更新.md).
 
-On2026-10-27 the user approved full replacement of former WPF DeskCue with the
-DeskBox-based CyberShadowX/DeskCue fork, complete product renaming and both cloud
-and explicit local build/update routes. No old WPF implementation is integrated
-into this product. GPL/upstream/third-party attribution is preserved.
+## Legacy preservation and local safety
 
-## Verified baseline
+The complete former WPF project and Git history are preserved at
+`F:/AI/AIProjects/DeskCue-legacy-20261027` (master `e98b255`). A separate all-ref
+bundle, former EXE and consistent SQLite backup are under the private archive
+`F:/AI/AIProjects/.archives/DeskCue/2026-10-27-before-deskbox`.
+No old data is automatically imported or uploaded. Cutover transactionally moved
+owned top-level entries and repaired owned worktrees; `.artifacts/cutover-result.json`.
 
-Unmodified upstream1fdf0bd: locked restore exit0; x64/win-x64 Release build exit0,
-20 warnings/0 errors; complete test run5804 passed/5804 total,0 failed/0 skipped.
-This is upstream baseline evidence, not acceptance of the rebranded application.
-Portable .NET10.0.402/Rust1.96.0/Inno6.7.3 were verified and prepared under F.
-Existing VS2022 x64 C++/Windows SDK prerequisites were used without global changes.
+`tools/Publish-DeskCue.ps1` builds the complete offline runtime and installer,
+verifies source/tests/package bytes, preserves the previous release and blocks
+replacement while its app is running. It never kills, installs or starts apps.
+Portable tools are under `F:/AI/AIProjects/.deskcue-tools`, using process-only
+environment changes. The former WPF single-file EXE contract no longer applies.
 
-Legacy e98b255 history, stable EXE and consistent SQLite snapshot are preserved
-in the private local archive and are not uploaded to this public fork. No legacy
-task/settings import or desktop-file organization has been performed.
+## Verification boundaries
 
-## Current product checks
+Scoped independent reviews passed branding, update/service boundaries, path
+safety, rollback, frozen-byte retry, source promotion and toolchain pins.
+The reminder snapshot bug and cross-environment fixture assumptions were fixed
+with controlled failing/passing evidence and review. Historical failed runs are
+retained under ignored local evidence, not counted as successful releases.
 
-- Mechanical generation fixture suite and real fresh-source replay passed.
-- The first fork-boundary RED run compiled successfully;12 tests executed,
- 5 failed/7 passed, demonstrating the original trust/feedback boundaries.
-- Controller full fork validation:5820/5820passed,0failed,0skipped; Release build
- 18warnings/0errors. Evidence retained locally under .artifacts/fork-r5-full.
-- Earlier checked patch replay reproduced all1697 product index entries across
- src/tests/native/scripts/installer exactly. PatchSHA256:
- 8307279b6002b930b138be33f24a4354fd608a0e18f0cd91f628e0974ac632ef.
-- Task1 recipe/identity round2PASS0C/0I/0M, including true junction tests and
- clean export of all14 original DLL inputs. Task2 boundary round2PASS0C/0I/0M,
- including real corrupt-download cleanup/prior-installer preservation and13locale
- source/feedback disclosures. Task3 local-build round2PASS0C/0I/0M, including31
- fixtures and an actual wrapper second-move-failure/byte-identical rollback.
-- Original baseline20warnings and current18warnings are retained; no zero-warning
- claim. Native-language human review and actual GUI/platform acceptance are not
- implied by JSON/schema/unit-test success.
-- Failed full runs remain recorded: initial14migration fixture failures; later
- three stale update-origin fixtures plus one existing12h watcher-delay timeout;
- then the mechanical copy-test self-rejection. Those migration assertions were
-  repaired. The watcher timing failure was initially unresolved; its later
- controlled reproduction and fixture-only correction are recorded above.
+WinUI preflights rendered DeskCue1.5.9.1/1.5.9.2 settings/about and verified
+second-launch single-instance behavior. Normal automated tray exit passed for
+1.5.9.1;1.5.9.2 required the manual exit above. Neither accepts1.5.9.3 or its feed.
+
+Not performed: installer installation, real two-version installed upgrade,
+startup/relogin, toast delivery, Windows10, physical DPI/multiple monitors,
+all-language human review, exhaustive parity or user visual acceptance.
+Packages are unsigned; no upstream signing identity is claimed. Existing
+compiler/analyzer warnings remain. Original DeskBox is not closed or modified;
+its global hotkey can conflict with DeskCue.
+
+Future upstream workflow-file changes may require reviewed manual integration:
+the delivery GITHUB_TOKEN cannot request workflow-file write permission. Such a
+rejected atomic source/tag push occurs before release publication, preserving
+the previous release/feed. Current HEAD-mode validation does not prove every
+future two-parent upstream promotion will be accepted by GitHub. No extra token
+or permission has been introduced. SDK disposal also retains the original
+one-second drain cap; longer in-flight work remains an existing boundary.
 
 ## Final acceptance sign-off
 
-- Product/identity migration: scoped code/fixture reviewPASS0C/0I/0M.
-- Fork-owned update/service boundaries and replayable patch: scopedPASS0C/0I/0M.
-- Shared local retail build and safe publishing: scopedPASS0C/0I/0M; actual retail
- packaging is still pending.
-- Actual cloud source/package/release cycle: pending.
-- Fresh Controller verification and fresh final review: pending.
-- User visual/physical Windows platform acceptance: not performed.
+- Workspace/legacy preservation: completed and checked.
+- Identities, fork-owned services and replayable delivery: scoped reviews passed.
+- Revision3 SDK lifecycle and historical notes fixes: scopedPASS0C/0I/0M.
+- Revision3 complete local retail publication: pending.
+- Revision3 actual dualarch cloud release/feed/hash verification: pending.
+- Revision3 actual GUI, own-feed check and normal shutdown: pending.
+- Fresh final independent review and Controller verification: pending.
+- User visual/platform acceptance and manual boundaries above: not performed.

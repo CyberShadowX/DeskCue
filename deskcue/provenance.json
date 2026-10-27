@@ -1,6 +1,6 @@
 {
-  "brandingRevision": 2,
-  "configSha256": "aee8bbae02fc6c2eab1e3a49f42eada154947719a5525ab2acf36c4deeb7f326",
+  "brandingRevision": 3,
+  "configSha256": "211c933ec8ebdda9cee721952ef98dbc5b1820c29c61015d2d665f88b860a2ae",
   "forkPatches": [
     "001-fork-boundaries.patch"
   ],
@@ -12,7 +12,7 @@
   },
   "packageIdentity": "CyberShadowX.DeskCue",
   "productName": "DeskCue",
-  "productVersion": "1.5.9.2",
+  "productVersion": "1.5.9.3",
   "productionInstanceScope": "0F10D29D",
   "recipeSha256": "be428219d7fd96e77b85eb7a9eb8c4f328de2ab3ebf5cd2772452145e5e100a3",
   "repository": "CyberShadowX/DeskCue",

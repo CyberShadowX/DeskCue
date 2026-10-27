@@ -569,28 +569,15 @@ public sealed class EverythingSearchService : IDisposable, ISearchConnectionClie
         }
 
         _isDisposed = true;
-        bool acquired = _nativeGate.Wait(TimeSpan.FromSeconds(1));
-        if (acquired)
+        // Preserve the bounded drain before a replacement provider can start.
+        if (_nativeGate.Wait(TimeSpan.FromSeconds(1)))
         {
-            try
-            {
-                try
-                {
-                    EverythingNativeMethods.CleanUp();
-                }
-                catch (Exception ex) when (
-                    ex is DllNotFoundException or BadImageFormatException or EntryPointNotFoundException)
-                {
-                    // The provider may never have loaded in this process.
-                }
-            }
-            finally
-            {
-                _nativeGate.Release();
-            }
-
-            _nativeGate.Dispose();
+            _nativeGate.Release();
         }
+
+        // The SDK owns process-wide state; its ARM64 CleanUp cannot be followed
+        // by another SDK call. QueryNative resets per-query buffers instead.
+        // Keep the instance gate alive for operations that are already in flight.
     }
 
     private sealed class EverythingIpcException(uint errorCode) : Exception

@@ -2,7 +2,32 @@
 
 Plan: docs/superpowers/plans/2026-10-27-deskcue-upstream-adoption.md
 
-## Current authoritative candidate1.5.9.2
+## Current authoritative checkpoint (2026-10-28): candidate1.5.9.3
+
+- Rev2 source6b6195c2 passed local5935/0/0 (5827C#+108helpers), full394-file
+  NativeAOT/offlineinstaller; actualCI40536288571 passed5827/0/0. Delivery40536288591
+  x64passed5935/fullAOT/installer; ARM4315PASS then nativehang, no release/tag/feed.
+  Previous1591/1592 bytes remain immutable.
+- Real ARMminidump/SOS/run40546464968 identify SDK CleanUp->nextSDKcall hang.
+  Minimal provider fix must retain original <=1s drain and avoid per-instance
+  globalCleanUp/prematuregateDispose. Lostdrain Important is fixed; round2 scoped
+  reviewPASS0C0I0M, controlledRED->focused26PASS/5hosts4PASS. OriginalSearchcase/
+  timeout unchanged. Historicalnotes route Important fixed:21RED->116GREEN,
+  strict knownhistory contentonly upstream, forkfeed/installertrust unchanged;
+  finalreviewer scopedre-reviewPASS0C0I0M, no other durableblockingfinding.
+- Rev3 metadata scopedreviewPASS0C0I0M; BASE3=32a8074efccc8da8d74ff91f693c80d3177f10bb,
+  configSHA211c933ec8ebdda9cee721952ef98dbc5b1820c29c61015d2d665f88b860a2ae,
+  recipe/GUIDs/14DLLinputs unchanged. Fresh main management108/108PASS0skip.
+  Finalpatch137807bytes SHA c60e809e4b21a730d8a00cb513fbf14688bdba4c327b8acf63cec5a54437d5bf;
+  freshLF mechanicalBASE3 and checkedreplay all1697productentries exact.
+  Evidence .artifacts/v3-final-product-replay.json.
+- User confirmed normalexit1592; read-onlyPID35212absent/noDeskCue, originalBox
+  PID45252 unchanged. This is manualevidence, not automatedtrayexit coverage.
+- Next: cleancommit, actualfullLocalPublish
+  and native dualarchcloud; publicrelease/feed/downloadhashes, finalGUI/update,
+  finalHANDOFF and fresh finalindependentreview. No completionclaim yet.
+
+## Historical candidate1.5.9.2 preparation
 
 - Rev2 candidate is frozen and whole CODE delta reviewPASS0C0I0M. All scoped
   reminder/fixture/ARM/diagnostics/version reviews alsoPASS0C0I0M. Main fresh

@@ -155,6 +155,73 @@ public sealed class ReleaseNotesTests : IDisposable
         Assert.Equal("## Latest\n- Fixed update content", result.Content);
     }
 
+    [Fact]
+    public async Task ReleaseNotesService_SelectedUpstreamHistoryLoadsApiBodyAndPersistsForOfflineViewing()
+    {
+        const string notes = "## DeskBox v1.5.8\n- Historical upstream release";
+        using var onlineClient = new HttpClient(new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri?.AbsoluteUri !=
+                "https://api.github.com/repos/Tianyu199509/DeskBox/releases/tags/v1.5.8")
+            {
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    JsonSerializer.Serialize(new { tag_name = "v1.5.8", body = notes }),
+                    Encoding.UTF8,
+                    "application/json")
+            };
+        }));
+        var onlineService = new ReleaseNotesService(_cacheRoot, onlineClient);
+
+        ReleaseNotesLoadResult online = await onlineService.LoadAsync(
+            AppUpdateService.CreateReleaseNotesOnlyManifest("1.5.8"));
+
+        Assert.Equal(notes, online.Content);
+        Assert.False(online.IsFromCache);
+        Assert.Null(online.ErrorMessage);
+        Assert.Equal(notes, await File.ReadAllTextAsync(Path.Combine(_cacheRoot, "1.5.8.all.md")));
+
+        using var offlineClient = new HttpClient(new StubHttpMessageHandler(_ =>
+            throw new HttpRequestException("Offline")));
+        var offlineService = new ReleaseNotesService(_cacheRoot, offlineClient);
+
+        ReleaseNotesLoadResult offline = await offlineService.LoadAsync(
+            AppUpdateService.CreateReleaseNotesOnlyManifest("1.5.8"));
+
+        Assert.Equal(notes, offline.Content);
+        Assert.True(offline.IsFromCache);
+        Assert.Null(offline.ErrorMessage);
+        Assert.Contains("1.5.8", offlineService.GetCachedVersions());
+    }
+
+    [Fact]
+    public async Task ReleaseNotesService_SelectedDeskCueVersionLoadsOwnGitHubApiBody()
+    {
+        using var httpClient = new HttpClient(new StubHttpMessageHandler(request =>
+            request.RequestUri?.AbsoluteUri ==
+                "https://api.github.com/repos/CyberShadowX/DeskCue/releases/tags/v1.5.9.3"
+                ? new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        """{"tag_name":"v1.5.9.3","body":"## DeskCue release"}""",
+                        Encoding.UTF8,
+                        "application/json")
+                }
+                : new HttpResponseMessage(HttpStatusCode.NotFound)));
+        var service = new ReleaseNotesService(_cacheRoot, httpClient);
+
+        ReleaseNotesLoadResult result = await service.LoadAsync(
+            AppUpdateService.CreateReleaseNotesOnlyManifest("1.5.9.3"));
+
+        Assert.Equal("## DeskCue release", result.Content);
+        Assert.False(result.IsFromCache);
+        Assert.Null(result.ErrorMessage);
+    }
+
     public void Dispose()
     {
         try
