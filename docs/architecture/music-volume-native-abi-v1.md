@@ -1,11 +1,11 @@
-# DeskBox 音乐音量 Rust 原生边界与 AOT 收口报告
+# DeskCue 音乐音量 Rust 原生边界与 AOT 收口报告
 
 ## 1. 结论
 
-阶段 4C 选择在现有 `deskbox_native.dll` 中增加粗粒度 Rust Core Audio 服务，没有把
+阶段 4C 选择在现有 `deskcue_native.dll` 中增加粗粒度 Rust Core Audio 服务，没有把
 `IMMDeviceEnumerator`、`IAudioEndpointVolume`、`IAudioSessionManager2` 等接口逐个改写成
 C# source-generated COM。普通 JIT 默认继续使用原有 C# `ComImport` 实现作为行为基准；
-显式设置 `DESKBOX_MUSIC_VOLUME_BACKEND=rust` 时走 Rust，Native AOT 则在编译期只保留
+显式设置 `DESKCUE_MUSIC_VOLUME_BACKEND=rust` 时走 Rust，Native AOT 则在编译期只保留
 Rust 路径，原有 coclass、接口和 `Marshal.ReleaseComObject` 代码全部排除。
 
 这项选择的原因不是“COM 都应改成 Rust”，而是本功能天然适合单次调用、无长期对象跨界的
@@ -34,12 +34,12 @@ Rust 路径，原有 coclass、接口和 `Marshal.ReleaseComObject` 代码全部
 | 构建/运行方式 | 音量后端 | 失败回退 |
 | --- | --- | --- |
 | 普通 JIT，未设置环境变量 | C# 旧实现 | 不适用 |
-| 普通 JIT，`DESKBOX_MUSIC_VOLUME_BACKEND=rust` | Rust | 不回退 C#，保留诊断 |
+| 普通 JIT，`DESKCUE_MUSIC_VOLUME_BACKEND=rust` | Rust | 不回退 C#，保留诊断 |
 | Native AOT | Rust | 不允许回退已被编译排除的 C# COM |
 
 `MusicVolumeService` 的四个公共异步方法和 ViewModel 调用方式没有变化。服务仍通过
 `Task.Run` 在工作线程执行同步 Core Audio 操作；后端选择只发生在服务内部。AOT 路径加载
-固定应用目录下的 `deskbox_native.dll`，复用既有安全加载标志、ABI 探针和能力探针。
+固定应用目录下的 `deskcue_native.dll`，复用既有安全加载标志、ABI 探针和能力探针。
 
 ## 4. ABI v1
 
@@ -47,15 +47,15 @@ Rust 路径，原有 coclass、接口和 `Marshal.ReleaseComObject` 代码全部
 掩码由 31 变为 63，并新增导出：
 
 ```text
-deskbox_music_volume_v1
+deskcue_music_volume_v1
 ```
 
 新导出使用独立的 v1 请求和结果 envelope：
 
 | 结构 | x64 固定尺寸 | 结构版本 |
 | --- | ---: | ---: |
-| `DeskBoxMusicVolumeRequestV1` | 88 字节 | 1 |
-| `DeskBoxMusicVolumeResultV1` | 104 字节 | 1 |
+| `DeskCueMusicVolumeRequestV1` | 88 字节 | 1 |
+| `DeskCueMusicVolumeResultV1` | 104 字节 | 1 |
 
 请求支持四个操作：
 
@@ -82,8 +82,8 @@ Rust 每次调用在当前线程执行 `CoInitializeEx(COINIT_MULTITHREADED)`。
 
 实现涉及：
 
-- `native/deskbox-native/src/music_volume.rs`：Core Audio 操作、session 匹配和资源释放；
-- `native/deskbox-native/src/lib.rs` 与公开头文件：能力、结构、校验和导出；
+- `native/deskcue-native/src/music_volume.rs`：Core Audio 操作、session 匹配和资源释放；
+- `native/deskcue-native/src/lib.rs` 与公开头文件：能力、结构、校验和导出；
 - `MusicVolumeNativeBackend.cs`：固定路径加载、能力/导出检查、托管结构与结果校验；
 - `MusicVolumeService.cs`：JIT oracle、显式 Rust 和 AOT 编译期路由；
 - Rust 构建验证、AOT 审计摘要和契约测试：要求能力 63、七个导出和音乐音量
@@ -160,7 +160,7 @@ setter。产品 `TrySetSystemMasterVolumeAsync` 把原值 `0.370000004768372` �
 
 阶段 5B-3C 使用 profile 35 / schema 32 的最终 x64 Native AOT 产物和测试专用 Rust 静音音频
 夹具，补齐匹配 session getter 与 session setter。夹具固定使用
-`deskbox-audio-session-fixture` 进程/display name，产品 getter 与直接 Rust snapshot 均确认
+`deskcue-audio-session-fixture` 进程/display name，产品 getter 与直接 Rust snapshot 均确认
 match kind 4 和 `0x3F` 健康阶段；session 音量只通过产品 `TrySetSessionVolumeAsync` 完成
 `1.0 → 0.92 → 1.0`。应用内主动异常由 App `finally` 恢复，强制终止则由独立新 AOT 进程先
 观察到约 `0.9200000167` 再恢复。session 消失会保留恢复意图，不视为成功；系统主音量全程保持

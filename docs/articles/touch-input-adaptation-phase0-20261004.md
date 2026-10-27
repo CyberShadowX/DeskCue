@@ -1,4 +1,4 @@
-# DeskBox 触摸屏适配 · 第一步（Phase 0 基线实证）方案
+# DeskCue 触摸屏适配 · 第一步（Phase 0 基线实证）方案
 
 - 日期：2026-10-04
 - 状态：待 Simon 拍板执行
@@ -52,7 +52,7 @@ Phase 0 产出：修正后的断点定案清单 + 批 1'–批 5' 范围定稿�
 
 ### 2.3 长按冲突（社区证据支持，仍需实测表现）
 
-触摸上"按住"同时是右键菜单（press-and-hold → RightTapped）与拖拽启动（short-press-and-drag → CanDrag）的手势来源，二者天然竞争。[microsoft-ui-xaml #1500 讨论](https://github.com/microsoft/microsoft-ui-xaml/issues/1500)确认了该冲突的真实性（"With touch input, the option to hold on a row and just move it"），常见结局是一方永远不触发。DeskBox 文件项同时挂 `CanDrag`（拖出/重排）与 `RightTapped`（原生 Shell 菜单）——触摸下谁赢必须实测（B3）。
+触摸上"按住"同时是右键菜单（press-and-hold → RightTapped）与拖拽启动（short-press-and-drag → CanDrag）的手势来源，二者天然竞争。[microsoft-ui-xaml #1500 讨论](https://github.com/microsoft/microsoft-ui-xaml/issues/1500)确认了该冲突的真实性（"With touch input, the option to hold on a row and just move it"），常见结局是一方永远不触发。DeskCue 文件项同时挂 `CanDrag`（拖出/重排）与 `RightTapped`（原生 Shell 菜单）——触摸下谁赢必须实测（B3）。
 
 ### 2.4 无权威文档、只能实测的关键项：`GetCursorPos` 触摸行为
 
@@ -66,14 +66,14 @@ Phase 0 产出：修正后的断点定案清单 + 批 1'–批 5' 范围定稿�
 | [Touch interactions 设计指引](https://learn.microsoft.com/en-us/windows/apps/design/input/touch-interactions) | 命中目标：**最小 40×40 epx**（视觉可以更小），宽 ≥120 epx 时高可 32 epx；**触摸优化 44×44 epx + 目标间 ≥4 epx 间距**。官方推荐两种策略："always touch optimized"或"基于设备信号切换"——后者即社区通行的"最后输入设备检测触摸模式"。手势惯例：tap=激活；**short-press-and-drag=移动对象**；**press-and-hold=上下文菜单**；swipe=快捷命令 |
 | [Touch developer guide](https://learn.microsoft.com/en-us/windows/apps/develop/input/touch-developer-guide) | 静态手势事件（Tapped/DoubleTapped/RightTapped/Holding）在交互结束后才触发，与 manipulation/drag 的仲裁关系——解释 §2.3 冲突机制 |
 | [InputPane.TryShow](https://learn.microsoft.com/en-us/uwp/api/windows.ui.viewmanagement.inputpane.tryshow) + [键盘迁移指南](https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/migrate-to-windows-app-sdk/guides/keyboard-events) | WinUI 3 desktop 无 CoreWindow → SIP 行为异于 UWP；`InputPaneInterop.GetForWindow` 是唯一正道；`TryShow` 是 best-effort 语义 |
-| 触摸键盘 reflow 指引（touch-interactions §Touch keyboard） | 键盘可占屏 50%；不得遮挡活动文本框，遮挡时滚动内容或移窗——DeskBox 多为贴桌面的浮窗，SIP 弹出后的窗口避让要做（批 1' 范围） |
+| 触摸键盘 reflow 指引（touch-interactions §Touch keyboard） | 键盘可占屏 50%；不得遮挡活动文本框，遮挡时滚动内容或移窗——DeskCue 多为贴桌面的浮窗，SIP 弹出后的窗口避让要做（批 1' 范围） |
 
 ## 4. 社区方案对照
 
 | 来源 | 结论 / 可复用方案 |
 |---|---|
 | [microsoft-ui-xaml #8874](https://github.com/microsoft/microsoft-ui-xaml/discussions/8874)（2023-09） | WinUI 3 desktop 取 InputPane 必须 `InputPaneInterop.GetForWindow(hwnd)`；订阅 Showing/Hiding；`TryShow()/TryHide()`。#8874 给出标准代码形态 |
-| [microsoft-ui-xaml #1500](https://github.com/microsoft/microsoft-ui-xaml/issues/1500) | hold/drag 手势冲突真实存在；workaround 三方向：容器关 CanDrag 改手动 `StartDragAsync`、按 `PointerDeviceType.Touch` 分流、用 `Holding` 事件替代 RightTapped 做触摸菜单。DeskBox 已有 `StartDragAsync` 手动路径先例（分组标题/搜索行），批 5' 可复用 |
+| [microsoft-ui-xaml #1500](https://github.com/microsoft/microsoft-ui-xaml/issues/1500) | hold/drag 手势冲突真实存在；workaround 三方向：容器关 CanDrag 改手动 `StartDragAsync`、按 `PointerDeviceType.Touch` 分流、用 `Holding` 事件替代 RightTapped 做触摸菜单。DeskCue 已有 `StartDragAsync` 手动路径先例（分组标题/搜索行），批 5' 可复用 |
 | [#8434](https://github.com/microsoft/microsoft-ui-xaml/issues/8434) | UWP ListView 触摸交互未处理异常案例——触摸矩阵跑拖拽时留意同类崩溃（风险提醒，非断言） |
 | WebView2 + WinUI 3 SIP 不弹案例（Stack Overflow） | 同形态问题的旁证：焦点进非 XAML 岛控件时 SIP 静默失败 |
 
@@ -100,7 +100,7 @@ Phase 0 产出：修正后的断点定案清单 + 批 1'–批 5' 范围定稿�
 | B11 | 触摸双击文件正常打开（DoubleTapped 触摸阈值） | 触摸快速双击文件项 | 通过则记录；失败则批 5' 查触摸双击间隔 |
 | B12 | 音乐进度条、音量滑条、天气横拖等自绘拖动件触摸表现 | 触摸按住拖动各一处 | 入口均为接触语义（第三轮判定 OK 倾向），复核 |
 
-打点版说明：B1/B2 需要（参照 DESKBOX_PERF_LOG 先例加 `[Touch]` 日志行，临时诊断、不入库或以诊断开关形式留）；B3–B12 纯观察即可。打点构建走 Debug 常规路径，不触碰 AOT/发布链。
+打点版说明：B1/B2 需要（参照 DESKCUE_PERF_LOG 先例加 `[Touch]` 日志行，临时诊断、不入库或以诊断开关形式留）；B3–B12 纯观察即可。打点构建走 Debug 常规路径，不触碰 AOT/发布链。
 
 ### 5.2 功能复现矩阵（六阶段，手动执行）
 
@@ -184,8 +184,8 @@ Phase 0 产出：修正后的断点定案清单 + 批 1'–批 5' 范围定稿�
 ## 9. 本地实证记录（2026-10-04，无触摸硬件开发机）
 
 **装备就绪（可复用）**：
-- 打点版 Debug 构建已产出并在跑：三处 `TOUCH-PROBE` 标记的诊断打点（工作区临时改动，勿提交）——`ContentWidgetWindow.WindowInteraction.cs`（TitleBarPointerPressed：dev/left/contact，B1 采样）、`WidgetWindowBase.Interaction.cs` ContinueWindowDragCore（cursor vs ptrLocal 坐标对比，B2 采样）、`FileSurfaceContent.xaml.cs` Items_RightTapped（fired，B3 采样）。日志走 `App.Log`，过滤 `grep "\[Touch\]" %LOCALAPPDATA%\DeskBox\DeskBox.log`。
-- 注入探针：`artifacts/touch-probe-20261004/touchprobe/`（list / status / tap / doubletap / hold / drag；双后端）。`list` 模式可枚举 DeskBox 全部顶层窗口坐标供注入选址（已验证可用，10 窗口全列出）。
+- 打点版 Debug 构建已产出并在跑：三处 `TOUCH-PROBE` 标记的诊断打点（工作区临时改动，勿提交）——`ContentWidgetWindow.WindowInteraction.cs`（TitleBarPointerPressed：dev/left/contact，B1 采样）、`WidgetWindowBase.Interaction.cs` ContinueWindowDragCore（cursor vs ptrLocal 坐标对比，B2 采样）、`FileSurfaceContent.xaml.cs` Items_RightTapped（fired，B3 采样）。日志走 `App.Log`，过滤 `grep "\[Touch\]" %LOCALAPPDATA%\DeskCue\DeskCue.log`。
+- 注入探针：`artifacts/touch-probe-20261004/touchprobe/`（list / status / tap / doubletap / hold / drag；双后端）。`list` 模式可枚举 DeskCue 全部顶层窗口坐标供注入选址（已验证可用，10 窗口全列出）。
 
 **合成触摸注入结论：本机不可用（已排尽公开 API）**：
 1. `InitializeTouchInjection` 返回成功，但 `InjectTouchInput` 对任意帧（DOWN/纯 MOVE/UP，含非零 `dwTime`、非零接触面积、INDIRECT 反馈模式、前置 MOVE 等全部变体）一律失败 `err=0`。
@@ -213,7 +213,7 @@ Phase 0 产出：修正后的断点定案清单 + 批 1'–批 5' 范围定稿�
 
 **官网反馈（PostgreSQL 全量 409 条，含 closed）**：触摸相关 **0 条**（两轮关键词：触摸/触屏/触控/平板/手指/手写/touch/tablet/stylus/finger/surface + 兜底单字"触"/拖不动/手势，9 条命中全为"触发"类误命中）。
 
-**GitHub issues（open + closed + 全状态搜索）**：触摸相关 **1 条**——[#497「触屏无法移动格子位置，也无法调整格子尺寸」](https://github.com/Tianyu199509/DeskBox/issues/497)：
+**GitHub issues（open + closed + 全状态搜索）**：触摸相关 **1 条**——[#497「触屏无法移动格子位置，也无法调整格子尺寸」](https://github.com/CyberShadowX/DeskCue/issues/497)：
 - ha47i，2026-10-03，v1.5.5 / Win11 x64，open 未回复
 - 原文："触屏无法移动格子以及调整格子尺寸，**其他部分暂未发现触屏适配问题**。既然项目使用winUI3，适配触屏应该不难，还请优化一下"
 

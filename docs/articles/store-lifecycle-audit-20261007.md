@@ -1,4 +1,4 @@
-# DeskBox 商店包与安装/卸载链路 审查·核实与解决方案
+# DeskCue 商店包与安装/卸载链路 审查·核实与解决方案
 
 日期：2026-10-07 ｜ 基线：1.5.6 待打包工作区（HEAD=1542fcd8 + 未提交批次，4849/4849 绿）
 方法：两轮审查——初审 7 个并行 Agent（商店包清单与管线 / 商店功能门控 / 商店文案与数据 / Win10 装 / Win11 装 / Win10 卸 / Win11 卸+商店卸载对照），复核 4 个并行 Agent 对全部发现做「当前代码逐行核对 + 微软官方文档与社区资料检索 + 方案合理性评估」。全程未改任何代码。
@@ -7,8 +7,8 @@
 
 ## 一、事实澄清（相对初审报告的修正，先读）
 
-1. **LTSC 叙事纠正**：LTSC 2021 仍带 AppX 平台（AppXSvc 服务、Appx PowerShell 模块均在，仅移除了商店客户端）——三态守卫在真实 LTSC 上走的是 PS 探测 `exit 1` 放行（多花 1-3 秒）；「平台预判放行」分支实际服务的是 NTLite/DISM 深度精简镜像与嵌入式系统。`DeskBox.Uninstall.iss:496` 注释对 LTSC 的表述不精确（行为正确，注释可顺手修）。
-2. **静默卸载行为比初审更糟，是两个缺陷**：仅 `/VERYSILENT` 时受管根确认框**照常弹出、无人值守部署会挂起等点击**（`/SUPPRESSMSGBOXES` 必须与 /SILENT//VERYSILENT 同用才抑制，Inno 源码级确认）；`/VERYSILENT /SUPPRESSMSGBOXES` 时抑制返回默认值 IDYES → 自动新建 `DeskBox Files.lnk` 桌面图标。
+1. **LTSC 叙事纠正**：LTSC 2021 仍带 AppX 平台（AppXSvc 服务、Appx PowerShell 模块均在，仅移除了商店客户端）——三态守卫在真实 LTSC 上走的是 PS 探测 `exit 1` 放行（多花 1-3 秒）；「平台预判放行」分支实际服务的是 NTLite/DISM 深度精简镜像与嵌入式系统。`DeskCue.Uninstall.iss:496` 注释对 LTSC 的表述不精确（行为正确，注释可顺手修）。
+2. **静默卸载行为比初审更糟，是两个缺陷**：仅 `/VERYSILENT` 时受管根确认框**照常弹出、无人值守部署会挂起等点击**（`/SUPPRESSMSGBOXES` 必须与 /SILENT//VERYSILENT 同用才抑制，Inno 源码级确认）；`/VERYSILENT /SUPPRESSMSGBOXES` 时抑制返回默认值 IDYES → 自动新建 `DeskCue Files.lnk` 桌面图标。
 3. **自定义备份目录的逃生通道要加限定**：只有选在 %LOCALAPPDATA% **之外**的目录才不受 MSIX 虚拟化；选在 Local 根内仍被重定向。
 4. **审计资产缺口自 1.5.x 早期即存在**：Cities/cities.json 与 WidgetTitleIcons 从未进过必备清单（1.5.5 包内实测已含）；1.5.6 真正新增的是 WeatherIcons（60 个 SVG + 2 个 LICENSE）。
 5. **编码风险的真实路径是 arm64.iss**：主脚本用了 6.3.0 才有的 `x64compatible`，旧版 ISCC 会响亮报错；`arm64.iss` 用 `arm64`（6.1 即支持），旧版会**静默产出乱码安装器**。
@@ -23,13 +23,13 @@
 
 #### A1. 商店版备份还原整链必然失败 【1.5.5 商店首发即带病，非 1.5.6 回归】
 
-**核实**：依赖链逐行成立——`Services/AppRelaunchService.cs:19-25` 依赖 `PrepareDetachedUpdaterHelper` 找 `DeskBox.Updater.exe`；商店构建三 Target（`DeskBox.csproj:301-317`）条件排除该进程；本地还原失败即取消（`SettingsWindow.Maintenance.cs:261-271`）、云还原同链（`SettingsWindow.CloudBackup.cs:523-533` → `BackupRestoreActions.cs:103-113`）。
-**关键事实**（决定方案）：还原本来就基于 `restore-pending.json` 标记「下次启动应用」（`DeskBoxDataBackupService.cs:221,541,688` + `App.xaml.cs:925-927`），重启**不带参数**（Updater restart-only 分支无参启动，已核实）。
+**核实**：依赖链逐行成立——`Services/AppRelaunchService.cs:19-25` 依赖 `PrepareDetachedUpdaterHelper` 找 `DeskCue.Updater.exe`；商店构建三 Target（`DeskCue.csproj:301-317`）条件排除该进程；本地还原失败即取消（`SettingsWindow.Maintenance.cs:261-271`）、云还原同链（`SettingsWindow.CloudBackup.cs:523-533` → `BackupRestoreActions.cs:103-113`）。
+**关键事实**（决定方案）：还原本来就基于 `restore-pending.json` 标记「下次启动应用」（`DeskCueDataBackupService.cs:221,541,688` + `App.xaml.cs:925-927`），重启**不带参数**（Updater restart-only 分支无参启动，已核实）。
 **最合理方案（M）**：
 1. `AppRelaunchService.ScheduleAfterCurrentProcessExit` 加商店分支：不再找 Updater，置 App 级 `PendingOsRestartOnShutdown` 标志并返回成功（保住 scoped 还原标记不被关机清理）。
 2. `App.ShutdownApplicationAsync` 末尾（DrainLogQueue 后、Exit 前）：标志置位且商店渠道 → 调 `Microsoft.Windows.AppLifecycle.AppInstance.Restart(string.Empty)`（注意与已用的 `Windows.ApplicationModel.AppInstance` 是两个类型，需全限定名）。成功则进程被框架包 agent 终止；失败（返回 reason）继续 Exit——**还原标记仍在，下次启动照常应用**，自动降级为「下次启动生效」。
 3. 两个调用点（本地/云）无需改动。
-**外部依据**：WinAppSDK Restart 官方规格明确适用任何打包 Win32 应用，agent 在框架包内（DeskBox 商店版 `WindowsAppSDKSelfContained=false` 恰好满足）；已知 issue #2792 只影响非打包应用且 1.4 已修。
+**外部依据**：WinAppSDK Restart 官方规格明确适用任何打包 Win32 应用，agent 在框架包内（DeskCue 商店版 `WindowsAppSDKSelfContained=false` 恰好满足）；已知 issue #2792 只影响非打包应用且 1.4 已修。
 **否决**：spawn 包内 watcher 进程（重复造 agent 已处理好的轮子）；纯「下次启动应用」（商店用户往往要等下次开机，体验差——而本方案失败路径天然就是它，两者兼得）。
 
 ### B 档｜应修（小改动，建议随 1.5.6 或紧随其后）
@@ -42,7 +42,7 @@
 | B4 | 静默卸载挂起（仅 /VERYSILENT）/自动建桌面图标（+/SUPPRESSMSGBOXES） | `OfferManagedStorageShortcut` 开头 `if UninstallSilent then Log(...) and Exit`（官方卸载期专用函数，覆盖两种静默；日志留存储根路径给部署者） | ~7 行 |
 | B5 | /PURGEUSERDATA + 商店版在装：静默跳过 purge 无反馈（Unknown 反而有弹窗） | Installed 分支补 `SuppressibleMsgBox(StoreEditionDataPreserved)`（消息 12 语言已存在，零翻译） | ~5 行 |
 | B6 | 商店包构建链无 git 指纹（Direct 链有；工作区脏树时包不可复现） | 把 `Get-WorkingTreeSnapshot`（`publish-aot-retail.ps1:168-190`）复制/抽共享模块进 `audit-store-native-aot-package.ps1`，写入 summary.json | S |
-| B7 | 升级瞬间 ThumbnailProxy 孤儿进程可锁文件（Rust 侧无看门狗，Shell handler 挂死时无限存活） | 两个 .iss：`CloseApplicationsFilter=DeskBox.exe,DeskBox.ThumbnailProxy.exe`（官方语义=逗号分隔通配列表；代理无状态可强杀） | 1 行×2 |
+| B7 | 升级瞬间 ThumbnailProxy 孤儿进程可锁文件（Rust 侧无看门狗，Shell handler 挂死时无限存活） | 两个 .iss：`CloseApplicationsFilter=DeskCue.exe,DeskCue.ThumbnailProxy.exe`（官方语义=逗号分隔通配列表；代理无状态可强杀） | 1 行×2 |
 | B8 | 升级清理脚本 PS 失败即中止安装（WDAC/AppLocker 机器恰好最需要升级） | `Migration.iss:45-49` 的 `RaiseException` 改降级：Log「下次升级重试」继续装（陈旧异名文件实害≈0、每次升级重跑自愈；否决反向统一为中止） | ~10 行 |
 | B9 | arm64.iss 旧版 ISCC 静默乱码 | 9 个无 BOM 的 .iss 加 UTF-8 BOM（6.x 长期支持）+ CI `distribution-audit.yml` 补 Inno≥6.3.0 断言 + 顶部注释 | 9 文件+2 行 |
 | B10 | 审计必备清单不覆盖 WeatherIcons 等资产（打包回归审计照样过） | 手动补清单+目录级计数断言（「WeatherIcons/ 至少 1 个 svg」等）；**否决从 csproj 自动生成**（审计价值=独立于构建系统的第二双眼睛） | S |
@@ -58,12 +58,12 @@
 
 | # | 事项 | 结论 |
 |---|---|---|
-| C1 | **直装包签名路线** | 推荐按序：①申请 **SignPath Foundation** 免费签名（GPLv3+GitHub 公开项目，DeskBox 符合画像，审核制）；②被拒则 **Certum OV**（约 1200 元/年，云签名版可进 CI；注意赞赏码是否触发「商业」认定需先确认）；③保底=README/Release 说明「未签名，首次运行 SmartScreen 点仍要运行」+引导商店版（商店版由微软签名免疫）。纪律：同一身份持续签每版（换证书=声誉清零）、误报走 Security Intelligence 提交。**否决**：Azure Trusted Signing（中国个人资格不符）、EV（官方确认已无 SmartScreen 增值）、x86 包（AOT 不支持 win-x86） |
+| C1 | **直装包签名路线** | 推荐按序：①申请 **SignPath Foundation** 免费签名（GPLv3+GitHub 公开项目，DeskCue 符合画像，审核制）；②被拒则 **Certum OV**（约 1200 元/年，云签名版可进 CI；注意赞赏码是否触发「商业」认定需先确认）；③保底=README/Release 说明「未签名，首次运行 SmartScreen 点仍要运行」+引导商店版（商店版由微软签名免疫）。纪律：同一身份持续签每版（换证书=声誉清零）、误报走 Security Intelligence 提交。**否决**：Azure Trusted Signing（中国个人资格不符）、EV（官方确认已无 SmartScreen 增值）、x86 包（AOT 不支持 win-x86） |
 | C2 | Win10 ARM 取 x64 包=死胡同（进程起不来，无指引） | 纯文档：官网下载页加架构选择+「Win10 ARM 必须用 ARM64 包（x64 包仅支持 Win11 on ARM）」；README FAQ 补同句；issues 零 ARM 实证，不值得代码动作 |
 | C3 | per-machine 静默安装默认 UAC | README 部署段补一句「免提权静默安装追加 /CURRENTUSER（拒绝提权退出码 1223）」 |
 | C4 | 双渠道互斥体同名（点商店图标静默打开直装版；通知信封单向不可见） | **维持现状+文档化**：同名互斥体事实上保证整机单实例，恰好规避双 watcher 双吞桌面文件的灾难，是「意外的好属性」→ 升格为 `distribution_channel_workflow.md` 显式设计记录+安装说明「装商店版前退出直装版」。**否决**渠道后缀拆分（受管根双写风险 M-L 工程） |
 | C5 | PS 商店探测无超时（AppXSvc 挂死→卸载器无响应冻结） | 与 B3/B4/B5 同批做：新增 `ExecWithTimeout`（ShellExecuteEx + WaitForSingleObject + 超时 Terminate → 返回 Unknown fail-closed），替换 :465-473 的 Exec；超时 15-30s。约 60-80 行 Inno Pascal |
-| C6 | 文档小疵 | `distribution_channel_workflow.md:345` 清理命令 PFN 写错（`DeskBox.Desktop` → `D1FC332A.DeskBoxWidgets`） |
+| C6 | 文档小疵 | `distribution_channel_workflow.md:345` 清理命令 PFN 写错（`DeskCue.Desktop` → `CyberShadowX.DeskCue`） |
 
 ### D 档｜明确不做（已论证否决）
 
@@ -84,7 +84,7 @@
 
 > **实施状态（2026-10-07）**：第四节的「随 1.5.6 一起修」与「打包流程内顺手做」两档已全部落地——A1、B1、B3、B4、B5、B7、B13、B14 + B6、B11，构建零错误、4849/4849 绿。B2/B9/B10/B12/B15/B16/B17、C5 维持 1.5.6 后批量计划；C1 签名申请（SignPath Foundation）待发起。
 >
-> **实施状态（2026-10-09）**：C1 闭环——SignPath Foundation 申请通过，组织 `DeskBox [OSS]` 与 GitHub App/secret/发版门禁 sign job 当日接线完成，测试证书 CI 签名全绿并本地验签（`docs/code-signing.md`），生产证书审查中。
+> **实施状态（2026-10-09）**：C1 闭环——SignPath Foundation 申请通过，组织 `DeskCue [OSS]` 与 GitHub App/secret/发版门禁 sign job 当日接线完成，测试证书 CI 签名全绿并本地验签（`docs/code-signing.md`），生产证书审查中。
 
 1. **随 1.5.6 一起修**（都是几行级）：A1（商店备份还原，唯一功能缺陷，修完商店版用户第一次能用还原）、B1/B3/B4/B5/B7/B13/B14（一行到数行，零行为风险）。
 2. **1.5.6 打包流程内顺手做**：B6（audit summary 补 git 指纹）、B11（combine 身份断言，改技能脚本）。

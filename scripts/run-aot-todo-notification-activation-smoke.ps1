@@ -13,11 +13,11 @@ Set-StrictMode -Version Latest
 
 $scenario = "DeterministicActionRouting"
 $smokeEnvironmentVariable =
-    "DESKBOX_AOT_TODO_NOTIFICATION_ACTIVATION_SMOKE"
+    "DESKCUE_AOT_TODO_NOTIFICATION_ACTIVATION_SMOKE"
 $phaseEnvironmentVariable =
-    "DESKBOX_AOT_TODO_NOTIFICATION_ACTIVATION_PHASE"
+    "DESKCUE_AOT_TODO_NOTIFICATION_ACTIVATION_PHASE"
 $runIdEnvironmentVariable =
-    "DESKBOX_AOT_TODO_NOTIFICATION_ACTIVATION_RUN_ID"
+    "DESKCUE_AOT_TODO_NOTIFICATION_ACTIVATION_RUN_ID"
 $runId = [Guid]::NewGuid().ToString("N")
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $launcher = Join-Path $PSScriptRoot "start-aot-preview.ps1"
@@ -34,9 +34,9 @@ $evidenceRoot = Join-Path `
     $repoRoot `
     ".artifacts\aot-todo-notification-activation-smoke\win-x64"
 $productionDataRoot = [System.IO.Path]::GetFullPath(
-    (Join-Path $env:LOCALAPPDATA "DeskBox"))
-$ownedMarkerName = ".deskbox-aot-todo-notification-activation-owned.json"
-$ownedMarkerKind = "DeskBox.Aot.TodoNotificationActivationSmoke.v1"
+    (Join-Path $env:LOCALAPPDATA "DeskCue"))
+$ownedMarkerName = ".deskcue-aot-todo-notification-activation-owned.json"
+$ownedMarkerKind = "DeskCue.Aot.TodoNotificationActivationSmoke.v1"
 $phases = @("RouteAndPersist", "VerifyAndClear", "Postflight")
 
 function Test-PathEqual {
@@ -105,7 +105,7 @@ function Get-DirectoryStateFingerprint {
 function Get-ExactPreviewProcesses {
     param([string]$ExecutablePath)
     return @(
-        Get-CimInstance Win32_Process -Filter "Name='DeskBox.exe'" |
+        Get-CimInstance Win32_Process -Filter "Name='DeskCue.exe'" |
             Where-Object {
                 -not [string]::IsNullOrWhiteSpace(
                     [string]$_.ExecutablePath) -and
@@ -255,7 +255,7 @@ function Invoke-TodoNotificationActivationPhase {
 
     $variables = @(
         @(Get-ChildItem Env: |
-            Where-Object { $_.Name -like "DESKBOX_AOT_*_SMOKE" } |
+            Where-Object { $_.Name -like "DESKCUE_AOT_*_SMOKE" } |
             Select-Object -ExpandProperty Name) +
         @(
             $smokeEnvironmentVariable,
@@ -346,7 +346,7 @@ function Invoke-TodoNotificationActivationPhase {
     }
     Assert-RequiredSteps -Phase $Phase -Result $result
 
-    $runtimeLogPath = Join-Path $DataRoot "DeskBox.log"
+    $runtimeLogPath = Join-Path $DataRoot "DeskCue.log"
     $failureLines = @(
         Get-Content -LiteralPath $runtimeLogPath |
             Where-Object {
@@ -459,7 +459,7 @@ $settings | ConvertTo-Json -Depth 16 |
 
 $productionBefore = Get-DirectoryStateFingerprint -Path $productionDataRoot
 $previewExecutablePath = [System.IO.Path]::GetFullPath(
-    (Join-Path ([string]$auditSummary.publishDirectory) "DeskBox.exe"))
+    (Join-Path ([string]$auditSummary.publishDirectory) "DeskCue.exe"))
 $runSucceeded = $false
 $previewRootCleaned = $false
 $phaseRuns = [System.Collections.Generic.List[object]]::new()
@@ -514,7 +514,7 @@ try {
         [int]$productionAfter.fileCount -ne
             [int]$productionBefore.fileCount -or
         [long]$productionAfter.bytes -ne [long]$productionBefore.bytes) {
-        throw "Production DeskBox data changed during the isolated action smoke."
+        throw "Production DeskCue data changed during the isolated action smoke."
     }
 
     New-Item -ItemType Directory -Path $archiveRoot -Force | Out-Null
@@ -531,8 +531,8 @@ try {
         -LiteralPath $settingsPath `
         -Destination (Join-Path $archiveRoot "preview-settings.json")
     Copy-Item `
-        -LiteralPath (Join-Path $DataRoot "DeskBox.log") `
-        -Destination (Join-Path $archiveRoot "DeskBox.log")
+        -LiteralPath (Join-Path $DataRoot "DeskCue.log") `
+        -Destination (Join-Path $archiveRoot "DeskCue.log")
     Copy-Item `
         -LiteralPath (Join-Path `
             $DataRoot `

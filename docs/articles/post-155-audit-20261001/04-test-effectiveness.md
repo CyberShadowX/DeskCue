@@ -1,4 +1,4 @@
-# 04 · 测试项目有效性梳理（tests/DeskBox.Tests，2026-10-01）
+# 04 · 测试项目有效性梳理（tests/DeskCue.Tests，2026-10-01）
 
 > 问题意识：仓库主人被"代理为全绿弱化测试"坑过。本审计用四视角对抗性审查：作弊/弱化扫描、冻结计数合理性、行为覆盖缺口、结构健康。基线：424 个测试文件、3074 个 `[Fact]` + 374 个 `[Theory]`/1457 条 `InlineData`，展开 = 4616（与当前全绿数吻合）。
 
@@ -55,7 +55,7 @@
 
 1. **合并 nameof=34 锁步钉**（AotStage5B4B1 + 4 个 editor MigrationPattern）为单一事实源。
 2. **废除元钉**：11 个 stage 测试断言 baseline 测试文件的断言文本。
-3. **消灭墙钟断言**（flaky 种子=未来弱化的最大诱因）：`FolderEnumerationPerfTests.cs:34`（<800ms）、`BoundedBackgroundWorkSchedulerTests.cs:84`（<2s）；真睡等待：FileDragSafety 150ms、ElevatedFileLauncher 200ms、DeskBoxDataBackup 750ms×2、WatcherDelay 300ms×3。
+3. **消灭墙钟断言**（flaky 种子=未来弱化的最大诱因）：`FolderEnumerationPerfTests.cs:34`（<800ms）、`BoundedBackgroundWorkSchedulerTests.cs:84`（<2s）；真睡等待：FileDragSafety 150ms、ElevatedFileLauncher 200ms、DeskCueDataBackup 750ms×2、WatcherDelay 300ms×3。
 4. **拆超大文件**：FileServiceTests 2682 行、FileSurfaceParity 2117、CloudBackupScoped 1895、SettingsServiceTests 1868 等 10 个 >1000 行。
 5. MigrationPattern 模板去重（4–8 个 editor 文件尾部 60–90 行同构钉）。
 6. 为 23 个退役迁移测试补一份"旧断言→新测试"退役映射说明。

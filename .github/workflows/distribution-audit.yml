@@ -9,9 +9,9 @@ on:
         default: ''
         type: string
       expected-signer-cn:
-        description: 'Expected signer certificate CN for verification (substring match, empty = DeskBox)'
+        description: 'Expected signer certificate CN for verification (substring match, empty = DeskCue)'
         required: false
-        default: 'DeskBox'
+        default: 'DeskCue'
         type: string
 
 permissions:
@@ -92,7 +92,7 @@ jobs:
           # Some Inno installations do not stamp ISCC.exe version info; fall
           # back to the uninstall registration before applying the floor. The
           # floor guards the installer language arbitration the /LANG update
-          # flow relies on (DeskBox.Updater Program.cs pins /LANG; the
+          # flow relies on (DeskCue.Updater Program.cs pins /LANG; the
           # silent-mode no-dialog + /LANG-overrides-previous-language behavior
           # was verified against Inno Setup 6.4+ sources).
           if ($innoVersion -in @('', '0.0.0.0')) {
@@ -124,7 +124,7 @@ jobs:
       - name: Restore architecture-specific assets
         shell: pwsh
         run: >-
-          dotnet restore .\DeskBox.sln
+          dotnet restore .\DeskCue.sln
           --locked-mode
           -p:Platform=${{ matrix.platform }}
           -p:RuntimeIdentifier=${{ matrix.rid }}
@@ -151,8 +151,8 @@ jobs:
             .artifacts/stage7c1-${{ matrix.rid }}/inno-compile.log
             .artifacts/stage7c1-${{ matrix.rid }}/direct-installer/*.exe
             .artifacts/stage7c1-${{ matrix.rid }}/store/*.msixupload
-            .artifacts/stage7c1-${{ matrix.rid }}/store/**/*DeskBox*.msix
-            .artifacts/stage7c1-${{ matrix.rid }}/store/**/*DeskBox*.appxsym
+            .artifacts/stage7c1-${{ matrix.rid }}/store/**/*DeskCue*.msix
+            .artifacts/stage7c1-${{ matrix.rid }}/store/**/*DeskCue*.appxsym
             .artifacts/stage7c1-${{ matrix.rid }}/store-audit/summary.json
             .artifacts/stage7c1-${{ matrix.rid }}/store-audit/package-files.txt
             .artifacts/stage7c1-${{ matrix.rid }}/store-audit/AppxManifest.xml
@@ -233,9 +233,9 @@ jobs:
       - name: Collect unsigned installers
         shell: pwsh
         run: |
-          $installers = Get-ChildItem -LiteralPath .\distribution -Recurse -Filter 'DeskBox_Setup_*.exe' -File
+          $installers = Get-ChildItem -LiteralPath .\distribution -Recurse -Filter 'DeskCue_Setup_*.exe' -File
           if (-not $installers) {
-            throw 'No DeskBox_Setup_*.exe found in distribution artifacts.'
+            throw 'No DeskCue_Setup_*.exe found in distribution artifacts.'
           }
           New-Item -ItemType Directory -Force -Path .\unsigned | Out-Null
           Copy-Item -LiteralPath $installers.FullName -Destination .\unsigned
@@ -256,7 +256,7 @@ jobs:
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: 'e4f8de42-d97c-409d-b768-ee383c34c15b'
-          project-slug: 'DeskBox'
+          project-slug: 'DeskCue'
           signing-policy-slug: ${{ inputs.signing-policy }}
           github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
           wait-for-completion: true
@@ -288,9 +288,9 @@ jobs:
         shell: pwsh
         run: |
           $expectedCn = '${{ inputs.expected-signer-cn }}'
-          if ([string]::IsNullOrWhiteSpace($expectedCn)) { $expectedCn = 'DeskBox' }
+          if ([string]::IsNullOrWhiteSpace($expectedCn)) { $expectedCn = 'DeskCue' }
 
-          $installers = @(Get-ChildItem -LiteralPath .\signed -Recurse -Filter 'DeskBox_Setup_*.exe' -File)
+          $installers = @(Get-ChildItem -LiteralPath .\signed -Recurse -Filter 'DeskCue_Setup_*.exe' -File)
           if ($installers.Count -ne 2) {
             throw "Expected exactly 2 signed installers (x64 + ARM64); found $($installers.Count)."
           }

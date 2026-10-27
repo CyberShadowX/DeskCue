@@ -1,4 +1,4 @@
-# DeskBox AOT 阶段 5B-4C3B2B1 完成与复盘报告
+# DeskCue AOT 阶段 5B-4C3B2B1 完成与复盘报告
 
 - 日期：2026-08-23
 - 状态：已完成；代码、定向测试、x64 Native AOT 审计、五进程运行矩阵、全量回归和 Rust 回归均通过
@@ -53,7 +53,7 @@
 | SecondaryForward | 第二进程 | 使用相同 preview root 启动，命中 mutex，写入 `UserInput=tomorrow`，唤醒主进程并退出 |
 | Postflight | 主进程 4 | 新进程重载两个精确 snooze，确认 spool 为空并清理 fixture store |
 
-runner 要求五个 PID 全部不同、四个主进程自然退出、第二进程在主进程保持存活时退出、全部结果和受审计 EXE 使用同一 SHA-256。正式 DeskBox 数据目录在运行前后以文件数、总字节和确定性元数据指纹核对。
+runner 要求五个 PID 全部不同、四个主进程自然退出、第二进程在主进程保持存活时退出、全部结果和受审计 EXE 使用同一 SHA-256。正式 DeskCue 数据目录在运行前后以文件数、总字节和确定性元数据指纹核对。
 
 fixture 固定时钟为 2026-08-25 08:15:00 +08:00。冷启动结果应为 08:45，第二实例 `tomorrow` 结果应为次日 09:00。AOT-only 分支抑制该 fixture 的 snooze 确认通知，系统通知展示与 Windows activation 均不在本阶段触发。
 
@@ -65,7 +65,7 @@ fixture 固定时钟为 2026-08-25 08:15:00 +08:00。冷启动结果应为 08:45
 
 - 审计耗时 258,943 ms，`sourceStableDuringAudit=true`；
 - publish 39 个文件、92,945,877 bytes；symbols 3 个文件、212,373,504 bytes；
-- `DeskBox.exe` SHA-256 为 `E5E4D95B9E386BADB69243280B975AFDD6DF25FB09638D2ABC0C87F25391E78C`；
+- `DeskCue.exe` SHA-256 为 `E5E4D95B9E386BADB69243280B975AFDD6DF25FB09638D2ABC0C87F25391E78C`；
 - WMC1506=0、WMC1510=1211、完整 `always-throw`=0，原始 IL2026/IL2050/IL2072/IL2075/IL3050 均为 0；
 - B2B1 的 scenario/product/runner 缺失模式、越界模式和目标源码 warning 均为 0；
 - fixture 1 处、信封 store 2 处 source-generated JSON 调用；JSON 固定清单为 29 个文件、65/65 处调用和 27 个 context 所有者；
@@ -93,7 +93,7 @@ fixture 固定时钟为 2026-08-25 08:15:00 +08:00。冷启动结果应为 08:45
 - x64 全量测试：2462/2462；
 - Rust workspace：57/57；`cargo fmt --all --check` 与 Clippy `-D warnings` 均通过；
 - 23 个 PowerShell 脚本解析错误为 0，`git diff --check` 通过；仅输出工作区既有的 LF/CRLF 提示。
-- 规范非平台 Debug 构建为 0 错误、24 个既有警告；最终仅运行一个仓库实例，PID 38860，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`。
+- 规范非平台 Debug 构建为 0 错误、24 个既有警告；最终仅运行一个仓库实例，PID 38860，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`。
 
 ## 5. Rust 决策
 

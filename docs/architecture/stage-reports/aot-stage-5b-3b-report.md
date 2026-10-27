@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-3B 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-3B 完成与复盘报告
 
 - 审计日期：2026-08-22
 - 范围：系统主音量 setter、应用内恢复、强制终止后的独立新进程恢复
@@ -21,7 +21,7 @@
 
 ## 2. 实现边界
 
-新增 `App.AotMusicVolumeMutationSmoke.cs`，只在 `DESKBOX_NATIVE_AOT` 中编译，并且只有显式设置 `DESKBOX_AOT_MUSIC_VOLUME_MUTATION_SMOKE` 才会运行。支持四种应用侧场景：
+新增 `App.AotMusicVolumeMutationSmoke.cs`，只在 `DESKCUE_NATIVE_AOT` 中编译，并且只有显式设置 `DESKCUE_AOT_MUSIC_VOLUME_MUTATION_SMOKE` 才会运行。支持四种应用侧场景：
 
 | 场景 | 行为 |
 | --- | --- |
@@ -45,7 +45,7 @@ runner 中没有 `MusicVolumeNativeBackend.SetSystemVolume`、`TrySetSessionVolu
 恢复意图使用稳定路径：
 
 ```text
-%LOCALAPPDATA%\DeskBox-AotPreview\wingezi-B073278E-stage5b3b-music-volume-mutation\
+%LOCALAPPDATA%\DeskCue-AotPreview\wingezi-B073278E-stage5b3b-music-volume-mutation\
   aot-music-volume-mutation-smoke\recovery-intent.json
 ```
 
@@ -62,7 +62,7 @@ runner 中没有 `MusicVolumeNativeBackend.SetSystemVolume`、`TrySetSessionVolu
 
 如果意图损坏、根不匹配、恢复 setter 失败或 getter 未回到容差内，runner 会保留意图。外层脚本无论主流程是否失败都会尝试独立 postflight；如果 postflight 仍失败，错误会给出恢复意图路径和可读取的原始系统音量，不会静默宣称完成。
 
-五个 AOT smoke 脚本现在都会保存、清空并恢复全部五个 opt-in，避免调用进程残留环境让多个 runner 同时进入。音乐变更脚本还隔离 `DESKBOX_MUSIC_VOLUME_BACKEND`。
+五个 AOT smoke 脚本现在都会保存、清空并恢复全部五个 opt-in，避免调用进程残留环境让多个 runner 同时进入。音乐变更脚本还隔离 `DESKCUE_MUSIC_VOLUME_BACKEND`。
 
 ## 4. 真实 AOT 六阶段结果
 
@@ -123,12 +123,12 @@ runner 中没有 `MusicVolumeNativeBackend.SetSystemVolume`、`TrySetSessionVolu
 
 最终受审计并实际运行的文件哈希：
 
-- `DeskBox.exe`：`46851FAA9A2C9C89B040973940653CA5D76FACE70E5ED72CD8C3A22876AD25A8`
-- `deskbox_native.dll`：`933DB2AECE4E8547519E4D4502C7EE9487BBC788D739571B1315841670A7BD21`
+- `DeskCue.exe`：`46851FAA9A2C9C89B040973940653CA5D76FACE70E5ED72CD8C3A22876AD25A8`
+- `deskcue_native.dll`：`933DB2AECE4E8547519E4D4502C7EE9487BBC788D739571B1315841670A7BD21`
 
 哈希只证明本次审计内部 staging/publish 一致，以及运行证据与同次 summary 一致；没有宣称跨次 Native AOT 构建字节级可复现。
 
-正式 `%LOCALAPPDATA%\DeskBox` 的确定性元数据指纹在完整六阶段前后均为：
+正式 `%LOCALAPPDATA%\DeskCue` 的确定性元数据指纹在完整六阶段前后均为：
 
 ```text
 DF25E91EF8BB726C3BDFA46B9C0CF08EEBA93F186A4B26E4045AE58321F3F976

@@ -1,9 +1,9 @@
-# DeskBox JSON source generation 迁移基线与后续设计
+# DeskCue JSON source generation 迁移基线与后续设计
 
 - 审计日期：2026-08-22（4A 人工验收完成于 2026-08-20）
 - 阶段：4B-4 已完成；后续隔离 AOT 冒烟与 5B-4C3B2B1 产品 activation envelope 继续按独立 context 登记
-- 范围：`src/DeskBox` 中生产代码的 `System.Text.Json` 调用、相关 DTO、持久化格式和现有回归测试
-- 本阶段边界：只在主程序与更新器的 `DeskBoxAotAudit=true` 配置中关闭 System.Text.Json 默认反射，并让隔离审计脚本显式传入、记录该开关；普通 Debug/Release JIT 默认值保持未设置。AOT fixture 调用只写隔离预览根下的结构化证据或恢复意图；5B-4C3B2B1 新增的产品 envelope 使用独立 schema 1 spool，不改变既有用户数据 store 格式
+- 范围：`src/DeskCue` 中生产代码的 `System.Text.Json` 调用、相关 DTO、持久化格式和现有回归测试
+- 本阶段边界：只在主程序与更新器的 `DeskCueAotAudit=true` 配置中关闭 System.Text.Json 默认反射，并让隔离审计脚本显式传入、记录该开关；普通 Debug/Release JIT 默认值保持未设置。AOT fixture 调用只写隔离预览根下的结构化证据或恢复意图；5B-4C3B2B1 新增的产品 envelope 使用独立 schema 1 spool，不改变既有用户数据 store 格式
 
 ## 1. 结论
 
@@ -12,7 +12,7 @@
 3. 4B-0 基线中的非泛型 `JsonStringEnumConverter` 共 7 个。4B-1/4B-2/4B-3B 已用各分域 context 的 source-generation 字符串枚举支持全部替换，当前数量为 0。
 4. `GlanceImageService` 的图片目录和 `SearchHistoryService` 的最近结果使用数字枚举。迁移时如果误用字符串枚举 context，会改变已落盘格式。
 5. 旧规划只记录了两个泛型读取/校验 helper。实际共有 3 个泛型 JSON helper：两个读取/校验入口和一个原子写入入口。它们的实际类型集合均为有限白名单，不需要保留开放泛型反射路径。
-6. 阶段 4B-4 已完成。主程序和更新器只有在 `DeskBoxAotAudit=true` 时将 `JsonSerializerIsReflectionEnabledByDefault` 求值为 `false`，普通构建求值为空；配置 13 / schema 10 的隔离 AOT 审计明确记录该值为 `false`，且 JSON 警告和反射回退错误均为 0。5B-4C3B2B1 的 profile 56 / schema 53 审计继续满足同一门禁，并编译当前全部 27 个 context 所有者。
+6. 阶段 4B-4 已完成。主程序和更新器只有在 `DeskCueAotAudit=true` 时将 `JsonSerializerIsReflectionEnabledByDefault` 求值为 `false`，普通构建求值为空；配置 13 / schema 10 的隔离 AOT 审计明确记录该值为 `false`，且 JSON 警告和反射回退错误均为 0。5B-4C3B2B1 的 profile 56 / schema 53 审计继续满足同一门禁，并编译当前全部 27 个 context 所有者。
 
 ## 2. 4A 放行记录
 
@@ -51,9 +51,9 @@
 | 5B-4C3B2B1 | `NativeNotificationActivationEnvelopeStore.cs` | 2 | `NativeNotificationActivationEnvelope` | 产品 schema 1 spool；camelCase、缩进、metadata context；原子写入和 source-generated 读取，保存 arguments、`UserInput`、来源 PID 与时序信息 |
 | 4B-1 | `AppUpdateService.cs` | 2 | `AppUpdateManifest`、`GitHubReleaseResponse` | 已迁移；`AppUpdateJsonContext` 保持 Web camelCase、大小写不敏感、字符串数字读取和 GitHub `JsonPropertyName` |
 | 4B-1 | `CitySearchService.cs` | 1 | `List<PredefinedCity>` | 已迁移；复用 `WeatherJsonContext`，保持大小写不敏感和 `zh`、`country_zh` 等固定字段名 |
-| 4B-3B | `DeskBoxAttachmentHealthService.cs` | 1 | 泛型 `T`，实际为 `QuickCaptureStoreData`、`TodoWidgetData` | 已迁移；复用 Quick Capture/Todo context 的兼容实例，保持大小写不敏感与字符串/数字枚举读取；只读健康扫描 |
-| 4B-3B/3C | `DeskBoxDataBackupService.cs` | 11 | `DeskBoxBackupManifest`、`PendingRestoreMarker`、`AppSettings`、`QuickCaptureStoreData`、`TodoWidgetData` | 已全部迁移；用户数据复用 4B-2 兼容 context，控制文档由私有 `BackupJsonContext` 保持 camelCase、缩进、大小写敏感与 schema 1/2 格式 |
-| 4B-1 | `DeskBoxDiagnosticsBundleService.cs` | 1 | `DeskBoxDiagnosticSnapshot` 完整对象图 | 已迁移；`DiagnosticsJsonContext` 保持 camelCase、缩进和字符串枚举；只写诊断包 |
+| 4B-3B | `DeskCueAttachmentHealthService.cs` | 1 | 泛型 `T`，实际为 `QuickCaptureStoreData`、`TodoWidgetData` | 已迁移；复用 Quick Capture/Todo context 的兼容实例，保持大小写不敏感与字符串/数字枚举读取；只读健康扫描 |
+| 4B-3B/3C | `DeskCueDataBackupService.cs` | 11 | `DeskCueBackupManifest`、`PendingRestoreMarker`、`AppSettings`、`QuickCaptureStoreData`、`TodoWidgetData` | 已全部迁移；用户数据复用 4B-2 兼容 context，控制文档由私有 `BackupJsonContext` 保持 camelCase、缩进、大小写敏感与 schema 1/2 格式 |
+| 4B-1 | `DeskCueDiagnosticsBundleService.cs` | 1 | `DeskCueDiagnosticSnapshot` 完整对象图 | 已迁移；`DiagnosticsJsonContext` 保持 camelCase、缩进和字符串枚举；只写诊断包 |
 | 4B-3A | `DesktopOrganizationRecoveryStore.cs` | 2 | `DesktopOrganizationRecoveryJournal` | 已迁移；`DesktopRecoveryJsonContext` 保持 camelCase、缩进；当前对象图无普通枚举；读写临时恢复日志 |
 | 4B-2 | `GlanceImageService.cs` | 2 | `List<GlanceImageInfo>` | 已迁移；`GlanceImageCatalogJsonContext` 保持 camelCase、缩进和数字枚举；读写可丢弃缓存目录 |
 | 4B-2 | `GlanceWidgetStore.cs` | 7 | `GlanceWidgetData` | 已迁移；`GlancePreferencesJsonContext` 保持 camelCase、缩进和字符串枚举；覆盖保存、加载、旧单文件迁移和深拷贝 |
@@ -85,9 +85,9 @@
 
 | 当前格式 | 所有者 | 写入 | 读取兼容性 |
 | --- | --- | --- | --- |
-| source-generated 字符串枚举兼容实例 | `DeskBoxAttachmentHealthService` | 只读 | 4B-3B 已替换非泛型 converter；枚举名称和整数均可读，属性名大小写不敏感 |
-| source-generated 字符串枚举兼容实例 | `DeskBoxDataBackupService` 用户数据路径 | 名称字符串 | 4B-3B 已替换非泛型 converter；名称字符串和整数均可读，属性名大小写不敏感 |
-| source-generated 字符串枚举 | `DeskBoxDiagnosticsBundleService` | 名称字符串 | 4B-1 已替换非泛型 converter；只写路径 |
+| source-generated 字符串枚举兼容实例 | `DeskCueAttachmentHealthService` | 只读 | 4B-3B 已替换非泛型 converter；枚举名称和整数均可读，属性名大小写不敏感 |
+| source-generated 字符串枚举兼容实例 | `DeskCueDataBackupService` 用户数据路径 | 名称字符串 | 4B-3B 已替换非泛型 converter；名称字符串和整数均可读，属性名大小写不敏感 |
+| source-generated 字符串枚举 | `DeskCueDiagnosticsBundleService` | 名称字符串 | 4B-1 已替换非泛型 converter；只写路径 |
 | source-generated 字符串枚举 | `GlanceWidgetStore` | 名称字符串 | 名称字符串和整数均可读 |
 | source-generated 字符串枚举 | `QuickCaptureStore` | 名称字符串 | 名称字符串和整数均可读 |
 | source-generated 字符串枚举 | `SettingsService` | 名称字符串 | 名称字符串和整数均可读；`WidgetKindJsonConverter` 将未知值降级为 `File` |
@@ -118,9 +118,9 @@
 
 | helper | 文件 | 实际类型 | 4B-3 目标形式 |
 | --- | --- | --- | --- |
-| `ReadJson<T>` | `DeskBoxAttachmentHealthService.cs` | `QuickCaptureStoreData`、`TodoWidgetData` | 4B-3B 已增加必需的 `JsonTypeInfo<T>` 参数 |
-| `ValidateJsonFileIfPresent<T>` | `DeskBoxDataBackupService.cs` | `AppSettings`、`QuickCaptureStoreData`、`TodoWidgetData` | 4B-3B 已增加必需的 `JsonTypeInfo<T>` 参数；不做运行时反射类型发现 |
-| `WritePendingRestoreMarkerAtomicallyAsync` | `DeskBoxDataBackupService.cs` | 仅 `PendingRestoreMarker` | 4B-3C 已改为非泛型 marker 专用入口并显式使用 source-generated `JsonTypeInfo` |
+| `ReadJson<T>` | `DeskCueAttachmentHealthService.cs` | `QuickCaptureStoreData`、`TodoWidgetData` | 4B-3B 已增加必需的 `JsonTypeInfo<T>` 参数 |
+| `ValidateJsonFileIfPresent<T>` | `DeskCueDataBackupService.cs` | `AppSettings`、`QuickCaptureStoreData`、`TodoWidgetData` | 4B-3B 已增加必需的 `JsonTypeInfo<T>` 参数；不做运行时反射类型发现 |
+| `WritePendingRestoreMarkerAtomicallyAsync` | `DeskCueDataBackupService.cs` | 仅 `PendingRestoreMarker` | 4B-3C 已改为非泛型 marker 专用入口并显式使用 source-generated `JsonTypeInfo` |
 
 这 3 个 helper 没有开放插件类型需求。两个读取/校验 helper 继续使用带显式类型信息的有限泛型入口，pending marker 写入 helper 已收口为非泛型专用入口；这比 `DynamicallyAccessedMembers`、宽泛 trimming root 或继续使用反射泛型更符合当前实际调用面。
 
@@ -144,16 +144,16 @@
 14. 附件健康与备份恢复金样同时覆盖混合大小写属性、字符串枚举、旧数字枚举、未知字段忽略和 managed attachment 路径重定位。
 15. 4B-3C 契约精确确认 6 个控制文档调用分别绑定 `BackupManifest` 与 `PendingRestoreMarker` 类型信息，并冻结私有 metadata context 的 camelCase、缩进和大小写敏感配置。
 16. 控制文档金样覆盖 manifest/file manifest 的规范字段与未知字段、pending marker 规范写入与未知字段读取，以及 PascalCase manifest 继续被拒绝。
-17. 4B-4 契约确认主程序与更新器各自只有一个 `JsonSerializerIsReflectionEnabledByDefault=false`，且都位于 `DeskBoxAotAudit=true` 条件组；审计脚本在 restore/publish 两处显式传入该开关，并在 schema 10 摘要中记录实际审计值。
+17. 4B-4 契约确认主程序与更新器各自只有一个 `JsonSerializerIsReflectionEnabledByDefault=false`，且都位于 `DeskCueAotAudit=true` 条件组；审计脚本在 restore/publish 两处显式传入该开关，并在 schema 10 摘要中记录实际审计值。
 
 已有测试继续承担以下兼容范围：
 
 - `AppUpdateServiceTests`：manifest、GitHub fallback、架构字段，以及 Web 默认的大小写和字符串数字行为。
 - `CitySearchServiceTests`：嵌入城市资源实际加载。
 - `WeatherServiceTests`：三类 source-generated 外部响应对象图及转换逻辑。
-- `DeskBoxDiagnosticsBundleServiceTests`：诊断 JSON、字符串枚举、脱敏和导出边界。
-- `DeskBoxAttachmentHealthServiceTests`：Quick Capture/Todo 实际读取及损坏文件隔离。
-- `DeskBoxDataBackupServiceTests`：schema 1/2、缺 settings、无效 JSON、未来版本、篡改和 pending restore。
+- `DeskCueDiagnosticsBundleServiceTests`：诊断 JSON、字符串枚举、脱敏和导出边界。
+- `DeskCueAttachmentHealthServiceTests`：Quick Capture/Todo 实际读取及损坏文件隔离。
+- `DeskCueDataBackupServiceTests`：schema 1/2、缺 settings、无效 JSON、未来版本、篡改和 pending restore。
 - `SettingsServiceTests`：缺文件、损坏恢复、旧字段迁移和未知 `WidgetKind`。
 - `QuickCaptureServiceTests`、`TodoWidgetStoreTests`、`GlanceWidgetStoreTests`：版本迁移、规范化、损坏恢复和保存格式。
 - `SearchIndexServiceTests.SaveIndex_MigratesLegacyJsonToCompactBinary_AndPreservesResults`：旧 JSON 到 DBIX 的兼容读取。
@@ -171,7 +171,7 @@
 | `AppUpdateJsonContext` | `AppUpdateManifest`、私有 GitHub release/asset DTO | 已实现为 partial service 内的私有 context；Web 默认、大小写不敏感、字符串数字读取和 `JsonPropertyName` 均保持 |
 | `WeatherJsonContext` | `PredefinedCity`、`List<PredefinedCity>`、`WeatherGeocodingResult`、`WeatherData`、`MsnWeatherResponse` 及对象图 | 已实现并由城市/天气共享；只启用大小写不敏感，不增加命名策略或枚举 converter |
 | `LocalizationJsonContext` | `Dictionary<string,string>` | 已实现；默认 options，不设置 DictionaryKeyPolicy |
-| `DiagnosticsJsonContext` | `DeskBoxDiagnosticSnapshot` 及对象图 | 已实现；camelCase、缩进、source-generated 字符串枚举，已替换该文件的非泛型 converter |
+| `DiagnosticsJsonContext` | `DeskCueDiagnosticSnapshot` 及对象图 | 已实现；camelCase、缩进、source-generated 字符串枚举，已替换该文件的非泛型 converter |
 
 AppUpdate 的 context 已放在对应 partial service 内部，因此 GitHub DTO 保持 private；本批没有为 source generation 扩大网络 DTO 的公开可见性。
 
@@ -240,7 +240,7 @@ Glance preferences 与 Glance image catalog 必须使用不同 context/options�
 
 4B-3C 以 4B-3B 的 24 条 JSON 直接相关警告为输入基线，完成结果如下：
 
-- 只迁移 `DeskBoxDataBackupService` 的 manifest、file manifest 和 pending marker 6 处控制文档调用；新增 1 个私有 metadata context。context 所有者从 13 个增至 14 个，已迁移调用从 43 处增至 49 处，反射型调用从 6 处降至 0。
+- 只迁移 `DeskCueDataBackupService` 的 manifest、file manifest 和 pending marker 6 处控制文档调用；新增 1 个私有 metadata context。context 所有者从 13 个增至 14 个，已迁移调用从 43 处增至 49 处，反射型调用从 6 处降至 0。
 - `BackupJsonContext` 嵌套在 partial service 内，私有 DTO 无需扩大可见性；保持 camelCase、缩进、默认大小写敏感和未知字段忽略，不注册字符串枚举 converter。
 - 原 `WriteJsonAtomicallyAsync<T>` 仅有 `PendingRestoreMarker` 一个实际类型，现已改为非泛型 `WritePendingRestoreMarkerAtomicallyAsync` 并显式使用对应 `JsonTypeInfo`。两个读取/校验泛型 helper 继续要求显式有限白名单类型信息。
 - 迁移前新增并先由旧反射实现通过控制文档金样；迁移后继续通过。金样覆盖规范 manifest/file manifest 字段、缩进、unknown fields、pending marker 读取/清理，以及控制 manifest 的大小写敏感行为。
@@ -249,7 +249,7 @@ Glance preferences 与 Glance image catalog 必须使用不同 context/options�
 
 4B-4 以 49/49 处 source-generated 调用和 0 条 JSON 直接相关警告为输入基线，完成结果如下：
 
-- 主程序与更新器各自在 `DeskBoxAotAudit=true` 条件组设置 `JsonSerializerIsReflectionEnabledByDefault=false`；普通构建实际求值为空，审计构建实际求值为 `false`。
+- 主程序与更新器各自在 `DeskCueAotAudit=true` 条件组设置 `JsonSerializerIsReflectionEnabledByDefault=false`；普通构建实际求值为空，审计构建实际求值为 `false`。
 - 审计脚本在 restore/publish 参数中显式传入该开关，审计配置从 12 升级为 13；摘要增加 `jsonSerializer.reflectionEnabledByDefault`，schema 从 9 升级为 10。
 - 新契约先在旧实现上以“属性集合为空”按预期失败，实施后转为通过。AOT/JSON 定向契约 32/32、x64 全量测试 1994/1994 通过。
 - 隔离 x64 AOT publish 继续产出 39 个发布文件和 3 个 PDB；摘要记录反射默认值为 `false`，JSON IL2026/IL3050 为 0，未出现反射序列化关闭或缺少 `TypeInfoResolver` 的回退错误。
@@ -266,10 +266,10 @@ Glance preferences 与 Glance image catalog 必须使用不同 context/options�
 | 4B-3B 定向兼容测试 | JSON 基线、附件健康、备份恢复及 Settings/Quick Capture/Todo 相关行为测试过滤执行 | 210/210 通过 |
 | 4B-3C 定向兼容测试 | JSON 基线与备份控制文档格式、读取、恢复和清理测试过滤执行 | 31/31 通过 |
 | 4B-4 定向契约 | AOT 发布契约与全部 JSON 基线契约过滤执行 | 32/32 通过 |
-| Debug 构建 | `dotnet build .\src\DeskBox\DeskBox.csproj --no-restore --verbosity:minimal` | 0 错误；本次增量构建报告 24 条既有 C# 警告，未重新发出此前 6 条 XAML WMC1506；source generator 无诊断 |
-| x64 全量测试 | `dotnet test .\tests\DeskBox.Tests\DeskBox.Tests.csproj --no-restore --verbosity:minimal -p:Platform=x64` | 1994/1994 通过 |
+| Debug 构建 | `dotnet build .\src\DeskCue\DeskCue.csproj --no-restore --verbosity:minimal` | 0 错误；本次增量构建报告 24 条既有 C# 警告，未重新发出此前 6 条 XAML WMC1506；source generator 无诊断 |
+| x64 全量测试 | `dotnet test .\tests\DeskCue.Tests\DeskCue.Tests.csproj --no-restore --verbosity:minimal -p:Platform=x64` | 1994/1994 通过 |
 | x64 AOT 审计 | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\publish-aot-audit.ps1 -Platform x64` | 配置 13 / schema 10；`reflectionEnabledByDefault=false`；39 个发布文件、3 个 PDB、12 类既有警告；JSON 直接相关警告 210→176→80→52→24→0，反射回退错误为 0；源码稳定；1 条音乐音量 `always-throw`，shortcut 为 0；Rust ABI 2、能力 31、同次哈希一致 |
-| 规范 Debug 进程 | 重新启动后核对仓库内 `DeskBox.exe` | PID 27008；仓库内实例 1 个；路径精确匹配 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`；启动时 Rust 模块数为 0（尚未触发按需加载） |
+| 规范 Debug 进程 | 重新启动后核对仓库内 `DeskCue.exe` | PID 27008；仓库内实例 1 个；路径精确匹配 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`；启动时 Rust 模块数为 0（尚未触发按需加载） |
 
 上述自动化与 AOT 门槛全部通过，4B-4 与整个 4B JSON source generation 阶段完成。4B 完成时的固定基线是 16 个文件、49/49 处产品调用和 14 个 context 所有者；后续 AOT evidence 与 5B-4C3B2B1 产品 activation envelope 均以独立 context 增量登记。当前固定基线为 29 个文件、65/65 处 source-generated 调用、27 个 context 所有者、0 个非泛型 converter、审计构建默认反射关闭和 0 条 JSON 直接相关警告。
 

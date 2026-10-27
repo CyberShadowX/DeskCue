@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 4E-3 完成报告
+# DeskCue Native AOT 阶段 4E-3 完成报告
 
 - 日期：2026-08-21
 - 范围：`AttachmentTileStrip` 与 `SearchPopupWindow` 中 14 条 DataTemplate WMC1510
@@ -75,14 +75,14 @@ AOT 审计升级为 profile 26 / schema 23，新增以下硬门禁：
 | 旧实现红线契约 | 6 失败 / 5 通过，符合预期 |
 | 4E-3 契约 | 11/11 |
 | AOT/4D/4E 扩大定向契约 | 113/113 |
-| DeskBox x64 全量测试 | 2101/2101 |
+| DeskCue x64 全量测试 | 2101/2101 |
 | canonical Debug 构建 | 0 错误 |
 | PowerShell 语法解析 | 0 错误 |
 | x64 AOT 审计 | profile 26 / schema 23，通过 |
 
 最终 AOT 审计用时 242,439 毫秒，源码指纹前后一致；产生 39 个发布文件，共 84,982,981 字节，
-以及 3 个分离 PDB，共 181,309,440 字节。`DeskBox.exe`、`DeskBox.Updater.exe` 和
-`deskbox_native.dll` 均为 x64 PE。Rust DLL 保持 ABI 2、能力掩码 255、9 个必需导出，
+以及 3 个分离 PDB，共 181,309,440 字节。`DeskCue.exe`、`DeskCue.Updater.exe` 和
+`deskcue_native.dll` 均为 x64 PE。Rust DLL 保持 ABI 2、能力掩码 255、9 个必需导出，
 staging/publish SHA-256 一致。
 
 最终分析结果：

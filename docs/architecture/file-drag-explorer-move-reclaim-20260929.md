@@ -1,6 +1,6 @@
 # 拖出到桌面/Explorer 的安全移动（第三批）
 
-**状态：已撤销（2026-10-12）。** 本方案（复制+核验+回收站删除）已被 `StartDragAsync` + `AllowedOperations=Copy | Move` 的"方案 B"取代：移动由 Explorer 原生执行，DeskBox 源端永不删除。撤销原因：核验仅靠同名+大小+mtime 会误回收落点上已有的同名文件（取消/跳过/拖到应用图标都会删源）；`FOF_NOCONFIRMATION` 下过大文件、网络盘或关闭回收站会静默永久删除；Explorer 的 Ctrl+Z 撤销的是"复制"而非"移动"，可能双端尽失；AOT 下落点解析恒为空导致正式包行为与 Debug 不一致。以下正文仅留档，代码与对应测试已删除。
+**状态：已撤销（2026-10-12）。** 本方案（复制+核验+回收站删除）已被 `StartDragAsync` + `AllowedOperations=Copy | Move` 的"方案 B"取代：移动由 Explorer 原生执行，DeskCue 源端永不删除。撤销原因：核验仅靠同名+大小+mtime 会误回收落点上已有的同名文件（取消/跳过/拖到应用图标都会删源）；`FOF_NOCONFIRMATION` 下过大文件、网络盘或关闭回收站会静默永久删除；Explorer 的 Ctrl+Z 撤销的是"复制"而非"移动"，可能双端尽失；AOT 下落点解析恒为空导致正式包行为与 Debug 不一致。以下正文仅留档，代码与对应测试已删除。
 
 日期：2026-09-29。承接 [文件拖出原件保护](file-drag-source-safety-20260929.md)（第一批）与待实施的独立副本方案（第二批）。本文档定义第三批：恢复"拖到桌面/Explorer 即移动"的体验，且不重新引入源文件丢失风险。
 
@@ -9,10 +9,10 @@
 每一次拖出先回答三个问题：
 
 1. **载荷里有什么？** 真实文件路径 / StorageItems / 纯文本 / 内部 token。
-2. **接收方是谁？** DeskBox 内部 / 确认的 Explorer·桌面 / 未知外部。
-3. **谁来执行最终变更？** 接收方经 OLE 协商 / DeskBox 文件服务 / DeskBox 核验回收。
+2. **接收方是谁？** DeskCue 内部 / 确认的 Explorer·桌面 / 未知外部。
+3. **谁来执行最终变更？** 接收方经 OLE 协商 / DeskCue 文件服务 / DeskCue 核验回收。
 
-总原则：**"移动"的权限永不交给 OLE；移动的执行者永远是 DeskBox。** 外部目标永远只看到 Copy。任何产生移动语义的路径都由 DeskBox 自行完成并逐项核验。
+总原则：**"移动"的权限永不交给 OLE；移动的执行者永远是 DeskCue。** 外部目标永远只看到 Copy。任何产生移动语义的路径都由 DeskCue 自行完成并逐项核验。
 
 ## 边界矩阵
 
@@ -29,13 +29,13 @@
 | 搜索弹窗 → 外部 | StorageItems | Copy | 一致性收尾：readOnly + 会话日志 | |
 | 待办/速记项 → 外部文本目标 | 文本+token | Copy\|Move | 建议收成 Copy | Move 对无文件路径载荷无害 |
 | 组标题/标签重排 | token | 内部 Move | 不变 | |
-| Explorer → 格子（进入方向） | 路径 | DeskBox 自行执行导入/移动 | 不变 | 对称：DeskBox 是唯一执行者 |
+| Explorer → 格子（进入方向） | 路径 | DeskCue 自行执行导入/移动 | 不变 | 对称：DeskCue 是唯一执行者 |
 
 剪贴板剪切（Ctrl+X→粘贴到外部）仍携带 Move 语义，与拖拽同型但无落点识别手段。本批不处理，记为已知残留，后续可用同一核验框架统一收口。
 
 ## 核心设计：事后确认回收
 
-不让 OLE 协商移动。Explorer 按 Copy 语义把文件落到真实目的地（它自行处理子文件夹图标、导航树等所有落点细节）；DeskBox 确认落点确为 Explorer/桌面、目的地文件逐项核验通过后，把源文件送回收站。**所有失败分支一律退化为"留下副本"，不产生丢失。**
+不让 OLE 协商移动。Explorer 按 Copy 语义把文件落到真实目的地（它自行处理子文件夹图标、导航树等所有落点细节）；DeskCue 确认落点确为 Explorer/桌面、目的地文件逐项核验通过后，把源文件送回收站。**所有失败分支一律退化为"留下副本"，不产生丢失。**
 
 ### 流程
 
@@ -59,7 +59,7 @@
 
 | 检查 | 方法 | 排除的误判 |
 |---|---|---|
-| 顶层窗口进程 | `WindowFromPoint` → 祖先链 → PID = explorer.exe | 微信、浏览器、DeskBox 自身、第三方文件管理器 |
+| 顶层窗口进程 | `WindowFromPoint` → 祖先链 → PID = explorer.exe | 微信、浏览器、DeskCue 自身、第三方文件管理器 |
 | 命中子控件 | 必须是视图区（`SHELLDLL_DefView`/`DirectUIHWND`） | 导航树、地址栏、搜索框、标签栏（落点与实际目的地不符） |
 | 目的地解析 | 桌面 → 用户桌面 + 公共桌面双候选；`CabinetWClass` → ShellWindows 按 HWND 匹配 → `LocationURL` 必须是 `file://` | 库/搜索结果/zip 视图/This PC 等伪路径 |
 
@@ -101,7 +101,7 @@
 1. **Spike-A（回执时机）**——待手动验证：现构建手动拖文件到 Explorer/桌面，读 `[DragProtocol]` 日志确认完成回执是否到达包装器 `SetData`（`stage=CompletionReceiptIgnored point=(x,y)`）、与按钮释放采样的落点是否一致。
 2. **Spike-B（落点解析）**——已完成：探针枚举真实 Explorer 窗口成功，`CabinetWClass` HWND→ShellWindows→`file://` 路径映射可用；"此电脑"返回空 URL → Ambiguous；桌面走 Progman/WorkerW+DefView 链；实测 Win11 视图链路 `DirectUIHWND→SHELLDLL_DefView→CtrlNotifySink→DirectUIHWND→DUIViewWndClassName→ShellTabWindowClass→CabinetWClass`，确认 `SHELLDLL_DefView` 仍是正向锚点、中段容器类不能误杀。
 3. 单元测试——已完成：`ExplorerDropTargetResolverTests`（13 例）与 `DragOutReclaimServiceTests`（10 例），全量 4575/4575 绿。
-4. 真机矩阵——待手动：桌面、Explorer 视图、子文件夹图标、导航树、库、搜索结果、zip 视图、跨卷、大文件、多文件部分冲突、Esc 取消、Ctrl+拖动（显式复制，应不回收）、拖回 DeskBox 自身、Explorer 崩溃中。
+4. 真机矩阵——待手动：桌面、Explorer 视图、子文件夹图标、导航树、库、搜索结果、zip 视图、跨卷、大文件、多文件部分冲突、Esc 取消、Ctrl+拖动（显式复制，应不回收）、拖回 DeskCue 自身、Explorer 崩溃中。
 5. 发布前补 Native AOT / ARM64 / Store 验证（AOT 下 ShellWindows 目录映射缺实现 → 自动退化为复制）。
 
 ## 验收标准

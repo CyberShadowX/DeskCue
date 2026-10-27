@@ -1,16 +1,16 @@
-# DeskBox 模块边界路线图：Modular Monolith 落地方案
+# DeskCue 模块边界路线图：Modular Monolith 落地方案
 
 - 日期：2026-09-18（同日经两轮复核 + 一轮独立审计修订）
 - 状态：**持续实施中**。当前已完成批次、验证证据和下一批范围见 [架构优化进度](architecture-optimization-progress-20260922.md)。下文早期统计是当时快照，不代表当前数量。
 - 输入：方向评审稿《方向.md》（PowerToys 架构辨析 + Modular Monolith 提案）、本仓 `widget_contribution_seam.md`（2026-09-11）、`startup-resilience-audit-20260915.md`、红队 DD 采纳对照、AOT 内存曲线实验（**已结案：PLATEAU**）、两轮独立复核 + 独立审计稿《方向审计.md》（已逐条核验吸收）
-- 本文回答三件事：这个方向值不值得做、按 DeskBox 现状应该怎么改、每刀的验收判据与工作量
+- 本文回答三件事：这个方向值不值得做、按 DeskCue 现状应该怎么改、每刀的验收判据与工作量
 - 修订记录：第二轮——第 0 刀门禁已开、原第 3 刀降为可选、原第 4 刀升级为数据分层刀；第三轮——刀序按"事故驱动 > 假设驱动"重排，新增立法前置步；**第四轮（审计收敛）——依赖方向改 ports & adapters、数据分层拆 2A/2B/2C、软边界措辞修正、新增 IFeatureRuntime 资源租约、启动管线带 criticality 模型、Platform 改随触碰 ratchet 不设专刀**
 
 ---
 
 ## 0. 结论
 
-**方向采纳，方案修正。** Modular Monolith + 集中文件安全内核 + 选择性进程外隔离，对 DeskBox 是正确的长期方向——不是因为它是什么新架构，而是因为它是**本仓已经在走的路的形式化**：contribution 缝文档、缩略图/右键菜单代理进程、FileService 文件安全内核、功能级资源释放，全部是同一方向的先遣。
+**方向采纳，方案修正。** Modular Monolith + 集中文件安全内核 + 选择性进程外隔离，对 DeskCue 是正确的长期方向——不是因为它是什么新架构，而是因为它是**本仓已经在走的路的形式化**：contribution 缝文档、缩略图/右键菜单代理进程、FileService 文件安全内核、功能级资源释放，全部是同一方向的先遣。
 
 但原提案需要四处修正才适配本仓：
 
@@ -42,9 +42,9 @@
 
 | 方案要素 | 现状 | 证据 |
 |---|---|---|
-| Modular monolith | 已是单进程单程序集 | `src/DeskBox/DeskBox.csproj` |
-| Rust 只做危险原语适配层 | 已成立 | `deskbox_native.dll` ABI 2 / 10 导出；全仓 P/Invoke 只在 `Helpers/` 与 `Services/` 内，Feature 无一处直接调 Rust |
-| 危险第三方代码进程外隔离 | **已存在且比提案深** | `deskbox-thumbnail-proxy` 常驻 server：第三方右键菜单处理器全部加载进代理进程（`native_context_menu_hosting.md`：拒绝进程内宿主，"崩了整个 App 陪葬"） |
+| Modular monolith | 已是单进程单程序集 | `src/DeskCue/DeskCue.csproj` |
+| Rust 只做危险原语适配层 | 已成立 | `deskcue_native.dll` ABI 2 / 10 导出；全仓 P/Invoke 只在 `Helpers/` 与 `Services/` 内，Feature 无一处直接调 Rust |
+| 危险第三方代码进程外隔离 | **已存在且比提案深** | `deskcue-thumbnail-proxy` 常驻 server：第三方右键菜单处理器全部加载进代理进程（`native_context_menu_hosting.md`：拒绝进程内宿主，"崩了整个 App 陪葬"） |
 | 集中文件安全内核 | `FileService` 已收口 | 对象身份（VolumeSerialNumber + FILE_ID_128）+ done-is-done，全部 copy/move/delete 走一处 |
 | 模块 contract 缝 | 已有雏形 | `Contracts/IWidgetContent` + `IWidgetContentProvider` + `WidgetContentDescriptor` + `WidgetContentFactory` |
 | DI | 已就位 | `ServiceRegistry` + Microsoft.Extensions.DI |
@@ -67,20 +67,20 @@
 单程序集内的逻辑分层（命名空间即边界，architecture tests 即执法）：
 
 ```text
-DeskBox.App                  ← Composition Root：生命线（单实例/托盘/激活/恢复）+ 装配
-  ├─ DeskBox.Features.*       ← FileWidget / Todo / QuickCapture / Search / Music / Weather / Glance
+DeskCue.App                  ← Composition Root：生命线（单实例/托盘/激活/恢复）+ 装配
+  ├─ DeskCue.Features.*       ← FileWidget / Todo / QuickCapture / Search / Music / Weather / Glance
   │    每个功能聚合自己的 service + viewmodel + content + settings 切片
   │    **只依赖 Contracts——说"要什么"，不认平台具体实现**
-  ├─ DeskBox.Widgets          ← 格子宿主公共层：WidgetManager / WidgetWindowBase / 胶囊/层级/拓扑
+  ├─ DeskCue.Widgets          ← 格子宿主公共层：WidgetManager / WidgetWindowBase / 胶囊/层级/拓扑
   │    （功能不拥有宿主机制，宿主不认识功能内部）
-  ├─ DeskBox.Contracts        ← IWidgetContent / IFileOperations / IFileSystemPrimitives /
+  ├─ DeskCue.Contracts        ← IWidgetContent / IFileOperations / IFileSystemPrimitives /
   │    IAudioSession / ISyncTransport / IFeatureRuntime ……功能与平台之间的端口
-  ├─ DeskBox.FileSafety       ← 文件操作 policy：对象身份/done-is-done/事务/WAL/何时允许 delete
+  ├─ DeskCue.FileSafety       ← 文件操作 policy：对象身份/done-is-done/事务/WAL/何时允许 delete
   │    只引用 IFileSystemPrimitives 契约，不碰 native
-  ├─ DeskBox.Platform         ← 唯一知道 HWND/WorkerW/DWM/Shell/COM/P/Invoke 的层
+  ├─ DeskCue.Platform         ← 唯一知道 HWND/WorkerW/DWM/Shell/COM/P/Invoke 的层
   │    实现 Contracts（mechanism：open handle/FILE_ID_INFO/move 原语/回收站 API）
-  └─ native/deskbox_native    ← 位置不变，仍只经 Platform 层调用
-进程外：deskbox-thumbnail-proxy（已是常驻 server，缩略图 + 右键菜单处理器宿主）
+  └─ native/deskcue_native    ← 位置不变，仍只经 Platform 层调用
+进程外：deskcue-thumbnail-proxy（已是常驻 server，缩略图 + 右键菜单处理器宿主）
 ```
 
 **依赖方向（契约测试强制）**：
@@ -134,17 +134,17 @@ Features.* 之间只允许经 Contracts/
 AOT 内存曲线四轮批次峰值 171→399→480→491MB，批间增量 +228→+81→+11（+2.4%，远低于 15% 阈值），末段 7 分钟私有内存钉死 ~490.6MB——**有界水位而非泄漏**，托管堆全程平稳（~35MB）。1.5.4 门禁已开，后续刀次不再受"排查基线漂移"约束。残留事项：~490MB 水位偏高——但它是**绝对预算**不是单项成本（含 WinUI runtime/.NET/Rust/窗口等固定开销），真实单项成本要用边际斜率 `(M2500-M500)/2000` 测；是否值得再降归入可选刀（§4）评估。
 
 ### 立法步（先于一切物理搬移，最便宜的一刀）——**已落地 2026-09-18**
-**先立法，后搬家**：物理重构之前，先用契约测试把目标边界"声明"出来。已实现为 `tests/DeskBox.Tests/ModuleBoundaryContractTests.cs`（7 个测试，全部通过）：
+**先立法，后搬家**：物理重构之前，先用契约测试把目标边界"声明"出来。已实现为 `tests/DeskCue.Tests/ModuleBoundaryContractTests.cs`（7 个测试，全部通过）：
 
 - **ratchet 精确清单法**（file→count 违规清单，条目只许缩或消失，新文件出现即红——与冻结计数、阶段守卫同构，比裸总数预算强：杜绝"删 A 违规补 B 违规"的替换攻击）：
-  - `DllImport`/`LibraryImport` 只允许出现在 `DeskBox.Platform` 域——当前清单 **260 个调用点 / 41 文件**，新增 P/Invoke 落 Platform 即不受罚，落别处立刻红；
+  - `DllImport`/`LibraryImport` 只允许出现在 `DeskCue.Platform` 域——当前清单 **260 个调用点 / 41 文件**，新增 P/Invoke 落 Platform 即不受罚，落别处立刻红；
   - `File`/`Directory` 的 `Move`/`Delete`/`Copy`/`Replace` 只允许出现在 FileSafety / Core.Persistence / Platform 域——当前清单 **121 个调用点 / 47 文件**；
-  - `DeskBox.Models` 命名空间内 UI 依赖文件（WinUI/WinRT/Graphics 引用）清单 **6 个**；
+  - `DeskCue.Models` 命名空间内 UI 依赖文件（WinUI/WinRT/Graphics 引用）清单 **6 个**；
 - **休眠硬零法**（命名空间落地即生效，无需改测试）：
-  - `DeskBox.Features.X` 不得 `using DeskBox.Features.Y`（跨功能只许经 `Contracts/`）；
-  - `DeskBox.Core.Models`/`FileSafety.Models`/`Sync.*` 不得出现 WinUI/WASDK 类型——**法按语义不按文件夹名**，`UI.Models`/`ViewModels` 不受限（AOT bindable 桥是合法生产代码）；
-  - `DeskBox.Sync` 不得引用 `FileSafety`/`Features`/`Platform`（只经 Contracts 读写同步域）；
-  - `DeskBox.FileSafety` 不得携带 P/Invoke（policy 经 `IFileSystemPrimitives` 契约调 mechanism）。
+  - `DeskCue.Features.X` 不得 `using DeskCue.Features.Y`（跨功能只许经 `Contracts/`）；
+  - `DeskCue.Core.Models`/`FileSafety.Models`/`Sync.*` 不得出现 WinUI/WASDK 类型——**法按语义不按文件夹名**，`UI.Models`/`ViewModels` 不受限（AOT bindable 桥是合法生产代码）；
+  - `DeskCue.Sync` 不得引用 `FileSafety`/`Features`/`Platform`（只经 Contracts 读写同步域）；
+  - `DeskCue.FileSafety` 不得携带 P/Invoke（policy 经 `IFileSystemPrimitives` 契约调 mechanism）。
 
 **机制照抄本仓已有的 ratchet 模式**：立法本身几十行测试、当天进 CI；之后每一刀物理搬移都在已立的法护网下进行——搬错立刻红，而不是三个月后才发现边界又烂了。**这把本仓的契约测试纪律从"守数字"升级成"守结构"**。
 
@@ -179,10 +179,10 @@ AOT 内存曲线四轮批次峰值 171→399→480→491MB，批间增量 +228�
 #### 第 2B 刀：本地持久化域分层 + 迁移（数据边界，最敏感一刀）
 
 - **2B-1 同步层字段预埋 ✅ 已落地**（加性变更、不搬数据）：`TodoItem`/`QuickCaptureItem` 增加 `device_id`（`entity_id`=`Id`、`updated_at`=`UpdatedAt`、墓碑=`IsDeleted` 均已存在；`TodoItem` 补了 `IsDeleted` 槽位）。`Services/DeviceIdentity.cs` 在 `<dataDir>/device.id` 持久化 GUID，两个 store 的 `Normalize` 里 `item.DeviceId ??=` 回填——存量记录下次加载/保存时自动补齐，外来 device_id 保留不覆盖。`SyncLayerFieldsContractTests` 4 测试。旧版读新文件忽略未知成员，安全；
-- **2B-2 本地层迁移 ✅ 已落地**（undo receipts → FileSafety 域）：新建 `DeskBox.FileSafety` 命名空间，`DesktopOrganizationHistoryStore` 是第一个住户（立法预设域名首次启用——新代码落正确命名空间的 ratchet 规则首次生效）。`desktop-organization-history.json` 在 `LoadAsync` 里对旧 `recentOrganizationHistory` 做 fail-closed 领养——文件成为权威后才清空 settings 列表，写失败则保留旧列表下次重试。**#393 时序冻结保持**：所有曾提交历史变更的 `SaveChecked/SaveAsync` 点位都成对加了 `OrganizationHistory` 保存（守卫规则——历史条目是 reconcile 的守卫，**新增先存、删除后存**：commit 是 history→settings，删除类是 settings→history），store 侧复刻 `SaveCheckedAsync` 语义。`DesktopOrganizationHistoryStoreTests` 9 测试，全量 **3759 绿**；
+- **2B-2 本地层迁移 ✅ 已落地**（undo receipts → FileSafety 域）：新建 `DeskCue.FileSafety` 命名空间，`DesktopOrganizationHistoryStore` 是第一个住户（立法预设域名首次启用——新代码落正确命名空间的 ratchet 规则首次生效）。`desktop-organization-history.json` 在 `LoadAsync` 里对旧 `recentOrganizationHistory` 做 fail-closed 领养——文件成为权威后才清空 settings 列表，写失败则保留旧列表下次重试。**#393 时序冻结保持**：所有曾提交历史变更的 `SaveChecked/SaveAsync` 点位都成对加了 `OrganizationHistory` 保存（守卫规则——历史条目是 reconcile 的守卫，**新增先存、删除后存**：commit 是 history→settings，删除类是 settings→history），store 侧复刻 `SaveCheckedAsync` 语义。`DesktopOrganizationHistoryStoreTests` 9 测试，全量 **3759 绿**；
 - **2B-2 复审修复（已落地）**：外部评审发现 receipt 持久化四处用了会抛的 `SaveAsync`（原 settings 路径是吞异常的 best-effort——文件已移动后落盘失败会误报失败/替换回滚原异常），全部改回 `SaveCheckedAsync` 并以源码 pin（`ProductionCode_PersistsReceiptsWithCheckedSaves`）封禁未检查调用点；HistoryStore 接入 `ResilientJsonStore`（`.bak`+`.corrupt-*` 隔离+校验写入），补齐相对 settings.json 时代的持久化保护差。**journal store（WAL 权威）同款 retrofit 已落地**：`DesktopOrganizationRecoveryStore` 接入 `ResilientJsonStore`——损坏 journal 自动 `.bak` 自救+隔离（旧代码直接抛），`Clear()` 连 `.bak` 一起删防"已清事务复活"，STA 同步 `Save` 经 `Task.Run` 隔离防 dispatcher 死锁。**crash-matrix 复审修正（已落地）**：①两文件提交线性化点翻正——`settings → history → clear journal`（history receipt 永远最后落，receipt 存在⇒两半都 durable；旧顺序 history 先落在 settings 失败+回滚写同败的关联故障下会留"假 commit evidence"→孤儿态；回滚段保持 history 先写——先撤 receipt 再还原 settings，两处 undo reconcile 同款翻正）；②`Clear()` 改 `.bak` 先删、primary 后删——中间 crash 只留 primary 终态，防 `.bak` 复活 abandon 前旧 WAL；`HasPendingJournal` 含 `.bak`；③备份对 settings/history/journal 三文件在 `OperationGate` 持锁下拷备——同一事务纪元，防 torn snapshot；④`DeviceIdentity.Id` 首发加锁防双 GUID 分裂；⑤备份 metadata 集合在 `OperationGate` 内用定死路径 `File.Exists` 解析——gate 外枚举会漏掉等待期间新建的 journal（settings@T1+history@T0+无 WAL 的撕裂态）；内部恢复件明确排除出备份，但 `attachments/` 路径段一律按**用户数据**直通——任何扩展名/sidecar 启发式都不得过滤它（托管附件保留用户原文件名，`config.json.bak`、`file.tmp` 都是合法附件名，按名字过滤即备份数据丢失）；非附件路径上的 `<store>.json.bak`/`<store>.json.corrupt-*` 才按 `ResilientJsonStore` sidecar 约定排除；`ResilientJsonStore` 对损坏 `.bak` 对称隔离——否则 corrupt bak-only journal 让 `HasPendingJournal` 永真而 `LoadAsync` 永 null，Execute 永久拒绝（死锁）；
 - **2B-2 已知限制（记录在案）**：① `device.id` 已从备份排除（installation-local 身份而非用户数据）——恢复时 `DeviceIdentity.GetOrCreate` 自动重生成，跨机克隆已消除；同机恢复后旧记录的 device_id 指向"上一代设备"，属诚实语义。2C 立项时如需更强连续性再决策机器指纹绑定；② 新版迁移后回退旧版：旧版写进 settings.json 的履历史录在"文件即权威"规则下被丢弃——降级非受支持流，属既定取舍；
-- **2B-3 设备层迁移 ✅ 已落地**（`b8dfb443` + 后续加固 `0b66db18`/`ed5b5a52`/`8319db1e`/`1d598f90`/`4378134c`；第三十批收口核验并补演练契约）：11 个布局线级键（`widgets`/`widgetGroups`/`widgetTopologyLayouts`/`activeWidgetTopologyKey`/`deletedWidgetIds`/`featureWidgetEnabledStates` 及 5 个组导航/兼容默认值键）迁入 `DeskBox.Core.Persistence.WidgetLayoutStore`——`widget-layout.json`，接入 `ResilientJsonStore`（`.bak`+`.corrupt-*` 隔离+校验写入），自带独立 `schemaVersion`（未来 schema 只读保护：typed slice 无法表示未知字段时拒绝覆写、save 如实报失败），结构校验 fail-closed（`null`/`{}`/`{"layout":null}` 走隔离路径，绝不充当权威空布局）。**原估 ~330 处调用点迁移被 2A facade 吸收**：消费方（WidgetManager 全部 partial、分组事务线、协调器/VM）继续读写 `AppSettings.WidgetLayout` 内存切片——store 的会话内活对象，权威数据加载后 `CopyFrom` 原位并入；全部持久化经 SettingsService 成对提交（layout 先落、settings 后落，settings 提交失败回滚 layout 至提交前字节——单一 `FileWriteLock` 下一次保存=一对一致文件，无半迁移混合读写态）。领养 fail-closed 同 2B-2 模式：`LoadAsync` 从旧 settings 键领养→store 文件落盘成为权威后才在下次保存剥离旧键，写失败保留旧键下次重试；settings.json 加载失败时 layout 独立重新领养（单文件损坏不拖垮桌面）。**#393/分组事务时序冻结保持**：合并/拆离/解散的 快照→成对提交→表面退役 顺序不变（提交在 `beforeRetireAsync` 内、回滚=切片快照还原+再保存），第 9-12/24 批的回滚与隔离补偿全部走同一成对保存入口；2B-2 的 `settings→history→clear journal` 线性化点不受影响（settings 腿内部先 commit layout 对）。**备份域**：`widget-layout.json` 永不进云备份域（allowlist 语义，契约钉固），本地灾难快照在 `OperationGate`+settings 写锁下与 settings/history/journal 同纪元拷备；`device.id` 维持排除。**样式口径**（云备份 v1"样式同步/布局不同步"）：`WidgetStyleBackupProjection` 白名单与 11 键不相交（第三十批补契约钉固），恢复端对 post-adoption 文件直接补进 layout 文件并带 journal 两提交事务。旧版回退语义如实记录：旧版读不到设备层文件=回默认布局，与 2B-2 同款既定取舍；
+- **2B-3 设备层迁移 ✅ 已落地**（`b8dfb443` + 后续加固 `0b66db18`/`ed5b5a52`/`8319db1e`/`1d598f90`/`4378134c`；第三十批收口核验并补演练契约）：11 个布局线级键（`widgets`/`widgetGroups`/`widgetTopologyLayouts`/`activeWidgetTopologyKey`/`deletedWidgetIds`/`featureWidgetEnabledStates` 及 5 个组导航/兼容默认值键）迁入 `DeskCue.Core.Persistence.WidgetLayoutStore`——`widget-layout.json`，接入 `ResilientJsonStore`（`.bak`+`.corrupt-*` 隔离+校验写入），自带独立 `schemaVersion`（未来 schema 只读保护：typed slice 无法表示未知字段时拒绝覆写、save 如实报失败），结构校验 fail-closed（`null`/`{}`/`{"layout":null}` 走隔离路径，绝不充当权威空布局）。**原估 ~330 处调用点迁移被 2A facade 吸收**：消费方（WidgetManager 全部 partial、分组事务线、协调器/VM）继续读写 `AppSettings.WidgetLayout` 内存切片——store 的会话内活对象，权威数据加载后 `CopyFrom` 原位并入；全部持久化经 SettingsService 成对提交（layout 先落、settings 后落，settings 提交失败回滚 layout 至提交前字节——单一 `FileWriteLock` 下一次保存=一对一致文件，无半迁移混合读写态）。领养 fail-closed 同 2B-2 模式：`LoadAsync` 从旧 settings 键领养→store 文件落盘成为权威后才在下次保存剥离旧键，写失败保留旧键下次重试；settings.json 加载失败时 layout 独立重新领养（单文件损坏不拖垮桌面）。**#393/分组事务时序冻结保持**：合并/拆离/解散的 快照→成对提交→表面退役 顺序不变（提交在 `beforeRetireAsync` 内、回滚=切片快照还原+再保存），第 9-12/24 批的回滚与隔离补偿全部走同一成对保存入口；2B-2 的 `settings→history→clear journal` 线性化点不受影响（settings 腿内部先 commit layout 对）。**备份域**：`widget-layout.json` 永不进云备份域（allowlist 语义，契约钉固），本地灾难快照在 `OperationGate`+settings 写锁下与 settings/history/journal 同纪元拷备；`device.id` 维持排除。**样式口径**（云备份 v1"样式同步/布局不同步"）：`WidgetStyleBackupProjection` 白名单与 11 键不相交（第三十批补契约钉固），恢复端对 post-adoption 文件直接补进 layout 文件并带 journal 两提交事务。旧版回退语义如实记录：旧版读不到设备层文件=回默认布局，与 2B-2 同款既定取舍；
 - **定位**：真正动磁盘——三域各落独立存储边界，待办/随记数据文件归位同步层；
 - **硬约束（事务边界保护）**：`RecentOrganizationHistory` 持久化时序**冻结**——#393 六轮稳定的 SaveChecked 提交顺序、WAL finalize、cap 在 journal 清除后执行，**不许被迁移顺手搅动**；历史和 journal 划归 FileSafety 域，不参与"设置归功能"的划分逻辑；
 - **同步层字段预埋**：记录带上 `entity_id`/`device_id`/`deleted`（墓碑）/`updated_at`——现在带几乎免费，事后补要动模型+迁移；
@@ -196,7 +196,7 @@ AOT 内存曲线四轮批次峰值 171→399→480→491MB，批间增量 +228�
 - **验收**：冲突注入测试（双设备离线改同条→服务端报 conflict）；超期设备全量替换路径演练；
 - **数据量判断不变**：KB 级数据不需要 CRDT——revision 乐观并发 + 墓碑已足够。
 
-**双渠道注记**：商店版 `%LocalAppData%` 写入被 MSIX VFS 重定向到 `Packages\[PFN]\LocalCache`，直装版直写——`DeskBoxDataPathService` 经 `SpecialFolder.LocalApplicationData` 已透明盖住这条分叉，同步引擎只走这层抽象即渠道无关。附带：商店版卸载即清 LocalCache，云同步对商店用户是数据安全加分项。
+**双渠道注记**：商店版 `%LocalAppData%` 写入被 MSIX VFS 重定向到 `Packages\[PFN]\LocalCache`，直装版直写——`DeskCueDataPathService` 经 `SpecialFolder.LocalApplicationData` 已透明盖住这条分叉，同步引擎只走这层抽象即渠道无关。附带：商店版卸载即清 LocalCache，云同步对商店用户是数据安全加分项。
 
 ### 第 3 刀（与新格子立项绑定，不提前做）：Contribution descriptor 收敛
 - **为什么降级为触发式**：它回应的"加格子碰 25 文件"是**尚未发生**的假设——近 3 个月零新增 kind（`Tags`/`SystemMonitor` 在枚举里占位但未实现）。等下一个新 kind 立项时做它，**让新格子本身当验收**："1+3 处落地"是不是真的，做一个格子立刻见分晓，比空转重构诚实；
@@ -207,7 +207,7 @@ AOT 内存曲线四轮批次峰值 171→399→480→491MB，批间增量 +228�
 - **价值**：新功能边际成本封顶——做的时候 ROI 立即兑现，而不是先付再等。
 
 ### 持续项（不设专刀）：Platform 收口 + Feature 命名空间收敛
-- **方式**：自立法日起**新增 P/Invoke 必须落 `DeskBox.Platform`**；存量 ~40 处随功能触碰顺手迁（40→35→…→0），`Features.*` 命名空间与文件位置跟着自然开发收敛——**不做"一次性大搬家"PR**：diff 大、收益有限、制造 git history 噪声；
+- **方式**：自立法日起**新增 P/Invoke 必须落 `DeskCue.Platform`**；存量 ~40 处随功能触碰顺手迁（40→35→…→0），`Features.*` 命名空间与文件位置跟着自然开发收敛——**不做"一次性大搬家"PR**：diff 大、收益有限、制造 git history 噪声；
 - **配套**：依赖方向契约测试入 CI（Feature→Contracts、Platform implements Contracts、FileSafety→`IFileSystemPrimitives`、Feature 间仅经 Contracts）；
 - **验收**：ratchet 计数单调下降；`grep DllImport` 来源数只减不增；
 - **价值**：边界由构建执法且不占发版节奏——bounded problem，不是专项重构。
@@ -242,7 +242,7 @@ AOT 内存曲线四轮批次峰值 171→399→480→491MB，批间增量 +228�
 
 ## 6. 对商店/打包的影响
 
-**零影响，一包到底。** 模块是编译期边界不是部署单元：单 exe、单 MSIX、单商店条目、单次送审；新格子 = 代码 + 描述符一行 + 本地化键，随版本更新同包下发。先例已在：`deskbox-thumbnail-proxy.exe` 独立进程也装在同一 MSIX 内。只有走回已放弃的"独立可下载功能包"（MSIX optional package 或自建包系统）才会变，方案明确排除。
+**零影响，一包到底。** 模块是编译期边界不是部署单元：单 exe、单 MSIX、单商店条目、单次送审；新格子 = 代码 + 描述符一行 + 本地化键，随版本更新同包下发。先例已在：`deskcue-thumbnail-proxy.exe` 独立进程也装在同一 MSIX 内。只有走回已放弃的"独立可下载功能包"（MSIX optional package 或自建包系统）才会变，方案明确排除。
 
 附加收益：模块边界 + 功能开关让新格子出问题时可单独禁用，降低整包回滚概率——对商店评分是保护项。
 
@@ -310,14 +310,14 @@ AOT 内存曲线四轮批次峰值 171→399→480→491MB，批间增量 +228�
 
 **凭证纪律**：Windows Credential Manager / DPAPI；settings.json 只存 provider/url/路径/开关，**密码一个字符不落盘**。
 
-**远端布局**：`<用户路径>/DeskBox/backups/<时间戳>-<deviceid8>.zip`，保留最近 N 份（默认 5 可调）。
+**远端布局**：`<用户路径>/DeskCue/backups/<时间戳>-<deviceid8>.zip`，保留最近 N 份（默认 5 可调）。
 
 **PR 分解**：PR-1 域范围快照+样式投影+凭证封装（纯本地）；PR-2 WebDAV transport+编排；PR-3 设置 UI；PR-4+ 官方云/真同步升级（换 envelope 语义/transport 实现）。
 
 ## 2026-09-26 追记：执行对账（22+3 批后）
 
 1. **Surface/分组事务线（计划外主线）**：2026-09-22 起的执行中，第 7–12 批 + 第 24/25 批围绕 `WidgetSurfaceRegistry` 的候选暂存、声明转移、拓扑持久化回滚与隔离补偿长成了约半数工作量。该线不在本路线图的刀序里，属事故驱动（外部审查发现的回滚缺陷链）生长；收尾条件=分组相关 P1/P2 全部关闭且设备验收绿（2026-09-26 达成）。后续触碰分组拓扑时沿用其事务模式（快照→提交→补偿阶梯），不再单独立刀。
-2. **2C PR-1 状态修正**：本地同步基础（`src/DeskBox/Sync/*`、`SyncOutboxStore`）已随 #403 进入 main，早于 09-22 后的进度叙事；"云同步按立项条件推进"指的是 PR-2..4（传输/引擎/UI），不含已落地的本地基础。
+2. **2C PR-1 状态修正**：本地同步基础（`src/DeskCue/Sync/*`、`SyncOutboxStore`）已随 #403 进入 main，早于 09-22 后的进度叙事；"云同步按立项条件推进"指的是 PR-2..4（传输/引擎/UI），不含已落地的本地基础。
 3. **IFeatureRuntime 替代记录（第三十二批结案）**：`Contracts/IFeatureRuntime` 已于第三十二批正式立项——§2 的状态机语义（幂等 Start/Dispose、Start 可取消+失败按获取逆序回收、Dispose 与 Start 竞争串行化、Dispose 超时不阻塞宿主关闭+泄漏隔离）落入接口 XML 契约与接口级契约测试；第 1/5/6 批的三个手写运行时（TodoReminder/QuickCaptureClipboard/Search 启停链经 `SearchFeatureRuntime` 薄适配）改为实现该接口，语义零变化；App 侧以 `Services/FeatureRuntimeRegistry` 登记所有权（退出步经注册表解析+反向注册序兜底清扫，故障隔离并计入泄漏清单）。云同步立项时 Sync 将是第四个实现，直接按本契约落。
 
 ## 2026-09-29 追记：第一阶段收官与架构冻结点

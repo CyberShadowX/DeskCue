@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5A 完成与复盘报告
+# DeskCue Native AOT 阶段 5A 完成与复盘报告
 
 - 报告日期：2026-08-21
 - 阶段范围：x64 AOT 预览数据隔离、受审计产物启动、首次存活、单实例、托盘退出与重启
@@ -13,9 +13,9 @@
 - 第二个 AOT 进程会退出并把激活转发给已有主实例；
 - AOT 主实例可退出、重新启动，并继续读取同一隔离数据根；
 - 托盘菜单可以显示，自动化调用真实“退出”菜单项后应用执行正常关闭链路；
-- 正式 `%LOCALAPPDATA%\DeskBox` 在全部 AOT 运行前后保持相同元数据指纹；
-- AOT 产物中的 `DeskBox.exe` 与 `deskbox_native.dll` 均和本次审计摘要中的哈希一致；
-- 启动所需的 `DeskBox.pri`、Assets、WinUI/XAML 窗口、托盘、通知、拖放目标和默认 Widget 均已在实际 AOT 进程中建立。
+- 正式 `%LOCALAPPDATA%\DeskCue` 在全部 AOT 运行前后保持相同元数据指纹；
+- AOT 产物中的 `DeskCue.exe` 与 `deskcue_native.dll` 均和本次审计摘要中的哈希一致；
+- 启动所需的 `DeskCue.pri`、Assets、WinUI/XAML 窗口、托盘、通知、拖放目标和默认 Widget 均已在实际 AOT 进程中建立。
 
 本阶段没有继续清理 Binding，也没有开始 Rust `SearchCore`，普通 JIT 的正式发布路径保持不变。
 
@@ -23,12 +23,12 @@
 
 ### 2.1 AOT 专用数据根
 
-`DeskBoxDataPathService` 现在按编译形态选择显式数据根：
+`DeskCueDataPathService` 现在按编译形态选择显式数据根：
 
 | 构建形态 | 可读取的覆盖变量 | 未设置变量时 |
 | --- | --- | --- |
-| Debug | `DESKBOX_DEV_DATA_ROOT` | 正式默认路径 |
-| Native AOT | `DESKBOX_AOT_PREVIEW_DATA_ROOT` | 正式默认路径 |
+| Debug | `DESKCUE_DEV_DATA_ROOT` | 正式默认路径 |
+| Native AOT | `DESKCUE_AOT_PREVIEW_DATA_ROOT` | 正式默认路径 |
 | 普通 Release JIT | 无 | 正式默认路径 |
 
 这项设计没有把 preview 路径永久改成产品默认值。AOT 双击启动仍会遵循产品默认路径，因此内部预览必须通过受控脚本启动；未来正式切换为 AOT 时也不需要撤销数据目录语义。
@@ -40,7 +40,7 @@
 1. 只接受最新 profile 29 / schema 26 的稳定 x64 Release 审计摘要；
 2. 核对 AOT EXE 和 Rust DLL 的实际 SHA-256，并要求 Rust staging/publish 哈希一致；
 3. 拒绝正式数据根及其父子重叠路径，也拒绝数据根与审计发布目录重叠；
-4. 只停止可执行文件完整路径等于本次受审计 AOT EXE 的进程，不扫描或终止其他 DeskBox 构建；
+4. 只停止可执行文件完整路径等于本次受审计 AOT EXE 的进程，不扫描或终止其他 DeskCue 构建；
 5. 只在子进程启动期间设置 AOT 数据根，并清除可能继承的 Debug 数据根，随后恢复调用方环境；
 6. 支持验证现有实例激活，并把产物、数据根、进程和正式目录指纹写入独立 `session.json`。
 
@@ -80,21 +80,21 @@
 
 | 文件 | 大小 | SHA-256 |
 | --- | ---: | --- |
-| `DeskBox.exe` | 39,358,976 | `14FC0E323264801B8D7A1C474A8E071596FAE0034E2B18CB69D461CFAB977F2C` |
-| `DeskBox.Updater.exe` | 2,020,352 | `B2DD1AE2F956171F3805532495C0EBFAE41DF3F0EA79EC124D4CEB34D9ACE101` |
-| `deskbox_native.dll` | 146,944 | `E5D131FF19B07360D9252ED47E0FBE49A804C9B67B428A907E1559F2A61BADC5` |
+| `DeskCue.exe` | 39,358,976 | `14FC0E323264801B8D7A1C474A8E071596FAE0034E2B18CB69D461CFAB977F2C` |
+| `DeskCue.Updater.exe` | 2,020,352 | `B2DD1AE2F956171F3805532495C0EBFAE41DF3F0EA79EC124D4CEB34D9ACE101` |
+| `deskcue_native.dll` | 146,944 | `E5D131FF19B07360D9252ED47E0FBE49A804C9B67B428A907E1559F2A61BADC5` |
 
-资源文件的实际名称是 `DeskBox.pri`，不是通用示例中常见的 `resources.pri`。本次已按真实产物核对 `DeskBox.pri` 和 Assets。
+资源文件的实际名称是 `DeskCue.pri`，不是通用示例中常见的 `resources.pri`。本次已按真实产物核对 `DeskCue.pri` 和 Assets。
 
 ## 5. 真实 AOT 运行证据
 
 最终隔离根为：
 
-`C:\Users\simon\AppData\Local\DeskBox-AotPreview\wingezi-B073278E-stage5a-final`
+`C:\Users\simon\AppData\Local\DeskCue-AotPreview\wingezi-B073278E-stage5a-final`
 
 受审计可执行文件为：
 
-`D:\project\wingezi\.artifacts\aot-audit\win-x64\publish\DeskBox.exe`
+`D:\project\wingezi\.artifacts\aot-audit\win-x64\publish\DeskCue.exe`
 
 | 场景 | 结果 |
 | --- | --- |
@@ -124,13 +124,13 @@
 
 ### 6.1 已核对的数据路径
 
-全仓库现有 26 处 `DeskBoxDataPathService.Current` 使用点。应用自有设置、日志、搜索索引、Quick Capture、Todo、Glance、诊断、备份和恢复路径均经该服务取得根目录。
+全仓库现有 26 处 `DeskCueDataPathService.Current` 使用点。应用自有设置、日志、搜索索引、Quick Capture、Todo、Glance、诊断、备份和恢复路径均经该服务取得根目录。
 
 其余直接出现的 `LocalApplicationData` 用途不是应用数据旁路：
 
 - `DragDropPermissionService` 检查已安装 EXE 的 AppCompat 项；
 - `IconHelper` 搜索常见应用安装位置；
-- `%UserProfile%\DeskBox` 是用户可管理的文件收纳目录或搜索根，不是应用元数据目录。
+- `%UserProfile%\DeskCue` 是用户可管理的文件收纳目录或搜索根，不是应用元数据目录。
 
 本轮没有发现会在 AOT 启动时绕过隔离根写入正式应用数据的代码路径。
 
@@ -158,8 +158,8 @@
 1. 在隔离临时目录创建、读取和覆盖 `.lnk`；
 2. 验证无 UI Resolve、损坏快捷方式、取消、修复和删除语义；
 3. 需要 UI 的操作传入真实 owner HWND；
-4. 确认 AOT 进程实际加载本次受审计的 `deskbox_native.dll`，结果与既有 JIT/C# oracle 冻结语义一致；
-5. 全程不读取或修改正式 DeskBox 数据，也不改变用户 Quick Access 或系统音量。
+4. 确认 AOT 进程实际加载本次受审计的 `deskcue_native.dll`，结果与既有 JIT/C# oracle 冻结语义一致；
+5. 全程不读取或修改正式 DeskCue 数据，也不改变用户 Quick Access 或系统音量。
 
 之所以先做 shortcut，是因为它已经有最完整的 Rust ABI、差分和人工验证基础，能够最小成本证明“托管 AOT 调用 Rust”这一层，而 5A 启动本身未必触发 Rust DLL 加载。该批通过后，再依次开放 Explorer 启动与 Quick Access、音乐 getter/setter、完整托管 UI/功能矩阵，最后处理安装升级、回滚和 CRT 决策。
 

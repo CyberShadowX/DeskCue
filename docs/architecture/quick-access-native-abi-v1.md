@@ -1,4 +1,4 @@
-# DeskBox Quick Access Rust 原生边界与 ABI v1
+# DeskCue Quick Access Rust 原生边界与 ABI v1
 
 - 日期：2026-08-21
 - 阶段：4D-4B
@@ -21,7 +21,7 @@
 | 构建/运行方式 | Quick Access 后端 | C# oracle 是否进入编译单元 |
 | --- | --- | --- |
 | 普通 JIT，未设置环境变量 | C# | 是 |
-| 普通 JIT，`DESKBOX_QUICK_ACCESS_BACKEND=rust` | Rust | 是，但失败时不静默回退 |
+| 普通 JIT，`DESKCUE_QUICK_ACCESS_BACKEND=rust` | Rust | 是，但失败时不静默回退 |
 | Native AOT | Rust | 否 |
 
 公开同步和异步 API 均保持不变。异步 API 继续创建后台 STA 线程，使用
@@ -59,18 +59,18 @@
 
 - 模块 ABI：`2`；
 - 结构版本：`1`；
-- 能力位：`DESKBOX_NATIVE_CAPABILITY_QUICK_ACCESS_V1 = 1 << 7`；
+- 能力位：`DESKCUE_NATIVE_CAPABILITY_QUICK_ACCESS_V1 = 1 << 7`；
 - 完整能力掩码：`255`；
-- 新导出：`deskbox_quick_access_v1`；
+- 新导出：`deskcue_quick_access_v1`；
 - 当前发布必需导出：9 个。
 
 ```c
-uint32_t deskbox_quick_access_v1(
-    const DeskBoxQuickAccessRequestV1* request,
-    DeskBoxQuickAccessResultV1* result);
+uint32_t deskcue_quick_access_v1(
+    const DeskCueQuickAccessRequestV1* request,
+    DeskCueQuickAccessResultV1* result);
 ```
 
-加载器固定从 `AppContext.BaseDirectory/deskbox_native.dll` 加载。调用前校验模块 ABI、能力位、
+加载器固定从 `AppContext.BaseDirectory/deskcue_native.dll` 加载。调用前校验模块 ABI、能力位、
 操作导出、输入和结果一致性；显式 Rust 或 AOT 路径失败时不调用 C# oracle。
 
 ## 5. 操作和输入

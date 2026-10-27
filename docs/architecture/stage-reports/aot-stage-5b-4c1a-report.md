@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-4C1A 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-4C1A 完成与复盘报告
 
 - 审计日期：2026-08-22
 - 范围：x64 NativeAOT、owned 本地文件树、真实 File Widget、目录导航、Name 升序、watcher、copy/move/rename、重名失败、三进程重载/恢复/postflight
@@ -7,7 +7,7 @@
 
 ## 1. 本阶段结论
 
-5B-4C1A 在既有 managed UI runner 中增加 `LocalFileSurfacePersistenceRestart`，由同一份受审计 NativeAOT 产物依次启动三个全新的 DeskBox 进程：
+5B-4C1A 在既有 managed UI runner 中增加 `LocalFileSurfacePersistenceRestart`，由同一份受审计 NativeAOT 产物依次启动三个全新的 DeskCue 进程：
 
 1. `Mutate` 从固定 owned 文件树开始，进入并返回子目录，经产品 ViewModel 完成 copy、move、rename 和重名失败，再从产品外直接创建 owned 文件以刺激真实 watcher；
 2. `VerifyRestore` 在新进程中确认变更后的磁盘、ViewModel 和真实 UI 全部重载，再由 harness 在精确 owned 根内恢复固定文件树，并等待产品 watcher 恢复表面；
@@ -54,7 +54,7 @@
 
 ### 4.1 夹具不能成为普通产品路径
 
-`AotLocalFileSurfaceFixture` 整体位于 `#if DESKBOX_NATIVE_AOT` 中。AOT 内还必须同时满足精确场景 `LocalFileSurfacePersistenceRestart`、三个允许 phase 之一以及固定 Widget ID `aot-5b4c1a-file`。路径必须位于隔离数据根下的 `fixtures/local-file-surface`，缺少目录或越过 owned 根立即失败。普通 JIT 二进制不包含该夹具。
+`AotLocalFileSurfaceFixture` 整体位于 `#if DESKCUE_NATIVE_AOT` 中。AOT 内还必须同时满足精确场景 `LocalFileSurfacePersistenceRestart`、三个允许 phase 之一以及固定 Widget ID `aot-5b4c1a-file`。路径必须位于隔离数据根下的 `fixtures/local-file-surface`，缺少目录或越过 owned 根立即失败。普通 JIT 二进制不包含该夹具。
 
 ### 4.2 产品操作与 harness 清理分开
 
@@ -100,7 +100,7 @@ VerifyRestore 中的移动回源和删除变更文件属于 harness-owned 清理
 .artifacts/aot-managed-ui-smoke/win-x64/local-file-surface-persistence-restart/final-settings.json
 .artifacts/aot-managed-ui-smoke/win-x64/local-file-surface-persistence-restart/final-fixture
 .artifacts/aot-managed-ui-smoke/win-x64/local-file-surface-persistence-restart/disk-states.json
-.artifacts/aot-managed-ui-smoke/win-x64/local-file-surface-persistence-restart/DeskBox.log
+.artifacts/aot-managed-ui-smoke/win-x64/local-file-surface-persistence-restart/DeskCue.log
 ```
 
 关键实测形状：

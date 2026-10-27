@@ -60,7 +60,7 @@ allocator reserve 和 GC 对小样本的噪声足以淹没结构值；该档不�
 17.328 ms 与 managed 17.160 ms 接近，但 P95 和加载明显更低；当前结论是减少 resident 结构和尾延迟，
 并非所有单次查询都按同一比例加速。
 
-## 4. 真实 DeskBox 全格子内存
+## 4. 真实 DeskCue 全格子内存
 
 产品测量使用规范 Debug 可执行文件和正式数据的只读隔离副本。两个后端各运行两次，每个进程等待
 8 秒稳定并取 10 个样本。副本包含 11 个已启用 Widget、207,925 个索引 entry、16,992 个目录，DBIX
@@ -74,7 +74,7 @@ allocator reserve 和 GC 对小样本的噪声足以淹没结构值；该档不�
 
 这是当前最接近用户“全部格子都显示且视觉不变”场景的证据：UI、图片、WinUI compositor、CLR 与其他
 Widget 均相同，只切换索引 owner，视觉效果和 Widget 数量不变。32.37 MiB Private Bytes 与
-31.60 MiB Working Set 的下降是整个 DeskBox 进程结果，不能与隔离索引的 74.2% 直接相加或互换。
+31.60 MiB Working Set 的下降是整个 DeskCue 进程结果，不能与隔离索引的 74.2% 直接相加或互换。
 
 该轮是同机两次重复测量，不是跨设备统计；它证明当前机器和当前完整数据上的收益，不代表所有目录
 分布、显卡驱动或 Windows 版本的固定百分比。正式 settings 与 DBIX 指纹在测量前后不变。
@@ -82,7 +82,7 @@ Widget 均相同，只切换索引 owner，视觉效果和 Widget 数量不变�
 ## 5. x64 Native AOT 与发布边界
 
 审计升级为 profile 57 / schema 54。受审计 Direct x64 AOT publish 包含唯一根目录
-`deskbox_search_core.dll`，ABI 3、14 个导出、x64 PE、staging/publish 哈希一致，PDB 只在符号目录。
+`deskcue_search_core.dll`，ABI 3、14 个导出、x64 PE、staging/publish 哈希一致，PDB 只在符号目录。
 发布产物为 40 个文件、89.18 MiB；符号为 4 个文件、205.1 MiB；`WMC1510=1211`，完整
 `always-throw=0`，审计期间源码稳定。
 

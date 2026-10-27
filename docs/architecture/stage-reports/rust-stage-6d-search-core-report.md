@@ -1,4 +1,4 @@
-# DeskBox Rust SearchCore 阶段 6D 收口报告
+# DeskCue Rust SearchCore 阶段 6D 收口报告
 
 - 日期：2026-08-23
 - 范围：Direct x64 SearchCore 长会话、运行期恢复、AOT 真实搜索界面、整机内存复测与默认启用决策
@@ -12,14 +12,14 @@ SearchCore 已从“可手动打开的预览”进入 Direct x64 的条件默认
 搜索界面和三轮完整格子进程内存门禁。
 
 迁移边界没有扩大到 WinUI 或整个搜索业务。C# 继续负责 watcher、扫描、reconciliation、搜索组合、
-应用结果、DeskBox 内容、筛选、排序和视觉层；Rust 只负责高常驻成本的文件索引数据、查询、投影、
+应用结果、DeskCue 内容、筛选、排序和视觉层；Rust 只负责高常驻成本的文件索引数据、查询、投影、
 增量 mutation 与 DBIX 保存。这是当前复杂度和内存收益最合适的分界。
 
 ## 2. 工作区保护
 
 开始 6D 前已创建本地快照：
 
-- 文件：`D:\project\wingezi-backups\DeskBox-stage6c-before-6d-20260823T101741Z.zip`
+- 文件：`D:\project\wingezi-backups\DeskCue-stage6c-before-6d-20260823T101741Z.zip`
 - 文件数：1,101
 - 大小：23,288,969 bytes
 - SHA-256：`7FB79E84600F38F94A32FBCD6322B1435D1BDD98A804A7B35DCCABA774E26157`
@@ -73,7 +73,7 @@ watcher/overflow/compaction 组合测试除首轮外又连续重复三轮，均�
 - Rust SearchCore 实际活跃、fallback 为空、单 resident owner、runtime recovery count 为 0；
 - 搜索结果包含 owned DBIX 文件 `Open Settings stage6d-rust-aot.txt`；
 - “打开设置”应用动作仍存在；
-- All、FilesAndFolders、Apps、Images、Documents、DeskBox 共 6 次筛选转换；
+- All、FilesAndFolders、Apps、Images、Documents、DeskCue 共 6 次筛选转换；
 - Name、Size、Date、Type 各点击两次，共 8 次升降序转换；
 - 最后回到 All / Relevance / ascending 基线；
 - 生产数据目录指纹不变，运行日志没有未处理异常，AOT 进程已停止。
@@ -113,7 +113,7 @@ watcher/overflow/compaction 组合测试除首轮外又连续重复三轮，均�
 | Store x64 | 不包含 | Managed `false` |
 | Direct ARM64 / win-arm64 | 不包含 | Managed `false` |
 
-MSBuild 实际求值已分别确认以上三种组合。实现使用 `DESKBOX_SEARCH_CORE_DEFAULT`，只有 Direct、
+MSBuild 实际求值已分别确认以上三种组合。实现使用 `DESKCUE_SEARCH_CORE_DEFAULT`，只有 Direct、
 SearchCore 模块启用且不是 ARM64/win-arm64 时才定义。设置文件中已经存在的布尔值仍按用户选择反序列化，
 因此升级不会把明确保存的 `false` 改回 `true`。新默认也不自动打开“自定义文件索引器”主开关；它只在
 该功能启用时选择更低内存的 resident owner。

@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 4E-2 完成报告
+# DeskCue Native AOT 阶段 4E-2 完成报告
 
 - 日期：2026-08-21
 - 范围：两个自有属性叶子控件中的 15 条 WMC1510
@@ -58,7 +58,7 @@ AOT 审计升级为 profile 25 / schema 22，新增以下硬门禁：
 | 旧实现红线契约 | 6 失败 / 3 通过，符合预期 |
 | 4E-2 契约 | 9/9 |
 | AOT/4D/4E 扩大定向契约 | 102/102 |
-| DeskBox x64 全量测试 | 2090/2090 |
+| DeskCue x64 全量测试 | 2090/2090 |
 | canonical Debug 构建 | 0 错误 |
 | PowerShell 语法解析 | 0 错误 |
 | x64 AOT 审计 | profile 25 / schema 22，通过 |

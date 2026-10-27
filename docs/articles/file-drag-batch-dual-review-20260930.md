@@ -11,8 +11,8 @@
 
 ## 审查背景
 
-- 工作区：DeskBox `D:\project\wingezi`，基线 HEAD `9d5313da`，未提交批次 111 个跟踪文件（+36k/−43k）+ 20 余新文件。
-- 四条主线：① 托管存储迁移改全量复制+双端校验（源永不删）；② 文件拖出保护方案 B（`StartDragAsync` + `AllowedOperations=Copy|Move` + `FileDragSourceGuardDataObject`，DeskBox 永不依据回执删源）；③ OnboardingWindow 拆分重构；④ 桌面自动整理策略化。
+- 工作区：DeskCue `D:\project\wingezi`，基线 HEAD `9d5313da`，未提交批次 111 个跟踪文件（+36k/−43k）+ 20 余新文件。
+- 四条主线：① 托管存储迁移改全量复制+双端校验（源永不删）；② 文件拖出保护方案 B（`StartDragAsync` + `AllowedOperations=Copy|Move` + `FileDragSourceGuardDataObject`，DeskCue 永不依据回执删源）；③ OnboardingWindow 拆分重构；④ 桌面自动整理策略化。
 - 两次审查各自派 5 个并行 agent，合计 10 个审查视角；全量测试 **4578/4578 绿**（0 跳过，x64，1m25s）。
 - 测试诚实性裁定（双方一致）：`ManagedStorageMigrationSafetyTests` −1040 行为**真搬家非缩水**，删除的旧断言全部对应有意退役的"移动式迁移"语义；未发现弱化/作弊模式。
 
@@ -25,7 +25,7 @@
 | 空格子修饰键被忽略 | 未发现 | **P1**（Ctrl 拖入空格子会删源） | B 独有 |
 | Onboarding 存储入口消失 | 未发现 | **P1**（与同批文档冲突，需产品裁定） | B 独有 |
 | ExplorerLaunchCircuitBreaker | P2（有本地兜底不会封死启动） | P1（误杀后落入反馈#9 定案的挂起路径） | 同一发现，分级分歧 |
-| ActiveDeskBoxDragRegistry 残留误吞 | P2 | P2 | 一致 |
+| ActiveDeskCueDragRegistry 残留误吞 | P2 | P2 | 一致 |
 | 诊断 schema 6 无测试钉 | P2 | 未发现 | A 独有，已亲证成立 |
 
 ---
@@ -35,13 +35,13 @@
 > **处理进度（2026-09-30 晚）**：P1-1 / P1-2 / P1-5 / P1-6 代码侧已修（见各条"已修"标注与文末修复记录）；P1-3 待 Simon 裁定未动。
 
 ### P1-1 [B]✅已修 原生 OLE 拖入路径丢弃源公告的 allowedEffects
-- **证据**：`src/DeskBox/Helpers/NativeDropEffectPolicy.cs:81-98`（`ShouldCopyMappedTransfer` 调 `ResolveMappedTransfer` 不传 canCopy/canMove，默认 true/true）→ `NativeDropTarget.cs:422-426` → `ContentWidgetWindow.NativeDragDrop.cs:1159-1234`（`NativeDropIntentEventArgs` 不携带 allowedEffects）→ `FileSurfaceContent.xaml.cs:4014-4043`（导入侧再次默认 canMove=true 重解析）。
+- **证据**：`src/DeskCue/Helpers/NativeDropEffectPolicy.cs:81-98`（`ShouldCopyMappedTransfer` 调 `ResolveMappedTransfer` 不传 canCopy/canMove，默认 true/true）→ `NativeDropTarget.cs:422-426` → `ContentWidgetWindow.NativeDragDrop.cs:1159-1234`（`NativeDropIntentEventArgs` 不携带 allowedEffects）→ `FileSurfaceContent.xaml.cs:4014-4043`（导入侧再次默认 canMove=true 重解析）。
 - **表现**：只公告 Copy 的源 + 跟随系统档 + 同卷：DragOver 光标显示"复制"（反馈侧用了真实 allowedEffects，`NativeDropTarget.cs:341`），实际却执行移动并删源。反向分歧（Move-only 源跨卷）同样成立。
 - **对照组**：XAML 路径 `FileSurfaceContent.ShortcutDrop.cs:49-55` 本批已正确传 `canMove`——两路径行为分裂。
 - **核对点**：确认 `NativeDropIntentEventArgs` 补字段并贯穿 `ScheduleNativeFileDropFallback → QueueNativeFileDropImport → ImportNativeDroppedFilesAsync`。
 
 ### P1-2 [B]✅已修 未映射（空）格子修饰键被整体忽略
-- **证据**：`src/DeskBox/Helpers/FileDropIntentPolicy.cs:33-36`（`!hasMappedFolder` 在修饰键判断前 `return Reference` 短路）→ `FileSurfaceContent.xaml.cs:2809-2813`（未映射时 `moveWhenMapped=null`）→ `WidgetViewModel.LayoutAndSettings.cs:93-122`（`?? ShouldMoveManagedItems(...)` 只看设置档，默认 Move）。
+- **证据**：`src/DeskCue/Helpers/FileDropIntentPolicy.cs:33-36`（`!hasMappedFolder` 在修饰键判断前 `return Reference` 短路）→ `FileSurfaceContent.xaml.cs:2809-2813`（未映射时 `moveWhenMapped=null`）→ `WidgetViewModel.LayoutAndSettings.cs:93-122`（`?? ShouldMoveManagedItems(...)` 只看设置档，默认 Move）。
 - **表现**：Ctrl 拖入**空格子**（首次使用格子的典型时刻）→ 移动并删源，用户明确按了 Ctrl；Copy 档 + Shift → 复制而非移动。XAML 与原生路径同病。
 - **核对点**：`Reference` 应只作无修饰默认，不应吞掉 Ctrl/Shift 分支；或把修饰键解析结果传入 `moveWhenMapped`。
 
@@ -50,7 +50,7 @@
 - **核对点**：**需 Simon 裁定**——有意裁剪则改两处文档（迁移文档 + architecture-optimization-progress），误删则在新 Onboarding 恢复存储步骤。
 
 ### P1-4 [双]✓ ExplorerLaunchCircuitBreaker 阈值 1 + 永不自愈（A 标 P2，B 标 P1）
-- **证据**：`src/DeskBox/Helpers/ExplorerLaunchCircuitBreaker.cs:21`（`RpcFailureThreshold = 1`）、`:97-127`（唯一复位条件 = shell PID 变化）。
+- **证据**：`src/DeskCue/Helpers/ExplorerLaunchCircuitBreaker.cs:21`（`RpcFailureThreshold = 1`）、`:97-127`（唯一复位条件 = shell PID 变化）。
 - **表现**：单次瞬时 RPC 失败（登录高峰/UAC 模态即可）→ 进程生命周期内永久旁路 explorer-hosted 启动；降级到的本地 `ShellExecuteEx` 正是反馈 #9 定案过的挂起路径。托盘同类策略 `App.Tray.cs:1177` 取阈值 2。
 - **核对点**：阈值提到 2-3，或加 half-open 探测 / RecordSuccess 冷却期解闸。
 
@@ -74,7 +74,7 @@
 4. **[B]◻ 原生反馈对空格子硬编码 `hasMappedFolder:true`**（`NativeDropEffectPolicy.cs:56`），与 XAML 路径（真实 MappedFolderPath）描述不一致。
 
 ### 拖拽-出站
-5. **[双]✓ ActiveDeskBoxDragRegistry 残留误吞外来拖入**：`ActiveDeskBoxDragRegistry.cs:19`（TTL 10 分钟）+ `NativeDragDrop.cs:1182-1206/1064-1072` 命中即静默 return。丢 DropCompleted 的现实触发器：拖拽模态循环中 watcher 刷新致容器回收、`Items_DragStarting` 1214-1243 间异常。**另**：`Items_DragStarting:1070-1071` 开新会话只 `Complete` 了 FileDragSessionState，未 `End` 注册表旧条目（B 补充发现）。
+5. **[双]✓ ActiveDeskCueDragRegistry 残留误吞外来拖入**：`ActiveDeskCueDragRegistry.cs:19`（TTL 10 分钟）+ `NativeDragDrop.cs:1182-1206/1064-1072` 命中即静默 return。丢 DropCompleted 的现实触发器：拖拽模态循环中 watcher 刷新致容器回收、`Items_DragStarting` 1214-1243 间异常。**另**：`Items_DragStarting:1070-1071` 开新会话只 `Complete` 了 FileDragSessionState，未 `End` 注册表旧条目（B 补充发现）。
 6. **[B]◻ Esc 取消的拖出必走 Full 11 轮观察 + 看门狗告警**：`FileSurfaceContent.xaml.cs:1474-1481, 1585-1591`，取消是常见结局，每次产告警噪音稀释真信号。
 7. **[B]◻ 多位 Preferred DropEffect 防线完全依赖 WASDK 行为约定**：guard 注释明言 No normalization（`FileDragSourceGuardDataObject.cs:44-48,133-147`）；旧 `PreferredDropEffectFilterDataObject` 的 CoGetCallerTID 隐藏防线已删。若 WASDK 升级后 StartDragAsync 从 AllowedOperations 派生多位 preferred，Win10 弹菜单回归且无报警。建议 guard 加钳制或把"Win10+FollowWindows 不弹菜单"钉为必测项。
 8. **[B]◻ QuickCapture 仍走 ListViewBase 内置拖拽 + 多位 `RequestedOperation=Copy|Move`**：`QuickCaptureSurfaceContent.xaml:160`、`.xaml.cs:2231-2233,2256,2579`——正是本批消灭的病理（存量非回归，但与方案 B 哲学不一致，建议后续批统一）。
@@ -83,7 +83,7 @@
 ### 迁移与整理
 10. **[A]✅ 延迟档切换不重排已入队条目**：`DesktopAutoOrganizationWatcher.cs` OnSettingsChanged（约 :126-153）只处理启停；入队时 `MarkDeferred(... GetDelay(...))`（约 :487-493）定死时间。12h 档切实时后已入队条目仍等 12h。**已亲证**。
 11. **[A]✅ 迁移停止后改名组件 → 重选同目标卡死**：`ManagedStorageMigrationService.cs:123` 续传要求 journal OldRoot/NewRoot/Folders 与当前严格相等（`SequenceEqual`），改名后抛 SourceChanged；destination 未删时也无 Abandoned 出口。**已亲证**（"死循环"程度偏重，实际是"卡住直到删目标目录或恢复组件名"，但核心主张成立）。
-12. **[A]✅ 迁移 .partial 残留无回收出口**：`:253` 每次重试新 GUID partial 从不清理（注释明言有意保留），孤立目录清理显式排除 `.deskbox-migration`；叠加空间预检只算文件总量不计残留（与 B 的 OBS 互证），磁盘近满时可被 DiskFull 锁死。**已亲证注释与排除逻辑**。
+12. **[A]✅ 迁移 .partial 残留无回收出口**：`:253` 每次重试新 GUID partial 从不清理（注释明言有意保留），孤立目录清理显式排除 `.deskcue-migration`；叠加空间预检只算文件总量不计残留（与 B 的 OBS 互证），磁盘近满时可被 DiskFull 锁死。**已亲证注释与排除逻辑**。
 13. **[A]✅ 诊断包 schema 6 无测试钉住**：`App.DiagnosticsBundle.cs:36` 写 `SchemaVersion: 6`，tests/ 全量 grep 无任何断言诊断 schema 版本的测试（A 说"测试仍断言 5"细节存疑，但"改回 5 不会红"成立）。**已亲证**。
 14. **[B]◻ 迁移源根也被强制 NTFS**：`ManagedStorageMigrationService.cs:94` 对 SourceFolder 也 `RequireSupportedVolume`，文档只对目标声明 NTFS；exFAT/FAT32 旧根用户被拒。方向安全，文档/文案需补。
 15. **[B]◻ 诊断包内容缺口**：未收录豁免 ledger（`desktop-organization-suppressions.json` 在册 claim）、熔断器降级状态、活跃拖拽会话——恰是三类新故障的直接答案。
@@ -124,8 +124,8 @@
 ## 两次审查一致确认无恙的核心不变量（修复时不得破坏）
 
 1. 完成回执（Performed/Logical Performed DropEffect、Paste Succeeded、TargetCLSID）永不抵达内层 Shell 对象（`FileDragSourceGuardDataObject.cs:210-241`，测试钉住）。
-2. DeskBox 无任何由 DropResult/回执触发的删除/移动调用（全仓调用点逐一核对，双向独立确认）。
-3. 内部路由反馈/完成永不返回 Move（`DeskBoxDragData.cs:157-163` 等 5 处赋值点 + `FileItemMultiDragTests:118-176`）。
+2. DeskCue 无任何由 DropResult/回执触发的删除/移动调用（全仓调用点逐一核对，双向独立确认）。
+3. 内部路由反馈/完成永不返回 Move（`DeskCueDragData.cs:157-163` 等 5 处赋值点 + `FileItemMultiDragTests:118-176`）。
 4. 复制迁移源永不删除；失败/取消/磁盘满全程保源；`Committing` 中断有 journal 幂等恢复。
 5. fRelease/介质所有权、x64/ARM64 结构布局正确；guard 包装失败回退 StorageItems，不空载荷出厂。
 6. 删除类型（`NativeFileDragOut`/`PreferredDropEffectFilterDataObject`/`ResidueDialog` 等）零悬挂引用；已撤销的第三批 reclaim 无代码残留。

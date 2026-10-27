@@ -1,20 +1,20 @@
 ---
-title: "DeskBox 安装与首次配置指南"
-description: "DeskBox 的系统要求、下载渠道、安装过程、运行时依赖、首次启动引导、推荐初始设置和覆盖升级注意事项。"
+title: "DeskCue 安装与首次配置指南"
+description: "DeskCue 的系统要求、下载渠道、安装过程、运行时依赖、首次启动引导、推荐初始设置和覆盖升级注意事项。"
 keywords:
-  - DeskBox 安装
-  - DeskBox 下载
+  - DeskCue 安装
+  - DeskCue 下载
   - Windows 桌面整理工具
   - 桌面收纳格子
 article_type: "feature"
 product_scope: "current-worktree"
 ---
 
-# DeskBox 安装与首次配置指南
+# DeskCue 安装与首次配置指南
 
 本指南帮助新用户从下载安装到创建第一个格子。完成后，你应该能够用 F7 显示或隐藏全部格子，并理解收纳目录、收纳格子和映射文件夹的区别。
 
-> [图片占位：DeskBox 首次启动后的完整桌面，至少展示一个文件格子、一个待办和一个随记]
+> [图片占位：DeskCue 首次启动后的完整桌面，至少展示一个文件格子、一个待办和一个随记]
 
 ## 系统要求
 
@@ -25,17 +25,17 @@ product_scope: "current-worktree"
 - Windows App Runtime 2.5.1（Direct 安装包已内置，无需单独安装）
 - 普通 Windows 用户权限
 
-DeskBox 围绕 WinUI 3 的窗口、材质、圆角、拖放、通知与媒体会话能力设计。Windows 10 会将系统不支持的材质、圆角和部分动画降级为兼容表现；文件同步、拖放和核心格子操作仍按 build 19041+ 验证。
+DeskCue 围绕 WinUI 3 的窗口、材质、圆角、拖放、通知与媒体会话能力设计。Windows 10 会将系统不支持的材质、圆角和部分动画降级为兼容表现；文件同步、拖放和核心格子操作仍按 build 19041+ 验证。
 
-DeskBox 不需要以管理员身份运行。不要在快捷方式兼容性设置中勾选「以管理员身份运行此程序」。资源管理器通常以普通权限运行，DeskBox 如果被提升为管理员权限，Windows 可能阻止两者之间的文件拖放。
+DeskCue 不需要以管理员身份运行。不要在快捷方式兼容性设置中勾选「以管理员身份运行此程序」。资源管理器通常以普通权限运行，DeskCue 如果被提升为管理员权限，Windows 可能阻止两者之间的文件拖放。
 
 ## 下载安装包
 
 Direct 安装包可以从官网或 GitHub Release 获取。
 
-- 官网：<https://deskbox.fun>
-- GitHub Release：<https://github.com/Tianyu199509/DeskBox/releases/latest>
-- 文件名：`DeskBox_Setup_<版本>_x64.exe`（Intel / AMD）或 `DeskBox_Setup_<版本>_arm64.exe`（骁龙、Surface Pro X 等 Windows on ARM 设备）
+- 官网：<https://github.com/CyberShadowX/DeskCue>
+- GitHub Release：<https://github.com/CyberShadowX/DeskCue/releases/latest>
+- 文件名：`DeskCue_Setup_<版本>_x64.exe`（Intel / AMD）或 `DeskCue_Setup_<版本>_arm64.exe`（骁龙、Surface Pro X 等 Windows on ARM 设备）
 
 Microsoft Store 渠道由商店负责安装和更新。两个渠道的核心功能一致，但更新方式和部分渠道展示内容可能不同。
 
@@ -46,7 +46,7 @@ Microsoft Store 渠道由商店负责安装和更新。两个渠道的核心功�
 Direct 安装包是 Full Native AOT 构建，内置匹配架构的私有 Windows App Runtime，不需要联网下载 .NET 10 或 Windows App Runtime。安装器仍会先检查目标电脑
 
 - 依赖已经存在，直接跳过，避免重复安装。
-- DeskBox 正在运行，先关闭进程，再替换文件。
+- DeskCue 正在运行，先关闭进程，再替换文件。
 
 这种方式可以控制安装包体积，也避免每次升级重复安装相同运行时。
 
@@ -60,7 +60,7 @@ Direct 安装包是 Full Native AOT 构建，内置匹配架构的私有 Windows
 
 收纳根目录保存所有收纳格子背后的真实文件夹。默认路径适合大多数用户；如果系统盘空间紧张，也可以选择其他本地磁盘。
 
-建议把收纳根目录固定到资源管理器的快速访问。这样即使 DeskBox 没有显示，也能直接从资源管理器访问格子中的文件。
+建议把收纳根目录固定到资源管理器的快速访问。这样即使 DeskCue 没有显示，也能直接从资源管理器访问格子中的文件。
 
 收纳根目录不是数据库。里面仍然是普通文件夹和文件。
 
@@ -90,11 +90,11 @@ Direct 安装包是 Full Native AOT 构建，内置匹配架构的私有 Windows
 
 如果 F7 与其他软件冲突，可以进入 `设置 > 快捷与交互 > 全局快捷键` 重新录制。
 
-开机启动适合希望 DeskBox 长期常驻托盘的用户。如果只是先体验，可以暂时关闭，确认工作流后再开启。
+开机启动适合希望 DeskCue 长期常驻托盘的用户。如果只是先体验，可以暂时关闭，确认工作流后再开启。
 
 ## 创建第一个格子
 
-右键系统托盘中的 DeskBox 图标，选择创建格子。
+右键系统托盘中的 DeskCue 图标，选择创建格子。
 
 建议第一个格子命名为「待处理」。它用于承接暂时不知道该归档到哪里，但不希望继续散落在桌面上的文件。
 
@@ -135,7 +135,7 @@ Direct 安装包是 Full Native AOT 构建，内置匹配架构的私有 Windows
 
 1. 在设置中确认当前收纳根目录。
 2. 用资源管理器打开目录，确认重要文件可独立访问。
-3. 导出一份 DeskBox 数据备份。
+3. 导出一份 DeskCue 数据备份。
 
 收纳格子中的普通文件不会因为应用消失就变成不可读格式，但卸载程序可能询问是否删除本地应用数据。操作前应看清选项。
 

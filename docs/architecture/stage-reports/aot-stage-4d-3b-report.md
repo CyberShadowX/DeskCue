@@ -1,4 +1,4 @@
-# DeskBox AOT 阶段 4D-3B 完成与复盘报告
+# DeskCue AOT 阶段 4D-3B 完成与复盘报告
 
 - 日期：2026-08-21
 - 范围：OLE `IDropTarget` 注册、CCW 与回调侧 AOT 化；不修改数据读取协议和文件导入业务
@@ -70,8 +70,8 @@ Rust 会引入一组双向回调和跨 ABI 生命周期，复杂度高于当前 
 - Rust 保持 ABI 2、能力 63、七个导出，staging/publish 哈希一致；
 - 审计前后源码指纹一致。
 - 规范非平台 Debug 构建通过，0 个错误、30 个既有警告；随后从
-  `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe` 启动唯一仓库实例；
-  PID 32144 响应正常，普通 JIT 默认策略未加载 `deskbox_native.dll`；
+  `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe` 启动唯一仓库实例；
+  PID 32144 响应正常，普通 JIT 默认策略未加载 `deskcue_native.dll`；
 - 启动日志确认新生成式 CCW 已通过真实 `RegisterDragDrop` 成功注册到 8 个恢复窗口的 HWND，
   没有注册失败日志。该证据证明真实 Windows 注册成功，但不代替实际拖入回调验证。
 
@@ -104,7 +104,7 @@ WMC1510 1265，另有既有 C# 编译警告。IL2050 已从 4D-3A 的 2 次原�
 人工复测发现的三项问题均位于既有 WinUI 文件表面，不在 4D-3A/3B 的 COM ABI 边界：
 
 1. 从桌面拖入大文件后，根表面 `Root_Drop` 在整个文件传输期间仍持有系统 Drop deferral。
-   DeskBox 已显示自身文件与底部进度时，Explorer 拖动图和标题仍未关闭，视觉上形成两层图标。
+   DeskCue 已显示自身文件与底部进度时，Explorer 拖动图和标题仍未关闭，视觉上形成两层图标。
    当前实现会先完整物化 `DataPackageView`、缓存操作类型和来源，再完成 deferral，随后才执行
    长时间文件传输；临时虚拟文件批次仍由原有作用域持有和释放。
 2. 文件夹和文件堆目标会把子项 `DragOver`/`DragLeave` 标记为已处理。快速跨越子项或直接移出
@@ -118,7 +118,7 @@ WMC1510 1265，另有既有 C# 编译警告。IL2050 已从 4D-3A 的 2 次原�
 两项新增行为契约和一项增强的进度层级契约均已验证；其中两项行为契约在旧实现上 2/2 按预期
 失败，修复后本批 3/3 通过。文件表面相关契约 21/21、x64 全量测试 2038/2038、规范非平台
 Debug 构建均通过，0 个错误。当前唯一仓库实例来自
-`src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`。本批没有修改
+`src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`。本批没有修改
 `NativeDropTarget`、源生成 CCW、Rust ABI、AOT 分支或文件传输语义，因此不重开 4D-3B 的
 COM/AOT 实现审计。
 

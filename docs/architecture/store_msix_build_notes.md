@@ -1,6 +1,6 @@
-﻿# DeskBox Store/MSIX 构建说明
+﻿# DeskCue Store/MSIX 构建说明
 
-本文档记录 Microsoft Store 技术分支的本地构建入口。当前 Direct/Inno 仍是默认发布通道，Store 包需要显式传入 `DeskBoxDistribution=Store`。
+本文档记录 Microsoft Store 技术分支的本地构建入口。当前 Direct/Inno 仍是默认发布通道，Store 包需要显式传入 `DeskCueDistribution=Store`。
 
 ## 构建入口
 
@@ -11,8 +11,8 @@
 默认行为：
 
 - 构建 `Release x64`
-- 使用 `DeskBoxDistribution=Store`
-- 跳过 `DeskBox.Updater`
+- 使用 `DeskCueDistribution=Store`
+- 跳过 `DeskCue.Updater`
 - 默认生成 managed 自包含 .NET 包，避免 Store 用户额外安装 .NET Desktop Runtime
 - 关闭 MSIX 签名，适合本机先验证包结构
 - 自动定位本机 VC 符号工具并生成 `.appxsym`
@@ -36,20 +36,20 @@ Native AOT Store 上传包：
 ```
 
 ARM64 使用同一入口，只把 `-Platform` 改为 `ARM64`。Native AOT 模式会固定启用 Rust 静态 CRT
-`deskbox_native.dll`；文件搜索统一走 Everything SDK（`EverythingSdk.dll` 随包分发并受审计门禁约束）；不会把 Direct 的 Updater、
-`deskbox_search_core.dll`、`.NET` deps/runtimeconfig、PDB 或 Direct 素材放入 MSIX。主程序和 Rust PDB
+`deskcue_native.dll`；文件搜索统一走 Everything SDK（`EverythingSdk.dll` 随包分发并受审计门禁约束）；不会把 Direct 的 Updater、
+`deskcue_search_core.dll`、`.NET` deps/runtimeconfig、PDB 或 Direct 素材放入 MSIX。主程序和 Rust PDB
 只进入 `.appxsym`。
 
 ## 正式 Partner Center 合并包
 
 `build-stage-7c1-distribution.ps1` 和上面的单架构命令生成的是 x64、ARM64 各自的构建与审计输入。
-DeskBox 已发布版本采用一个双架构上传包；正式提交前必须再聚合为：
+DeskCue 已发布版本采用一个双架构上传包；正式提交前必须再聚合为：
 
 ```text
-DeskBox_<version>_x64_arm64.msixupload
-├── DeskBox_<version>_x64_arm64.msixbundle
-├── DeskBox_<version>_x64.appxsym
-└── DeskBox_<version>_arm64.appxsym
+DeskCue_<version>_x64_arm64.msixupload
+├── DeskCue_<version>_x64_arm64.msixbundle
+├── DeskCue_<version>_x64.appxsym
+└── DeskCue_<version>_arm64.appxsym
 ```
 
 聚合时从两个 `StoreUpload` 构建的 `*_Test` 目录取得经过审计的 `.msix` 和匹配的 `.appxsym`，先用
@@ -59,7 +59,7 @@ MakeAppx 必须显式指定四段式 Bundle 版本，例如：
 ```powershell
 makeappx bundle `
   /d <bundle-input> `
-  /p DeskBox_1.4.9.0_x64_arm64.msixbundle `
+  /p DeskCue_1.4.9.0_x64_arm64.msixbundle `
   /bv 1.4.9.0 `
   /o
 ```
@@ -72,23 +72,23 @@ Bundle 身份仍会偏离发布版本。封装完成后必须再次 `unbundle`�
 - 外层 `.msixupload` 恰好包含一个 `.msixbundle` 和两份对应架构的 `.appxsym`；
 - 解出的两个 `.msix` 哈希与合并输入一致，并分别再次通过 Store Native AOT 包审计；
 - 包身份、Publisher、最低系统和 Windows App Runtime 框架依赖与已发布版本连续；
-- 包内没有 `DeskBox.Updater`、CoreCLR、自包含 Windows App Runtime 或 Direct 专用素材。
+- 包内没有 `DeskCue.Updater`、CoreCLR、自包含 Windows App Runtime 或 Direct 专用素材。
 
-单架构 `.msixupload` 可以保留为构建证据，但不是 DeskBox 既有发布模式下应提交的最终商店包。Partner
+单架构 `.msixupload` 可以保留为构建证据，但不是 DeskCue 既有发布模式下应提交的最终商店包。Partner
 Center 只上传合并后的 `x64_arm64.msixupload`，不上传其内部 `.msixbundle`。
 
 带证书签名：
 
 ```powershell
-.\scripts\build-store-msix.ps1 -SignPackage -PackageCertificateKeyFile "path\to\DeskBox.pfx"
+.\scripts\build-store-msix.ps1 -SignPackage -PackageCertificateKeyFile "path\to\DeskCue.pfx"
 ```
 
 ## Partner Center 身份
 
-`src\DeskBox\Package.appxmanifest` 已使用 Partner Center 分配的正式身份：
+`src\DeskCue\Package.appxmanifest` 已使用 Partner Center 分配的正式身份：
 
-- `Identity Name="D1FC332A.DeskBoxWidgets"`
-- `Publisher="CN=3B75AA4A-2433-4F71-9CC1-B644B26F474A"`
+- `Identity Name="CyberShadowX.DeskCue"`
+- `Publisher="CN=32AFF2BA-34E3-56BE-83E3-671BEBBFA32F"`
 - `PublisherDisplayName="朱天雨"`
 
 每次打包后仍需从生成包内复核 Identity，确保没有被本地发布配置或临时证书覆盖。
@@ -97,7 +97,7 @@ Center 只上传合并后的 `x64_arm64.msixupload`，不上传其内部 `.msixb
 
 Store 构建会启用：
 
-- `DESKBOX_STORE` 编译常量
+- `DESKCUE_STORE` 编译常量
 - `StoreAppUpdateService`
 - `StoreStartupService`
 - `Package.appxmanifest`
@@ -109,7 +109,7 @@ Direct 构建继续使用：
 - Inno 安装包
 - `AppUpdateService`
 - `DirectStartupService`
-- `DeskBox.Updater`
+- `DeskCue.Updater`
 
 ## Native AOT 包内容审计
 
@@ -117,8 +117,8 @@ Direct 构建继续使用：
 
 ```powershell
 .\scripts\audit-store-native-aot-package.ps1 `
-  -MsixPath <DeskBox.msix> `
-  -AppxSymPath <DeskBox.appxsym> `
+  -MsixPath <DeskCue.msix> `
+  -AppxSymPath <DeskCue.appxsym> `
   -ExpectedPlatform x64 `
   -ExpectedPublishDirectory <publish> `
   -OutputDirectory <audit-output>
@@ -145,4 +145,4 @@ Direct 构建继续使用：
 2. 通过 package flight 做不卸载覆盖升级、退出/重启及设置、Widget、Quick Capture、Todo、索引和日志保留。
 3. 在 x64 与可获得的 ARM64 实体设备实测文件拖拽、托盘、开机自启、系统音量、多屏/DPI。
 4. 确认关于页不显示跳转 Microsoft Store 的支持入口。
-5. 复核包内没有 `DeskBox.Updater.*`、支付二维码或 `store-assets-html/` 这类非 Store 包资源。
+5. 复核包内没有 `DeskCue.Updater.*`、支付二维码或 `store-assets-html/` 这类非 Store 包资源。

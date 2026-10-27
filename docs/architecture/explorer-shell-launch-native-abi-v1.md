@@ -1,4 +1,4 @@
-# DeskBox Explorer 托管启动 Rust 原生边界与 ABI v1
+# DeskCue Explorer 托管启动 Rust 原生边界与 ABI v1
 
 - 日期：2026-08-21
 - 阶段：4D-4A
@@ -8,11 +8,11 @@
 
 ## 1. 目标与行为边界
 
-DeskBox 优先让正在运行的 Explorer 桌面进程执行 `ShellExecute`。这样启动的应用继承当前
-Explorer 用户环境，避免 DeskBox 自身启动时保存的环境变量传给 Electron 等关联程序。
+DeskCue 优先让正在运行的 Explorer 桌面进程执行 `ShellExecute`。这样启动的应用继承当前
+Explorer 用户环境，避免 DeskCue 自身启动时保存的环境变量传给 Electron 等关联程序。
 这一语义不能退化为单纯的 `Process.Start(UseShellExecute=true)`。
 
-4D-4A 在既有 `deskbox_native.dll` 中增加一个完整、同步、无状态的 Rust 操作。Rust 使用
+4D-4A 在既有 `deskcue_native.dll` 中增加一个完整、同步、无状态的 Rust 操作。Rust 使用
 `windows` crate 生成的强类型 Shell 接口完成下列链路：
 
 ```text
@@ -33,7 +33,7 @@ VARIANT 生命周期。
 | 构建/运行方式 | Explorer 启动后端 | 原生调用失败后的产品行为 |
 | --- | --- | --- |
 | 普通 JIT，未设置环境变量 | 原 C# dynamic 实现 | 继续既有本地 ShellExecute 回退 |
-| 普通 JIT，`DESKBOX_EXPLORER_SHELL_BACKEND=rust` | Rust | 不静默回退 C#；由产品层走既有本地回退 |
+| 普通 JIT，`DESKCUE_EXPLORER_SHELL_BACKEND=rust` | Rust | 不静默回退 C#；由产品层走既有本地回退 |
 | Native AOT | Rust | C# dynamic/RCW 实现不进入编译单元；由产品层走既有本地回退 |
 
 原生边界自身不调用 C# oracle。`ExplorerShellLaunchService.TryOpen` 返回失败后，
@@ -45,20 +45,20 @@ VARIANT 生命周期。
 
 模块整体 ABI 版本保持为 `2`。本批是向后兼容的能力扩展：
 
-- 新能力位：`DESKBOX_NATIVE_CAPABILITY_EXPLORER_SHELL_LAUNCH_V1 = 1 << 6`；
+- 新能力位：`DESKCUE_NATIVE_CAPABILITY_EXPLORER_SHELL_LAUNCH_V1 = 1 << 6`；
 - 完整能力掩码：`127`；
-- 新导出：`deskbox_explorer_shell_launch_v1`；
+- 新导出：`deskcue_explorer_shell_launch_v1`；
 - 当前发布模块必需导出总数：8。
 
 导出函数使用 C calling convention：
 
 ```c
-uint32_t deskbox_explorer_shell_launch_v1(
-    const DeskBoxExplorerShellLaunchRequestV1* request,
-    DeskBoxExplorerShellLaunchResultV1* result);
+uint32_t deskcue_explorer_shell_launch_v1(
+    const DeskCueExplorerShellLaunchRequestV1* request,
+    DeskCueExplorerShellLaunchResultV1* result);
 ```
 
-托管加载器仍固定从 `AppContext.BaseDirectory/deskbox_native.dll` 加载，先校验 ABI 2 和基础
+托管加载器仍固定从 `AppContext.BaseDirectory/deskcue_native.dll` 加载，先校验 ABI 2 和基础
 shortcut 导出；本操作还会校验能力位和自身导出。任何模块、ABI、能力、导出、输入或结果
 异常都会返回可诊断失败，不回退到同进程 C# dynamic 实现。
 
@@ -125,7 +125,7 @@ code unit，不允许嵌入 NUL；空工作目录必须使用空指针和零长�
 
 自动化不会主动打开用户文件、URL 或系统对话框。进入 4D-4B 前，仍需在显式 Rust JIT 实例
 中人工确认：已有文件、文件夹、URL、未知扩展名/Open With、缺失目标/本地回退，以及从
-Explorer 环境启动的关联程序不继承 DeskBox 特有环境变量。AOT 应用本阶段仍不启动；完整
+Explorer 环境启动的关联程序不继承 DeskCue 特有环境变量。AOT 应用本阶段仍不启动；完整
 AOT 运行矩阵保留到阶段 5。
 
 ## 7. 4D-4B 后的模块状态

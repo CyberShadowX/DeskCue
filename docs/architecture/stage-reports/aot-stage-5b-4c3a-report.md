@@ -1,4 +1,4 @@
-# DeskBox AOT 阶段 5B-4C3A 完成报告
+# DeskCue AOT 阶段 5B-4C3A 完成报告
 
 - 日期：2026-08-23
 - 状态：5B-4C3A 已完成到 x64 Native AOT 五进程实际运行边界
@@ -26,7 +26,7 @@
 
 新增的 NativeAOT-only 场景只接受：
 
-- `DESKBOX_AOT_TODO_RECURRENCE_REMINDER_SMOKE=DeterministicStateMatrix`；
+- `DESKCUE_AOT_TODO_RECURRENCE_REMINDER_SMOKE=DeterministicStateMatrix`；
 - 五个固定 phase；
 - 32 位 `Guid N` run ID；
 - 显式隔离的 Native AOT preview 根。

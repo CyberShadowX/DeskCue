@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-4B2B2B1 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-4B2B2B1 完成与复盘报告
 
 - 审计日期：2026-08-22
 - 范围：x64 NativeAOT Todo 步骤创建、文本修改、完成状态、跨进程重载、步骤删除与任务删除后复核
@@ -7,7 +7,7 @@
 
 ## 1. 本阶段结论
 
-5B-4B2B2B1 在现有 managed UI runner 中增加 `TodoStepsPersistenceRestart`，使用同一份受审计 NativeAOT 产物依次启动三个全新的 DeskBox 进程：
+5B-4B2B2B1 在现有 managed UI runner 中增加 `TodoStepsPersistenceRestart`，使用同一份受审计 NativeAOT 产物依次启动三个全新的 DeskCue 进程：
 
 1. `Mutate` 从 schema 3 空 Todo store 经真实详情入口创建固定普通任务，通过详情步骤输入新增步骤，再经真实行控件完成文本修改和完成状态切换；
 2. `VerifyDelete` 在新进程中重载任务和已完成步骤，从真实行 UI 将步骤恢复为未完成，再依次删除步骤和任务；
@@ -21,7 +21,7 @@
 - 每个非空阶段同时核对 Todo store、强类型 ViewModel、实际 DataTemplate DataContext、行文本、复选框和完成态透明度；
 - `true → 跨进程重载 true → false` 的完成状态往返已通过，步骤删除后先验证任务仍存在且步骤数为 0，再删除任务；
 - 三个进程均由应用正常关闭路径退出，外层脚本没有用强制结束替代成功退出；
-- 最终 owned preview 根已清理，正式 `%LOCALAPPDATA%\DeskBox` 前后指纹一致，运行失败日志和残留受审计 AOT 进程均为 0。
+- 最终 owned preview 根已清理，正式 `%LOCALAPPDATA%\DeskCue` 前后指纹一致，运行失败日志和残留受审计 AOT 进程均为 0。
 
 本阶段没有扩展 Rust 产品边界。Todo 步骤属于 WinUI DataTemplate、ViewModel 集合通知和 Todo store 的现有 C# 状态链；保持该链并只修正 AOT UI 投影，比建立跨语言步骤状态同步更简单且风险更小。
 
@@ -36,10 +36,10 @@ scripts/run-aot-managed-ui-smoke.ps1 -Scenario TodoStepsPersistenceRestart
 应用内场景和阶段变量为：
 
 ```text
-DESKBOX_AOT_MANAGED_UI_SMOKE=TodoStepsPersistenceRestart
-DESKBOX_AOT_MANAGED_UI_TODO_STEPS_PHASE=Mutate|VerifyDelete|Postflight
+DESKCUE_AOT_MANAGED_UI_SMOKE=TodoStepsPersistenceRestart
+DESKCUE_AOT_MANAGED_UI_TODO_STEPS_PHASE=Mutate|VerifyDelete|Postflight
 .artifacts/aot-managed-ui-smoke/win-x64/preview-root
-.deskbox-aot-managed-ui-owned.json
+.deskcue-aot-managed-ui-owned.json
 ```
 
 安全边界如下：
@@ -135,7 +135,7 @@ object[] StepItemsSource => Steps.Cast<object>().ToArray()
 .artifacts/aot-managed-ui-smoke/win-x64/todo-steps-persistence-restart/postflight-result.json
 .artifacts/aot-managed-ui-smoke/win-x64/todo-steps-persistence-restart/final-todo.json
 .artifacts/aot-managed-ui-smoke/win-x64/todo-steps-persistence-restart/final-settings.json
-.artifacts/aot-managed-ui-smoke/win-x64/todo-steps-persistence-restart/DeskBox.log
+.artifacts/aot-managed-ui-smoke/win-x64/todo-steps-persistence-restart/DeskCue.log
 ```
 
 本次实测数据：
@@ -173,7 +173,7 @@ object[] StepItemsSource => Steps.Cast<object>().ToArray()
 | Todo 步骤三进程矩阵 | 创建、文本修改、完成、重载、恢复未完成、步骤删除、任务删除、postflight 全部通过；3/3 正常退出 |
 | Todo 核心回归矩阵 | `TodoPersistenceRestart` 再次通过；3/3 正常退出 |
 
-上述 UI 项是实际运行受审计 `DeskBox.exe` 的程序化产品路径证据，不是仅靠源码扫描。它仍不替代用户对物理键鼠、触控、IME、焦点、动画、视觉层级和目标系统差异的人工验收。
+上述 UI 项是实际运行受审计 `DeskCue.exe` 的程序化产品路径证据，不是仅靠源码扫描。它仍不替代用户对物理键鼠、触控、IME、焦点、动画、视觉层级和目标系统差异的人工验收。
 
 ## 8. 复盘与遗漏检查
 

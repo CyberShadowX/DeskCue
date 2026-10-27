@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-4B2B2A 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-4B2B2A 完成与复盘报告
 
 - 审计日期：2026-08-22
 - 范围：x64 NativeAOT Todo 核心任务、标题、详情备注、完成状态、跨进程重载与删除后复核
@@ -7,7 +7,7 @@
 
 ## 1. 本阶段结论
 
-5B-4B2B2A 在现有 managed UI runner 中增加 `TodoPersistenceRestart`，使用同一份受审计 NativeAOT 产物依次启动三个全新的 DeskBox 进程：
+5B-4B2B2A 在现有 managed UI runner 中增加 `TodoPersistenceRestart`，使用同一份受审计 NativeAOT 产物依次启动三个全新的 DeskCue 进程：
 
 1. `Mutate` 从空 Todo store 打开真实详情新建入口，保存任务并修改标题；随后通过产品 600 ms timer 自动保存 Markdown 备注，将普通非重复任务设为已完成，然后正常退出；
 2. `VerifyDelete` 在新进程中重载任务、标题、备注和完成状态，再通过显式备注保存路径更新正文，将任务恢复为未完成，最后经产品路径删除任务并正常退出；
@@ -23,7 +23,7 @@
 - 完成状态通过 `SetCompletedWithFeedbackAsync` 执行 `false → true → 跨进程重载 true → false`，并同时核对 `CompletedAt` 的存在与清除；
 - 删除经 `DeleteItemAsync` 完成；第二阶段退出前和第三阶段启动后均确认 item 数为 0；
 - 三个进程均由应用正常关闭路径退出，没有依靠外层脚本强制结束；
-- 最终 owned preview 根已清理，正式 `%LOCALAPPDATA%\DeskBox` 前后指纹一致，运行日志失败数为 0。
+- 最终 owned preview 根已清理，正式 `%LOCALAPPDATA%\DeskCue` 前后指纹一致，运行日志失败数为 0。
 
 本阶段没有改写或扩展 Rust 产品边界。Todo 的 UI、ViewModel、JSON store、保存门和状态机继续保留在 C#。它们与 WinUI 编辑状态和用户数据事务紧密耦合，迁移 Rust 会增加跨语言状态同步，并不比现有实现简单。
 
@@ -38,10 +38,10 @@ scripts/run-aot-managed-ui-smoke.ps1 -Scenario TodoPersistenceRestart
 应用内场景和阶段变量为：
 
 ```text
-DESKBOX_AOT_MANAGED_UI_SMOKE=TodoPersistenceRestart
-DESKBOX_AOT_MANAGED_UI_TODO_PHASE=Mutate|VerifyDelete|Postflight
+DESKCUE_AOT_MANAGED_UI_SMOKE=TodoPersistenceRestart
+DESKCUE_AOT_MANAGED_UI_TODO_PHASE=Mutate|VerifyDelete|Postflight
 .artifacts/aot-managed-ui-smoke/win-x64/preview-root
-.deskbox-aot-managed-ui-owned.json
+.deskcue-aot-managed-ui-owned.json
 ```
 
 安全边界如下：
@@ -124,7 +124,7 @@ TodoItemViewModel
 .artifacts/aot-managed-ui-smoke/win-x64/todo-persistence-restart/postflight-result.json
 .artifacts/aot-managed-ui-smoke/win-x64/todo-persistence-restart/final-todo.json
 .artifacts/aot-managed-ui-smoke/win-x64/todo-persistence-restart/final-settings.json
-.artifacts/aot-managed-ui-smoke/win-x64/todo-persistence-restart/DeskBox.log
+.artifacts/aot-managed-ui-smoke/win-x64/todo-persistence-restart/DeskCue.log
 ```
 
 本次实测数据：
@@ -163,7 +163,7 @@ TodoItemViewModel
 | 审计期间源码稳定 | `true` |
 | Todo 三进程矩阵 | 创建、标题修改、600 ms 备注自动保存、完成、重载、显式备注保存、恢复未完成、删除、postflight 全部通过；3/3 正常退出 |
 
-上述 UI 项是实际运行受审计 `DeskBox.exe` 的程序化产品路径证据，不是仅靠源码扫描。它仍不替代用户对物理键鼠输入、视觉层级、焦点、动画、IME 和目标系统差异的人工验收。
+上述 UI 项是实际运行受审计 `DeskCue.exe` 的程序化产品路径证据，不是仅靠源码扫描。它仍不替代用户对物理键鼠输入、视觉层级、焦点、动画、IME 和目标系统差异的人工验收。
 
 ## 8. 复盘与遗漏检查
 

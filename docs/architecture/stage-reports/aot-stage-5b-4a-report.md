@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-4A 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-4A 完成与复盘报告
 
 - 审计日期：2026-08-22
 - 范围：x64 NativeAOT 基础托管 UI 只读矩阵，包括托盘、Widget 恢复、语言资源、设置主分区与搜索筛选/排序
@@ -13,9 +13,9 @@
 2. 预置的 File 与 Search 两个 Widget 按固定 ID 从设置中恢复，两个表面均已加载且可见，没有通过 runner 创建新 Widget；
 3. 12 套已发布语言字典均能装载，每套包含 2350 个资源，并具有设置标题与“打开设置”搜索动作所需键；
 4. 同一个设置窗口依次打开 General、Appearance、FeatureWidgets、Interaction、Maintenance、About 六个主分区，每一步都有有效 HWND、可见 AppWindow、XamlRoot、尺寸、标题、当前分区与选中分区证据；
-5. 搜索窗口使用本地化且必定存在的“打开设置”动作产生结果，依次切换 All、FilesAndFolders、Apps、Images、Documents、DeskBox 六种筛选；
+5. 搜索窗口使用本地化且必定存在的“打开设置”动作产生结果，依次切换 All、FilesAndFolders、Apps、Images、Documents、DeskCue 六种筛选；
 6. 名称、大小、日期、类型四个排序入口各调用两次，八次升降序转换均被记录，结束后恢复到 `All / Relevance / ascending`；
-7. AOT 进程正常退出，正式 `%LOCALAPPDATA%\DeskBox` 运行前后指纹一致。
+7. AOT 进程正常退出，正式 `%LOCALAPPDATA%\DeskCue` 运行前后指纹一致。
 
 这轮没有改写 Rust 产品边界。此前 shortcut、Explorer/Quick Access 和音乐音量在 AOT 下继续使用已经冻结的 Rust ABI；普通 JIT 的默认后端策略不变。
 
@@ -30,9 +30,9 @@ scripts/run-aot-managed-ui-smoke.ps1
 它固定使用：
 
 ```text
-DESKBOX_AOT_MANAGED_UI_SMOKE=BasicReadOnly
+DESKCUE_AOT_MANAGED_UI_SMOKE=BasicReadOnly
 .artifacts/aot-managed-ui-smoke/win-x64/preview-root
-.deskbox-aot-managed-ui-owned.json
+.deskcue-aot-managed-ui-owned.json
 ```
 
 安全边界包括：
@@ -40,7 +40,7 @@ DESKBOX_AOT_MANAGED_UI_SMOKE=BasicReadOnly
 - DataRoot 必须位于本阶段专属 artifact 根之下，且必须具有本脚本创建的所有权标记；
 - 只预置 `aot-5b4a-file` 与 `aot-5b4a-search` 两个固定 Widget；
 - runner 拒绝非 NativeAOT、非 preview 根和不精确的预置配置；
-- 只停止路径精确等于受审计 `DeskBox.exe` 的进程，不按进程名清理其他安装或开发实例；
+- 只停止路径精确等于受审计 `DeskCue.exe` 的进程，不按进程名清理其他安装或开发实例；
 - 正式数据目录在运行前后计算确定性指纹，任何变化都使矩阵失败；
 - 本阶段不打开搜索结果、不写搜索历史、不变更设置、不创建或删除 Widget，也不触发文件、Shell 或媒体写操作；
 - 七个 AOT smoke 脚本都会保存、清空并恢复全部七个 opt-in，避免父环境残留让多个 runner 同时执行。

@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 4D-5 完成报告
+# DeskCue Native AOT 阶段 4D-5 完成报告
 
 - 日期：2026-08-21
 - 范围：托盘 identity 与 SecondWindow 菜单 presenter 的反射收口
@@ -66,7 +66,7 @@ Rust 不能减少其 UI 生命周期复杂度；升级 H.NotifyIcon 则会把依
 | --- | --- |
 | 旧实现红线契约 | 4 失败 / 2 通过，符合预期 |
 | 4D-5 契约测试 | 6/6 |
-| DeskBox x64 全量测试 | 2067/2067 |
+| DeskCue x64 全量测试 | 2067/2067 |
 | `git diff --check` | 通过，仅有仓库既有换行提示 |
 | x64 AOT 审计 | 配置 22 / schema 19，通过 |
 

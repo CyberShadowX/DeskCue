@@ -30,7 +30,7 @@ registration helpers mutate the existing dictionaries and set in place.
 - Focused registration, group, Surface and deletion tests: **60/60 passed**.
 - Final full x64/win-x64 suite, including the two boundary laws: **4,173/4,173
   passed**. Ignored local evidence:
-  `tests/DeskBox.Tests/TestResults/architecture-c-registration-final-20260924.trx`.
+  `tests/DeskCue.Tests/TestResults/architecture-c-registration-final-20260924.trx`.
 - Canonical Debug build: **0 errors**. Release AOT audit/smoke conditional build:
   **0 errors, 890 warnings**. Native AOT publish/link and packaged execution
   were not run.
@@ -54,7 +54,7 @@ D's Surface-promotion candidate parameter or group recovery implementation.
 The C registration helper and zero-HWND guard match the combined candidate.
 
 The final full x64 suite passed **4,177/4,177**; ignored local TRX:
-`tests/DeskBox.Tests/TestResults/architecture-c-final-20260924.trx`.
+`tests/DeskCue.Tests/TestResults/architecture-c-final-20260924.trx`.
 Release AOT audit/smoke conditional compilation passed with **0 errors, 888
 warnings**. The canonical Debug build passed with **0 errors, 22 warnings**.
 An isolated Debug launch from this worktree's canonical executable, PID 34056,
@@ -76,4 +76,4 @@ audit/smoke conditional compilation with **0 errors**, and a canonical Debug
 build with **0 errors**. Isolated Debug PID 38208 started from this worktree's
 canonical executable at Medium integrity: 36 startup steps, 0 degraded,
 0 failed. It was stopped after verification. The local TRX is
-`tests/DeskBox.Tests/TestResults/architecture-c-stacked-20260925.trx`.
+`tests/DeskCue.Tests/TestResults/architecture-c-stacked-20260925.trx`.

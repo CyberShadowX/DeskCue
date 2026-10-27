@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 4E-4 完成与复盘报告
+# DeskCue Native AOT 阶段 4E-4 完成与复盘报告
 
 - 日期：2026-08-21
 - 范围：`FileWidgetSettingsSection` typed ViewModel 桥接及 5 条 Binding
@@ -70,7 +70,7 @@ Debug 生成的 `FileWidgetSettingsSection.g.cs` 确认：
 | 旧实现红线契约 | 8 失败 / 3 通过，符合预期 |
 | 4E-4 契约 | 11/11 |
 | AOT/4D/4E 扩大定向契约 | 124/124 |
-| DeskBox x64 全量测试 | 2112/2112 |
+| DeskCue x64 全量测试 | 2112/2112 |
 | canonical Debug 构建 | 0 错误，24 条既有警告 |
 | PowerShell 语法解析 | 0 错误 |
 | x64 AOT 审计 | profile 27 / schema 24，通过 |
@@ -78,9 +78,9 @@ Debug 生成的 `FileWidgetSettingsSection.g.cs` 确认：
 最终隔离 AOT 审计用时 209,155 毫秒，源码指纹前后一致；产生 39 个发布文件，共
 84,994,765 字节，以及 3 个分离 PDB，共 181,358,592 字节。三个本地产物均为 x64 PE：
 
-- `DeskBox.exe`：39,355,904 字节；
-- `DeskBox.Updater.exe`：2,020,352 字节；
-- `deskbox_native.dll`：146,944 字节。
+- `DeskCue.exe`：39,355,904 字节；
+- `DeskCue.Updater.exe`：2,020,352 字节；
+- `deskcue_native.dll`：146,944 字节。
 
 Rust DLL 保持 ABI 2、能力掩码 255、9 个必需导出，staging/publish SHA-256 一致。
 

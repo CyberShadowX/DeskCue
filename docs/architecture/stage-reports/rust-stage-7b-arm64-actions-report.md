@@ -1,4 +1,4 @@
-# DeskBox Rust / Native AOT 阶段 7B ARM64 GitHub Actions 运行报告
+# DeskCue Rust / Native AOT 阶段 7B ARM64 GitHub Actions 运行报告
 
 - 日期：2026-08-23
 - 范围：原生 ARM64 Windows 托管机、两个 Rust DLL 的运行时 ABI、SearchCore 产品绑定、静态 CRT 最终配置
@@ -17,18 +17,18 @@ Rust host 均实际运行在 ARM64，不是 x64 主机上的交叉编译，也�
 
 两次隔离分支运行分别完成基线和最终生产配置验证。首轮证明动态 CRT 构建可在 ARM64 进程中加载；
 第二轮把生产默认切换为静态 CRT，并要求运行门禁拒绝任何残留 `VCRUNTIME140.dll` 导入。两个 Rust
-模块均保持冻结 ABI：`deskbox_native.dll` 为 ABI 2、能力 511、10 个导出，
-`deskbox_search_core.dll` 为 ABI 3、14 个导出，machine 均为 `0xAA64`。
+模块均保持冻结 ABI：`deskcue_native.dll` 为 ABI 2、能力 511、10 个导出，
+`deskcue_search_core.dll` 为 ABI 3、14 个导出，machine 均为 `0xAA64`。
 
 SearchCore 的 ARM64 测试实际创建索引、加入 Unicode 路径、seal 并查询结果，同时覆盖产品加载器与
 原生后端测试。最终 Direct ARM64 构建因此与 Direct x64 一样默认定义
-`DESKBOX_SEARCH_CORE_DEFAULT`；已经保存的用户设置继续优先，Store 构建仍使用 managed 后端。
+`DESKCUE_SEARCH_CORE_DEFAULT`；已经保存的用户设置继续优先，Store 构建仍使用 managed 后端。
 
 ## 2. 工作区与远端隔离
 
 开始前创建的本地快照：
 
-- `D:\project\wingezi-backups\DeskBox-stage7a-before-7b-actions-20260823T132349Z.zip`
+- `D:\project\wingezi-backups\DeskCue-stage7a-before-7b-actions-20260823T132349Z.zip`
 - 文件数：40,258
 - 大小：951,711,046 bytes
 - SHA-256：`23B8C76DE91B4EB7CBD0B95600346B15A0997D471C9B26E93F423F3DF94A56AA`
@@ -75,7 +75,7 @@ x64-only 判断拒绝。该限制已改为只接受 x64 或 ARM64，并继续拒
 | --- | --- | --- |
 | 分支 | `codex/stage7b-arm64-actions` | `codex/stage7b-arm64-actions` |
 | commit | `908bab38c4d8eb64a154f6e7dfe1c0d7955ba176` | `0b3b67a26d4795c840ba8db1fa06d8d9f45592bd` |
-| run | [32644378767](https://github.com/Tianyu199509/DeskBox/actions/runs/32644378767) | [32645299871](https://github.com/Tianyu199509/DeskBox/actions/runs/32645299871) |
+| run | [32644378767](https://github.com/CyberShadowX/DeskCue/actions/runs/32644378767) | [32645299871](https://github.com/CyberShadowX/DeskCue/actions/runs/32645299871) |
 | runner | `win11-vs2026-arm64` | `win11-vs2026-arm64` |
 | OS / process | ARM64 / ARM64 | ARM64 / ARM64 |
 | .NET | 10.0.303 | 10.0.303 |
@@ -114,7 +114,7 @@ x64-only 判断拒绝。该限制已改为只接受 x64 或 ARM64，并继续拒
 
 仍未由 GitHub 托管 runner 关闭：
 
-- ARM64 Native AOT DeskBox 的交互式窗口、托盘、正常退出和系统 UI；
+- ARM64 Native AOT DeskCue 的交互式窗口、托盘、正常退出和系统 UI；
 - 文件/应用结果的真人筛选与名称、大小、日期、类型双向排序；
 - watcher、Explorer、通知、热键等真实用户输入或外部应用交互；
 - 11 个 Widget 全显示且视觉不变时的 ARM64 整进程多轮内存；

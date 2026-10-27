@@ -1,4 +1,4 @@
-# DeskBox 回收站精确恢复 Rust 原生边界与 ABI v1
+# DeskCue 回收站精确恢复 Rust 原生边界与 ABI v1
 
 - 日期：2026-08-22
 - 阶段：5B-4C1B1
@@ -45,18 +45,18 @@ Rust 打开 Shell namespace CSIDL 10，完整枚举回收站项目。名称通�
 
 - 模块 ABI：`2`；
 - 结构版本：`1`；
-- 能力位：`DESKBOX_NATIVE_CAPABILITY_RECYCLE_BIN_V1 = 1 << 8`；
+- 能力位：`DESKCUE_NATIVE_CAPABILITY_RECYCLE_BIN_V1 = 1 << 8`；
 - 完整能力掩码：`511`；
-- 新导出：`deskbox_recycle_bin_v1`；
+- 新导出：`deskcue_recycle_bin_v1`；
 - 当前发布必需导出：10 个。
 
 ```c
-uint32_t deskbox_recycle_bin_v1(
-    const DeskBoxRecycleBinRequestV1* request,
-    DeskBoxRecycleBinResultV1* result);
+uint32_t deskcue_recycle_bin_v1(
+    const DeskCueRecycleBinRequestV1* request,
+    DeskCueRecycleBinResultV1* result);
 ```
 
-托管加载器固定从 `AppContext.BaseDirectory/deskbox_native.dll` 获取现有受审计模块，先校验 ABI 和能力位，再动态解析操作导出。Native AOT 路径失败时不回退到传统 C# COM。
+托管加载器固定从 `AppContext.BaseDirectory/deskcue_native.dll` 获取现有受审计模块，先校验 ABI 和能力位，再动态解析操作导出。Native AOT 路径失败时不回退到传统 C# COM。
 
 ## 5. 输入与托管门禁
 

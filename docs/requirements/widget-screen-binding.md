@@ -27,7 +27,7 @@
 
 ## R1. 概念与数据模型
 
-镜像 Windows 的心智：Windows 里选中一块屏点"设为主显示器"；DeskBox 里选中一块屏点"设为格子主屏幕"。
+镜像 Windows 的心智：Windows 里选中一块屏点"设为主显示器"；DeskCue 里选中一块屏点"设为格子主屏幕"。
 
 ```text
 WidgetConfig 新增：

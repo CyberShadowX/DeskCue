@@ -1,6 +1,6 @@
 ---
-title: "DeskBox 自动叠放与 QuickLook：少一点桌面噪音，更快确认文件"
-description: "介绍 DeskBox 文件自动叠放的类型、日期和自定义扩展名规则、优先级、未匹配文件、叠放操作以及 QuickLook 空格预览。"
+title: "DeskCue 自动叠放与 QuickLook：少一点桌面噪音，更快确认文件"
+description: "介绍 DeskCue 文件自动叠放的类型、日期和自定义扩展名规则、优先级、未匹配文件、叠放操作以及 QuickLook 空格预览。"
 keywords:
   - Windows 文件自动分类
   - 文件自动叠放
@@ -12,7 +12,7 @@ product_scope: "current-worktree"
 updated: "2026-08-03"
 ---
 
-# DeskBox 自动叠放与 QuickLook：少一点桌面噪音，更快确认文件
+# DeskCue 自动叠放与 QuickLook：少一点桌面噪音，更快确认文件
 
 一个文件格子里有十几个图片、多个压缩包和一批项目文件时，问题不一定是目录结构错了，而是所有内容同时铺在眼前，视觉负担太高。
 
@@ -42,7 +42,7 @@ updated: "2026-08-03"
 
 ### 按日期
 
-可以按加入 DeskBox 的时间或修改日期分组。适合持续工作的项目目录，用“今天”“过去 7 天”“更早”等方式查看文件。
+可以按加入 DeskCue 的时间或修改日期分组。适合持续工作的项目目录，用“今天”“过去 7 天”“更早”等方式查看文件。
 
 ### 按自定义格式
 
@@ -102,14 +102,14 @@ updated: "2026-08-03"
 
 ## QuickLook 空格预览
 
-DeskBox 对 QuickLook 采用被动兼容方式：
+DeskCue 对 QuickLook 采用被动兼容方式：
 
 1. Windows 已安装 QuickLook。
 2. QuickLook 进程正在运行。
-3. 在 DeskBox 文件格子或搜索结果中选中真实文件。
+3. 在 DeskCue 文件格子或搜索结果中选中真实文件。
 4. 按 `Space` 预览，再按一次关闭。
 
-DeskBox 不会自动安装或启动 QuickLook，也不会把它作为 DeskBox 的必需依赖。没有 QuickLook 时，文件格子和搜索功能仍然可用。
+DeskCue 不会自动安装或启动 QuickLook，也不会把它作为 DeskCue 的必需依赖。没有 QuickLook 时，文件格子和搜索功能仍然可用。
 
 > [动图占位：在叠放中展开图片组，选中一张图片按 Space 打开 QuickLook，再切换到另一个文件]
 
@@ -140,7 +140,7 @@ DeskBox 不会自动安装或启动 QuickLook，也不会把它作为 DeskBox �
 
 ### 自动叠放会把文件归档到不同文件夹吗？
 
-不会。它只改变 DeskBox 文件格子的显示方式。
+不会。它只改变 DeskCue 文件格子的显示方式。
 
 ### 为什么自定义规则显示 0 个文件？
 
@@ -152,7 +152,7 @@ DeskBox 不会自动安装或启动 QuickLook，也不会把它作为 DeskBox �
 
 ### QuickLook 没有反应怎么办？
 
-确认 QuickLook 已安装、进程正在运行，并且选中的是真实存在的文件或目录。DeskBox 不会替你自动启动 QuickLook。
+确认 QuickLook 已安装、进程正在运行，并且选中的是真实存在的文件或目录。DeskCue 不会替你自动启动 QuickLook。
 
 ## 相关文章
 

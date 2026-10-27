@@ -1,12 +1,49 @@
-# DeskBox development workflow
+# DeskCue development rules
 
-- After changing application code, first stop any running `DeskBox.exe` whose executable path is under this repository, then build the affected project, and start a fresh instance from the current Debug build unless the user explicitly asks not to restart it. Stopping before the build avoids locking the output executable. A running instance can also make the build silently skip writing its output while still reporting zero errors, so a successful build is only proven by the canonical `DeskBox.dll` write time being newer than the build start (the exe host is a fixed stub); the one-shot gate lives at `C:\Users\simon\.agents\skills\deskbox-dev\scripts\dev-restart.ps1`. An installed copy under `C:\Program Files\DeskBox` holds the single-instance lock and makes the repo Debug exe exit silently — stop it by executable path, possibly twice.
-- The canonical local development executable is `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`.
-- After starting DeskBox, verify that exactly the intended repository build is running and report the executable path.
-- Do not launch DeskBox from `Output`, `artifacts`, `.artifacts`, or `src/DeskBox/AppPackages` unless the user explicitly requests testing a packaged or published build.
-- Preserve unrelated user changes and release artifacts. Ask before deleting material output directories or installer packages unless the user explicitly authorizes their removal.
-- DeskBox is a packaged Windows application. Do not first run its tests with the default `AnyCPU` platform: MSIX packaging rejects a processor-neutral app-host executable. Run the test suite directly with `dotnet test .\tests\DeskBox.Tests\DeskBox.Tests.csproj --no-restore --verbosity:minimal -p:Platform=x64` (add `-p:RuntimeIdentifier=win-x64` when using architecture-specific restored assets). A test run only counts as green when the passed count equals the total count — an aborted run also prints `失败: 0`.
-- For Release publishing, always specify a matching platform and runtime identifier from the start: `-p:Platform=x64 -p:RuntimeIdentifier=win-x64` for x64, or `-p:Platform=ARM64 -p:RuntimeIdentifier=win-arm64` for ARM64. The shipped direct installers must be fully offline-capable: the retail AOT publish (`scripts/publish-aot-retail.ps1`) sets `SelfContained=true` and `WindowsAppSDKSelfContained=true`, and ISCC is always invoked with `/DDeskBoxNativeAot=1 /DDeskBoxBundledRuntime=1`, so the package carries its private runtime and never downloads anything at install time. Never switch the direct channel to a download-based dependency flow; the download page in `installer/DeskBox.Dependencies.iss` is only compiled in when `DeskBoxBundledRuntime=0` and is not a shipped configuration.
-- The explicit architecture rules above apply to tests and Release publishing. Continue using the canonical non-platform Debug output for the normal local restart workflow.
-- When the root cause you diagnosed calls for a deeper fix than the one you are about to implement (a bolt-on guard around a broken mechanism), stop and present the trade-off — root cause, shallow fix with its debt, root fix with its cost — and let the user decide. Never silently choose the shallow path to save time or tokens; an emergency hotfix is allowed only with an explicit debt record in the handoff.
-- Commits and PRs carry only the user's identity (`Simon <1047078635@qq.com>`). Do not add `Co-Authored-By` trailers, `Generated with` lines, or any assistant/tool attribution to commit messages, PR bodies, or code comments. This is enforced, not advisory: the tracked `.githooks/commit-msg` hook rejects violating messages locally, and the CI `Commit message attribution check` fails the PR. On a fresh clone, activate the hooks once with `git config core.hooksPath .githooks`.
+## Authorized migration (2026-10-27)
+
+The user explicitly approved replacing the former WPF DeskCue with the complete
+DeskBox-based DeskCue fork, including product renaming, upstream synchronization,
+cloud releases, and a local build fallback. This is the one-time migration of
+project-specific rules. The old project and its instructions remain in the local
+archive; the upstream author's machine paths and Git identity are not adopted.
+
+## Controller workflow
+
+- Work under F:\AI\AIProjects. Confirm repository, branch, and status before edits.
+- One Controller owns requirements, integration, verification, and reporting.
+- For new work, discuss and refine scope until the user says exactly
+  `方案确认，开始执行`. The current migration has already received that approval.
+- The approved implementation proceeds without repeated internal-plan approval.
+- Preserve unrelated changes and local user data. Never force-kill DeskCue or the
+  separately installed DeskBox. Use normal application shutdown for owned builds.
+- Implement -> test -> independent review -> fix -> re-review for each task.
+  Critical/Important findings block advancement. Use a fresh final reviewer and
+  fresh main-session verification. Record remaining Minor findings honestly.
+- Source synchronization is only from Tianyu199509/DeskBox; remote writes and
+  releases are only to the user's CyberShadowX/DeskCue repository. Never push
+  upstream. Never upload personal data, private backups, credentials or logs
+  containing personal content. No paid services or signing identities are adopted.
+- Keep original copyright, GPL-3.0-only, third-party notices and explicit upstream
+  attribution. DeskCue is a derived work, not an independent-originality claim.
+- Do not silently remove an upstream capability. Fork-specific changes are limited
+  to branding, separate application identity, delivery, and replacing services
+  controlled by the upstream author with appropriate DeskCue destinations.
+
+## Build and release
+
+- Solution: DeskCue.sln. WinUI3/.NET10/Rust, explicit x64 or ARM64 architecture.
+- SDK/toolchain pins and source provenance are authoritative. Do not run AnyCPU.
+- Local tooling may be placed at F:\AI\AIProjects\.deskcue-tools; use process-only
+  environment changes. No global PATH/toolchain changes are required.
+- Main build/release entry: tools/Publish-DeskCue.ps1; shared implementation under
+  deskcue/. Cloud and local builds use the same source selection, transformation,
+  version, tests and package generation. No bare publish shortcut for retail.
+- Full Native AOT/offline runtime packaging replaces the former WPF single-file
+  contract. A complete runtime directory and an installer are expected.
+- An installer/source-sync candidate is not a successful update until verified.
+  Hash/download/build failures preserve the current installed application.
+- Do not run installer auto-organization, move desktop files, enable startup,
+  notifications or other user/system actions just to obtain smoke evidence.
+- Record verified results, source/package hashes, review verdicts and limits in
+  docs/HANDOFF.md. Never upgrade an unexecuted/manual boundary to automated proof.

@@ -1,4 +1,4 @@
-# DeskBox 全功能性能梳理（2026-09-07）
+# DeskCue 全功能性能梳理（2026-09-07）
 
 > 只读审计，未改任何代码。五个并行方向：动画帧率 / 文件与 Shell 热路径 / 内存 / 后台服务与定时器 / UI 线程与大数据渲染。行号基于当前 main（1.5.0 后）。
 
@@ -57,7 +57,7 @@
 
 ### H1【高】junction 解析 = 全应用最大隐性 CPU/syscall 热点
 `Services/FileService.PathResolution.cs:18-183`：每路径逐段 `File.GetAttributes`，遇 reparse point 再 `ResolveLinkTarget` 递归。**22 处调用点**（枚举、快照、图标、计数、FolderWatcher、搜索枚举等），无缓存（刻意，防 swap-during-drag 读到陈旧物理路径——正确性取舍，保留语义）。
-- **最优解（Rust 值得）**：在现有 `native/deskbox-native` 模块（shortcut.rs / recycle_bin.rs 同款导出模式，ShortcutNativeBackend 加载基建现成）追加 `resolve_traversal_path`：NtOpenFile + FSCTL_GET_REPARSE_POINT 一次调用完成逐段+循环检测，保持"每次真实解析"语义。
+- **最优解（Rust 值得）**：在现有 `native/deskcue-native` 模块（shortcut.rs / recycle_bin.rs 同款导出模式，ShortcutNativeBackend 加载基建现成）追加 `resolve_traversal_path`：NtOpenFile + FSCTL_GET_REPARSE_POINT 一次调用完成逐段+循环检测，保持"每次真实解析"语义。
 - 折中：短 TTL（~5s）解析缓存 + 传输前强制重解析（现有行为），拿 90% 收益。
 
 ### H2【高】目录枚举：每条目 3-8 次冗余文件系统 stat
@@ -68,7 +68,7 @@
 - **修法（C#，不值得 Rust）**：一次 `FindFirstFileW`/`FileSystemEntry` 拿全属性；entry 处理并行化。决定 widget 打开/刷新首帧延迟，随条目数线性放大。
 
 ### H3【中】缩略图/右键菜单代理：每请求一个进程
-`ShellThumbnailProxy.cs:119-140`：每个非媒体缩略图 = 冷启动一个 `DeskBox.ThumbnailProxy.exe`（CreateProcess + COM + 管道），并发上限 2；50 个 PDF 目录 = 50 次进程冷启动。进程外隔离（防第三方 Shell handler DLL 崩溃进主进程）是硬约束，不能放弃。
+`ShellThumbnailProxy.cs:119-140`：每个非媒体缩略图 = 冷启动一个 `DeskCue.ThumbnailProxy.exe`（CreateProcess + COM + 管道），并发上限 2；50 个 PDF 目录 = 50 次进程冷启动。进程外隔离（防第三方 Shell handler DLL 崩溃进主进程）是硬约束，不能放弃。
 - **修法**：代理从"每请求一进程"改**常驻 worker 进程**（stdin 队列/named pipe 批量请求）——现有 native 组件的协议升级，非重写。或先走进程内 `SHGetImageList`/IThumbnailCache 快路径兜底。
 
 ### H4【中】其他
@@ -185,4 +185,4 @@
 | 9 | H1 junction 解析 Rust 化 | 热路径 | ~1 天量级，进现有 native 模块 |
 | 10 | H3 缩略图代理常驻化 | 热路径 | 协议升级，缩略图墙吞吐质变 |
 
-**Rust 总结**：值得做的只有两件——junction 解析器（进 `deskbox-native`，shortcut/recycle_bin 已验证该模式）和缩略图代理常驻 worker 化（改造现有 native 组件）。传输引擎、目录枚举、Everything、FolderWatcher、备份都不值得：IO/IPC-bound，瓶颈在内核或外部服务，C# 批量化即可。
+**Rust 总结**：值得做的只有两件——junction 解析器（进 `deskcue-native`，shortcut/recycle_bin 已验证该模式）和缩略图代理常驻 worker 化（改造现有 native 组件）。传输引擎、目录枚举、Everything、FolderWatcher、备份都不值得：IO/IPC-bound，瓶颈在内核或外部服务，C# 批量化即可。

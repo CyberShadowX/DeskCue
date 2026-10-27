@@ -1,4 +1,4 @@
-# DeskBox Rust 阶段 7C0 CRT 与分发依赖决策报告
+# DeskCue Rust 阶段 7C0 CRT 与分发依赖决策报告
 
 - 日期：2026-08-23
 - 范围：两个 Rust DLL、x64/ARM64、动态/静态 MSVC CRT、PE 导入、体积、隔离进程内存与产品测试
@@ -11,7 +11,7 @@
 
 ## 1. 决策
 
-`deskbox_native.dll` 与 `deskbox_search_core.dll` 在 x64 和 ARM64 均改为静态链接 MSVC CRT。动态版本
+`deskcue_native.dll` 与 `deskcue_search_core.dll` 在 x64 和 ARM64 均改为静态链接 MSVC CRT。动态版本
 在两种架构的两个 DLL 中都直接导入 `VCRUNTIME140.dll`；静态版本均不再导入 `VCRUNTIME140.dll`、
 `MSVCP*.dll` 或其他 VC runtime 模块。ABI、能力、导出和产品行为没有变化。
 
@@ -36,7 +36,7 @@
 
 ### 2.2 ARM64 原生运行
 
-证据：GitHub Actions [32644378767](https://github.com/Tianyu199509/DeskBox/actions/runs/32644378767)
+证据：GitHub Actions [32644378767](https://github.com/CyberShadowX/DeskCue/actions/runs/32644378767)
 下载产物中的 `rust-crt-stage7c0-evidence.json`。
 
 | 指标 | Dynamic | Static | Static - Dynamic |
@@ -48,7 +48,7 @@
 | 静态方案产品测试 | 不适用 | 11/11 | 通过 |
 
 首轮 ARM64 Stage 7B 动态构建也通过 11/11；最终生产配置又在
-[32645299871](https://github.com/Tianyu199509/DeskBox/actions/runs/32645299871) 中显式要求静态 CRT、无 VC
+[32645299871](https://github.com/CyberShadowX/DeskCue/actions/runs/32645299871) 中显式要求静态 CRT、无 VC
 runtime 导入并重复运行同一 ARM64 产品门禁。
 
 ## 3. 内存数据解释
@@ -56,17 +56,17 @@ runtime 导入并重复运行同一 ARM64 产品门禁。
 A/B 脚本在独立测试宿主中只测“加载两个 DLL 并调用 ABI”前后的 Private Bytes 与 Working Set。x64
 三轮样本出现负 Private delta，ARM64 首轮动态样本也出现明显负异常值，说明进程启动、GC、页面回收和
 共享页会覆盖不足 1 MiB 的模块差异。该数据适合发现数量级回归，不适合把几十 KiB 的中位数差解释成
-DeskBox 常驻内存收益或损失。
+DeskCue 常驻内存收益或损失。
 
 可稳定比较的是 PE 数据：静态版本只增加约 0.2 MiB image，两 DLL 仍按需分页；SearchCore 在 11 个
 Widget 全显示场景中已经证明的整进程 Private Bytes -12.85%、Working Set -9.36% 收益不由 CRT 选择
-产生，也不会被这一级别的模块增量抵消。后续整机内存继续以真实 DeskBox 进程和同一数据集多轮中位数
+产生，也不会被这一级别的模块增量抵消。后续整机内存继续以真实 DeskCue 进程和同一数据集多轮中位数
 为准，不使用本次微基准替代。
 
 ## 4. 实现门禁
 
 - 两个 Rust build script 的默认 `CrtLinkage` 为 `Static`；
-- `DeskBox.csproj` 与测试项目的 `DeskBoxRustCrtLinkage` 默认值为 `Static`；
+- `DeskCue.csproj` 与测试项目的 `DeskCueRustCrtLinkage` 默认值为 `Static`；
 - dynamic/static 使用不同 intermediate 与 Cargo target 目录，避免增量产物串用；
 - 构建通过 `CARGO_ENCODED_RUSTFLAGS` 显式设置 `+crt-static` 或 `-crt-static`，完成后恢复调用方环境；
 - PE parser 读取 import descriptor 和 `SizeOfImage`，静态模式发现任何 VC runtime 导入立即失败；
@@ -79,7 +79,7 @@ Widget 全显示场景中已经证明的整进程 Private Bytes -12.85%、Workin
 
 - Direct x64/ARM64 安装器不需要因为 Rust 新增 `vc_redist` 检测、下载或安装；
 - Store 包不需要因为 Rust 新增 `Microsoft.VCLibs` 依赖；
-- Windows App SDK framework/runtime 仍按 DeskBox 既有 framework-dependent 策略单独处理；
+- Windows App SDK framework/runtime 仍按 DeskCue 既有 framework-dependent 策略单独处理；
 - .NET Native AOT、Windows App Runtime、签名、证书和系统 API 兼容性仍需 7C1 安装包验证；
 - 不能把“Rust 无 VC runtime 导入”扩大解释为“整个安装包没有任何框架依赖”。
 

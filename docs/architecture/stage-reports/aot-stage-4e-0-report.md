@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 4E-0 完成报告
+# DeskCue Native AOT 阶段 4E-0 完成报告
 
 - 日期：2026-08-21
 - 范围：搜索桌面组件历史条目的 6 条 WMC1506
@@ -45,7 +45,7 @@ AOT 审计升级为 profile 23 / schema 20，并增加以下门禁：
 | 4E-0 + 4D-5 联合契约 | 12/12 |
 | AOT 发布契约扩大验证 | 26/26 |
 | 4E-0 + 4D-5 + AOT 发布契约最终复验 | 32/32 |
-| DeskBox x64 全量测试 | 2073/2073 |
+| DeskCue x64 全量测试 | 2073/2073 |
 | `git diff --check` | 通过，仅有共享工作区既有换行提示 |
 | x64 AOT 审计 | profile 23 / schema 20，通过 |
 

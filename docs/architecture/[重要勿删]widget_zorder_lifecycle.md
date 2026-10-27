@@ -1,4 +1,4 @@
-# DeskBox 格子层级（Z-Order）生命周期与排查手册
+# DeskCue 格子层级（Z-Order）生命周期与排查手册
 
 > 文档性质：技术实现手册 + 故障复盘指南。
 > 适用场景：F7 / 托盘唤起格子后出现的层级类问题（压屏、不回落、闪烁、不收起等）。
@@ -28,7 +28,7 @@
 | 回落判定 | 物理落点 |
 |---|---|
 | 外部应用获得前台 | 整组格子紧随该前台窗口之后，保留格子内部顺序 |
-| 前台是 DeskBox 自身 | 保持当前全局层级，只整理格子内部顺序 |
+| 前台是 DeskCue 自身 | 保持当前全局层级，只整理格子内部顺序 |
 | 前台缺失或为桌面壳 | 回到桌面层 / 普通层级带底部 |
 | DesktopPinned 模式 | 回到 Explorer 桌面 Owner 内，仅做桌面兄弟排序 |
 
@@ -36,7 +36,7 @@
 
 | 宿主类 | 文件 | 用于 |
 |---|---|---|
-| `ContentWidgetWindow`（继承 `WidgetWindowBase`） | `src/DeskBox/Views/ContentWidgetWindow.*.cs` | 文件、Todo、音乐、天气、搜索、随记、监控等全部格子 |
+| `ContentWidgetWindow`（继承 `WidgetWindowBase`） | `src/DeskCue/Views/ContentWidgetWindow.*.cs` | 文件、Todo、音乐、天气、搜索、随记、监控等全部格子 |
 
 ---
 
@@ -51,7 +51,7 @@ SetWindowPos(hwnd, HWND_NOTOPMOST, ..., SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
 先设为 TOPMOST 再立刻取消，窗口会停留在**普通（非 TopMost）层级带的最顶部**。效果上"浮在所有普通窗口之上"，但不占用 TopMost 属性——这样其他窗口被激活时可以正常盖过它。
 
-实现位置：`src/DeskBox/Helpers/Win32Helper.cs` 的 `BringWindowTemporarilyToFront()`（约 556 行）。
+实现位置：`src/DeskCue/Helpers/Win32Helper.cs` 的 `BringWindowTemporarilyToFront()`（约 556 行）。
 
 > **推论**：格子压屏问题几乎都不是"置顶没清除"，而是"**回落（restore）没有被触发**"或"**回落了但没有视觉效果**"。排查时不要先找谁设了 TopMost，先找回落信号为什么没响。
 
@@ -65,7 +65,7 @@ SetWindowPos(hwnd, HWND_NOTOPMOST, ..., SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
 ### 3.1 热键入口
 
-`src/DeskBox/Services/GlobalHotkeyService.cs`
+`src/DeskCue/Services/GlobalHotkeyService.cs`
 
 - 主路径：`RegisterHotKey` + 窗口子类化（`SetWindowSubclass`）接 `WM_HOTKEY`。
 - 兜底路径：`WH_KEYBOARD_LL` 低级键盘钩子（`KeyboardHookProc`）。**当前台窗口是提权进程时，UIPI 会拦截 WM_HOTKEY 投递，只有钩子路径能收到 F7**——这就是"热键时而灵时而不灵"的来源，不是注册失败。
@@ -73,20 +73,20 @@ SetWindowPos(hwnd, HWND_NOTOPMOST, ..., SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
 ### 3.2 Toggle 决策（三态）
 
-`src/DeskBox/Services/WidgetManager.cs` 的 `ShouldHideWidgetsForTrayToggle()`（231 行）：
+`src/DeskCue/Services/WidgetManager.cs` 的 `ShouldHideWidgetsForTrayToggle()`（231 行）：
 
 | 条件 | 决策 | 日志标记 |
 |---|---|---|
 | `_widgetsRaisedFromTray == true`（唤起态中） | **hide** | `reason=raised-session` |
 | 无可见格子 | **raise** | `reason=no-visible-windows` |
-| 前台是 DeskBox / 桌面壳（Progman/WorkerW）/ 任务栏 | **hide** | `reason=foreground-local` |
+| 前台是 DeskCue / 桌面壳（Progman/WorkerW）/ 任务栏 | **hide** | `reason=foreground-local` |
 | 格子可见但被埋 + 前台是外部窗口 | **raise** | `reason=visible-widgets-behind` |
 
 > 注意最后一行是**有意设计**（2026-07-24 用户确认保留）：F7 可以把被其他窗口埋住的格子重新捞上来。所以"唤起 → 点外部回落 → 再按 F7"是重新浮起而不是隐藏，属预期行为。
 
 ### 3.3 唤起执行序列
 
-`src/DeskBox/Services/WidgetManager.TrayAnimation.cs` 的 `RaiseWidgetsFromTrayAsync`（约 40-130 行），顺序固定、相互依赖，**调整顺序前务必读完整个函数**：
+`src/DeskCue/Services/WidgetManager.TrayAnimation.cs` 的 `RaiseWidgetsFromTrayAsync`（约 40-130 行），顺序固定、相互依赖，**调整顺序前务必读完整个函数**：
 
 1. `_isTogglingWidgetsDesktopLayer = true`（finally 复位，防重入）。
 2. 逐格子 `PrepareWidgetForBatchShowAsync`（异步，可能首次创建窗口）。
@@ -96,7 +96,7 @@ SetWindowPos(hwnd, HWND_NOTOPMOST, ..., SWP_NOACTIVATE | SWP_SHOWWINDOW);
 6. `QueueTrayRaiseTopMostConfirmation` → `BringGroupTemporarilyToFront`（瞬态置顶再清除，见 §2）。
 7. **`StartTrayLayerRestoreMonitor`：启动 200ms 恢复监视器 + 50ms 鼠标边沿采样器（见 §4）。**
 8. `ActivateLastRaisedWindow` → 两个宿主类的 `ActivateRaisedFromTrayBatch()`：`base.Activate()` + `SetForegroundWindow(hwnd)`。
-   - **`SetForegroundWindow` 经常失败**（Windows 前台锁：只有"收到最后一次输入事件"的进程才能抢前台；热键经异步队列 + 窗口准备耗时后，输入事件归属可能已不是 DeskBox；前台是提权进程时 UIPI 也会拒绝）。**返回值必须检查并记日志**（2026-07-24 起已加，日志前缀 `[ZOrder] ... SetForegroundWindow FAILED`）。失败是合法的，系统必须能在"DeskBox 从未获得前台"的情况下正确回落。
+   - **`SetForegroundWindow` 经常失败**（Windows 前台锁：只有"收到最后一次输入事件"的进程才能抢前台；热键经异步队列 + 窗口准备耗时后，输入事件归属可能已不是 DeskCue；前台是提权进程时 UIPI 也会拒绝）。**返回值必须检查并记日志**（2026-07-24 起已加，日志前缀 `[ZOrder] ... SetForegroundWindow FAILED`）。失败是合法的，系统必须能在"DeskCue 从未获得前台"的情况下正确回落。
 
 ---
 
@@ -104,20 +104,20 @@ SetWindowPos(hwnd, HWND_NOTOPMOST, ..., SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
 **唤起态期间，单窗口的所有自救路径都被显式禁用**（`WidgetWindowBase.Interaction.cs` 与 `ContentWidgetWindow.WindowInteraction.cs` 的 Deactivated/安全定时器路径都检查 `WidgetsRaisedFromTray: true` 后跳过）。唯一生效的回落路径是管理器侧的 **200ms 恢复监视器**：
 
-`src/DeskBox/Services/WidgetManager.ZOrder.cs` 的 `TrayLayerRestoreTimer_Tick` → `TryRestoreRaisedWidgetsAfterInteraction`（约 93-152 行）。
+`src/DeskCue/Services/WidgetManager.ZOrder.cs` 的 `TrayLayerRestoreTimer_Tick` → `TryRestoreRaisedWidgetsAfterInteraction`（约 93-152 行）。
 
 ### 4.1 监视器的四道闸（任一不满足则跳过本 tick）
 
 1. `_isTogglingWidgetsDesktopLayer`：toggle 进行中。
 2. `IsWidgetInteractionActive`：交互深度 > 0（拖拽/重命名/菜单/对话框）。**泄漏会永久堵死回落，见 §6 坑 #4。**
 3. `_suppressTrayLayerRestoreUntilUtc`：唤起后 160ms 抑制窗。
-4. 前台判断：前台是 DeskBox → 保持唤起并标记 `_hasDeskBoxForegroundSinceRaise`；前台是任务栏 → 保持唤起。
+4. 前台判断：前台是 DeskCue → 保持唤起并标记 `_hasDeskCueForegroundSinceRaise`；前台是任务栏 → 保持唤起。
 
 ### 4.2 触发回落的三条信号
 
 | 信号 | 可靠性 | 说明 |
 |---|---|---|
-| **DeskBox 曾拿前台，后离开** | 高 | 激活成功时的主路径。点任何外部窗口即触发。 |
+| **DeskCue 曾拿前台，后离开** | 高 | 激活成功时的主路径。点任何外部窗口即触发。 |
 | **前台窗口发生变化**（≠ `_foregroundAtRaiseTime`） | 高 | 激活失败时的主路径。要求用户点了**不同的**窗口。 |
 | **鼠标按下边沿**（50ms 采样器） | 高（2026-07-24 修复后） | 激活失败 + 用户点回**同一个**已激活窗口时的兜底。 |
 
@@ -126,7 +126,7 @@ SetWindowPos(hwnd, HWND_NOTOPMOST, ..., SWP_NOACTIVATE | SWP_SHOWWINDOW);
 `WidgetManager.ZOrder.cs` 的 `TrayMouseSamplerTimer_Tick`：
 
 - 50ms 轮询 `Win32Helper.IsAnyMouseButtonDown()`（`GetAsyncKeyState` **高位**，全局物理状态，与目标进程是否提权无关）。
-- 检测 up→down 跳变，**在按下瞬间**判断光标不在 DeskBox/任务栏上 → 置 `_outsideMousePressObserved = true`。
+- 检测 up→down 跳变，**在按下瞬间**判断光标不在 DeskCue/任务栏上 → 置 `_outsideMousePressObserved = true`。
 - 200ms 监视器消费该标志触发回落。
 - 启动时预充当前按键状态（`_lastMouseButtonsDown = IsAnyMouseButtonDown()`），防止用户按住触发热键的那次点击被误判为新按下。
 
@@ -136,7 +136,7 @@ SetWindowPos(hwnd, HWND_NOTOPMOST, ..., SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
 `WidgetManager.RestoreRaisedWidgetsToDesktopLayer` 先让各宿主执行 `ForceRestoreDesktopLayerFromManager()`，清理临时置顶、交互计时器及逻辑状态；随后调用 `WidgetLayerService.RestoreGroupPreservingForeground()`，把所有可见格子作为一个连续 Z-order 组恢复。
 
-组恢复只读取一次当前前台根窗口，并按 `RelativeLayerRestorePolicy` 选择落点：外部页面对应 `BehindForeground`，DeskBox 前台对应 `PreservePeerOrder`，桌面壳或无有效前台对应 `DesktopBottom`。外部页面分支以该页面为固定边界，使用 `BeginDeferWindowPos` / `DeferWindowPos` 一次排列整个格子组；失败时再以相同边界逐格子 `SetWindowPos` 兜底。
+组恢复只读取一次当前前台根窗口，并按 `RelativeLayerRestorePolicy` 选择落点：外部页面对应 `BehindForeground`，DeskCue 前台对应 `PreservePeerOrder`，桌面壳或无有效前台对应 `DesktopBottom`。外部页面分支以该页面为固定边界，使用 `BeginDeferWindowPos` / `DeferWindowPos` 一次排列整个格子组；失败时再以相同边界逐格子 `SetWindowPos` 兜底。
 
 `NormalizeIdleWidgetZOrder()` 只能整理格子之间的顺序。它以当前最高格子的上一窗口作为全局边界，不得调用 `MoveToDesktopBottom()`、`SetWindowToBottom()` 或重新绑定 Owner。否则前面刚建立的“前台页面 > 格子组 > 更早页面”会在恢复末尾或 120ms 延迟回调中被覆盖成“所有页面 > 格子组”。
 
@@ -148,18 +148,18 @@ SetWindowPos(hwnd, HWND_NOTOPMOST, ..., SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
 | 文件 | 职责 |
 |---|---|
-| `src/DeskBox/Services/GlobalHotkeyService.cs` | F7 注册（RegisterHotKey + WH_KEYBOARD_LL 双路径）、去重、触发 |
-| `src/DeskBox/App.Tray.cs` | `ToggleTrayWidgetsAsync`（551 行）：toggle 总入口 |
-| `src/DeskBox/Services/WidgetManager.cs` | `ShouldHideWidgetsForTrayToggle`（231）、`RestoreRaisedWidgetsToDesktopLayer`（1141）、`IsWidgetInteractionActive`（112） |
-| `src/DeskBox/Services/WidgetManager.TrayAnimation.cs` | `RaiseWidgetsFromTrayAsync` 唤起序列、`_foregroundAtRaiseTime`、抑制窗、`ActivateLastRaisedWindow` |
-| `src/DeskBox/Services/WidgetManager.ZOrder.cs` | **恢复监视器（200ms）+ 鼠标采样器（50ms）+ 交互泄漏看门狗**，前台/任务栏/桌面壳判定 |
-| `src/DeskBox/Services/WidgetLayerService.cs` | Z-order 原语：`BringWindowTemporarilyToFront`、`BringGroupTemporarilyToFront`、`RestoreGroupPreservingForeground`、相对前台组排序、DesktopPinned attach/detach |
-| `src/DeskBox/Services/WidgetSessionManager.cs` | 会话状态机 + 交互深度计数（`BeginInteraction`/`EndInteraction`/`ForceResetInteractions`） |
-| `src/DeskBox/Helpers/Win32Helper.cs` | `BringWindowTemporarilyToFront`（556）、`SetWindowTopMost`（575）、`ClearWindowTopMost`（590）、`IsAnyMouseButtonDown`（约 344）、`GetAsyncKeyState` 封装 |
-| `src/DeskBox/Views/WidgetWindowBase.Interaction.cs` | 基类版本同上 + `ShouldDeferDesktopLayerRestore`（94） |
-| `src/DeskBox/Views/WidgetWindowBase.Collapse.cs` | `RaiseForExpandedState`（1811）：胶囊展开时的层级处理（含"物理浮起但状态已回落"的兼容分支） |
-| `src/DeskBox/Views/ContentWidgetWindow.xaml.cs` | 全部格子（含随记、监控）的统一宿主；实现唤起/回落/激活和内容切换 |
-| `src/DeskBox/App.xaml.cs` | `IsDeskBoxWindow`（562）：按 PID + 已知窗口根判定，**范围宽（本进程所有窗口）** |
+| `src/DeskCue/Services/GlobalHotkeyService.cs` | F7 注册（RegisterHotKey + WH_KEYBOARD_LL 双路径）、去重、触发 |
+| `src/DeskCue/App.Tray.cs` | `ToggleTrayWidgetsAsync`（551 行）：toggle 总入口 |
+| `src/DeskCue/Services/WidgetManager.cs` | `ShouldHideWidgetsForTrayToggle`（231）、`RestoreRaisedWidgetsToDesktopLayer`（1141）、`IsWidgetInteractionActive`（112） |
+| `src/DeskCue/Services/WidgetManager.TrayAnimation.cs` | `RaiseWidgetsFromTrayAsync` 唤起序列、`_foregroundAtRaiseTime`、抑制窗、`ActivateLastRaisedWindow` |
+| `src/DeskCue/Services/WidgetManager.ZOrder.cs` | **恢复监视器（200ms）+ 鼠标采样器（50ms）+ 交互泄漏看门狗**，前台/任务栏/桌面壳判定 |
+| `src/DeskCue/Services/WidgetLayerService.cs` | Z-order 原语：`BringWindowTemporarilyToFront`、`BringGroupTemporarilyToFront`、`RestoreGroupPreservingForeground`、相对前台组排序、DesktopPinned attach/detach |
+| `src/DeskCue/Services/WidgetSessionManager.cs` | 会话状态机 + 交互深度计数（`BeginInteraction`/`EndInteraction`/`ForceResetInteractions`） |
+| `src/DeskCue/Helpers/Win32Helper.cs` | `BringWindowTemporarilyToFront`（556）、`SetWindowTopMost`（575）、`ClearWindowTopMost`（590）、`IsAnyMouseButtonDown`（约 344）、`GetAsyncKeyState` 封装 |
+| `src/DeskCue/Views/WidgetWindowBase.Interaction.cs` | 基类版本同上 + `ShouldDeferDesktopLayerRestore`（94） |
+| `src/DeskCue/Views/WidgetWindowBase.Collapse.cs` | `RaiseForExpandedState`（1811）：胶囊展开时的层级处理（含"物理浮起但状态已回落"的兼容分支） |
+| `src/DeskCue/Views/ContentWidgetWindow.xaml.cs` | 全部格子（含随记、监控）的统一宿主；实现唤起/回落/激活和内容切换 |
+| `src/DeskCue/App.xaml.cs` | `IsDeskCueWindow`（562）：按 PID + 已知窗口根判定，**范围宽（本进程所有窗口）** |
 
 ---
 
@@ -177,13 +177,13 @@ SetWindowPos(hwnd, HWND_NOTOPMOST, ..., SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
 ### 坑 #3：`SetForegroundWindow` 静默失败 —— 必须检查返回值
 - Windows 前台锁（foreground lock）规则：只有"收到最后一次输入事件"的进程等少数情况能抢前台。热键 → 异步队列 → 窗口准备/动画耗时后，输入归属可能已丢失；前台是提权进程时 UIPI 直接拒绝。
-- 失败时格子仍浮起但永远拿不到前台，`_hasDeskBoxForegroundSinceRaise` 永不成立，回落完全依赖"前台变化"或"鼠标边沿"两条信号。
+- 失败时格子仍浮起但永远拿不到前台，`_hasDeskCueForegroundSinceRaise` 永不成立，回落完全依赖"前台变化"或"鼠标边沿"两条信号。
 - 三个 `ActivateRaisedFromTrayBatch` 已实现返回值日志（`[ZOrder] ... SetForegroundWindow FAILED`），复盘先看这条。
 
 ### 坑 #4：`BeginInteractionLayer`/`ReleaseInteractionLayer` 配对泄漏 —— 会永久堵死回落
 - 交互深度计数在 `WidgetSessionManager._interactionDepth`，> 0 时监视器每 tick 跳过。
 - 清零只发生在 `MarkDesktopResting`/`MarkHidden`——而这俩又依赖回落先发生，**泄漏即死锁**。
-- 看门狗 **2026-10-17 起真实存在**（`WidgetManager.ZOrder.cs` 的 `InteractionLeakWatchdog_Tick`，此前文档声称的 v1.3.3 实现从未落地）：交互深度 > 0 持续 10s（固定层模式 20s）且前台既非 DeskBox、非任务栏、也无代理原生菜单回合 → `ForceResetInteractions` 强制清零 + 排一次普通整理。真实交互若前台在 DeskBox/任务栏/原生菜单上则计时器不断重置，不误伤。
+- 看门狗 **2026-10-17 起真实存在**（`WidgetManager.ZOrder.cs` 的 `InteractionLeakWatchdog_Tick`，此前文档声称的 v1.3.3 实现从未落地）：交互深度 > 0 持续 10s（固定层模式 20s）且前台既非 DeskCue、非任务栏、也无代理原生菜单回合 → `ForceResetInteractions` 强制清零 + 排一次普通整理。真实交互若前台在 DeskCue/任务栏/原生菜单上则计时器不断重置，不误伤。
 - **新增任何 Begin 调用点时**：确认所有退出路径（异常、取消、窗口中途隐藏、flyout 轻 dismiss）都有配对 End。
 
 ### 坑 #5：修改一条路径，忘了另一类宿主 / 另一种层级模式
@@ -204,11 +204,11 @@ SetWindowPos(hwnd, HWND_NOTOPMOST, ..., SWP_NOACTIVATE | SWP_SHOWWINDOW);
 - `_suppressTrayLayerRestoreUntilUtc` 目前只有唤起时 +160ms 一处赋值。新增赋值点要克制——它直接推迟回落。
 - `_trayRaiseBatchGeneration` 用于让过期异步回调失效（每次唤起/确认/回落都自增）。写新的延迟回调时记得捕获当前代际并在回调里比对，现行参考实现=`QueueTrayRaiseBandRecheck`（2026-10-17 起，带前台/拖拽/会话守卫的一次性带完整性复检；v1.2.9 已删除的三参延迟确认重载不再是参考）。
 
-### 坑 #8：`IsDeskBoxWindow` 按进程判定，范围很宽
-- 本进程**所有**窗口（搜索弹窗、设置、托盘隐藏窗口）都算 DeskBox 窗口。前台判断时，DeskBox 自家任何窗口拿到前台都会被视为"用户还在用格子"而保持唤起。新增顶级窗口类型时意识到这一点。
+### 坑 #8：`IsDeskCueWindow` 按进程判定，范围很宽
+- 本进程**所有**窗口（搜索弹窗、设置、托盘隐藏窗口）都算 DeskCue 窗口。前台判断时，DeskCue 自家任何窗口拿到前台都会被视为"用户还在用格子"而保持唤起。新增顶级窗口类型时意识到这一点。
 
 ### 坑 #9：raised 会话期间的窗口侧回落请求是"内联挂起"，不是调度
-- 旧版 `RequestRestoreRaisedWidgetsToDesktopLayer`（返回 true、只打日志 "held until=next-toggle"）已于 2026-10-17 删除：这是 v1.2.9 拍板的"raised 会话存活期间窗口自身回落挂起"语义，不是遗忘。现行形态=四个原调用点（`CompleteTitleRename`、flyout Closed、`QueueRestoreDesktopLayerIfForegroundLeavesDeskBox`、`ReleaseInteractionLayer`）内联 `App.Current.WidgetManager is { WidgetsRaisedFromTray: true }` 判定。以为"请求一下就会回落"仍会落空——真正的回落永远走监视器。
+- 旧版 `RequestRestoreRaisedWidgetsToDesktopLayer`（返回 true、只打日志 "held until=next-toggle"）已于 2026-10-17 删除：这是 v1.2.9 拍板的"raised 会话存活期间窗口自身回落挂起"语义，不是遗忘。现行形态=四个原调用点（`CompleteTitleRename`、flyout Closed、`QueueRestoreDesktopLayerIfForegroundLeavesDeskCue`、`ReleaseInteractionLayer`）内联 `App.Current.WidgetManager is { WidgetsRaisedFromTray: true }` 判定。以为"请求一下就会回落"仍会落空——真正的回落永远走监视器。
 
 ---
 
@@ -234,7 +234,7 @@ SetWindowPos(hwnd, HWND_NOTOPMOST, ..., SWP_NOACTIVATE | SWP_SHOWWINDOW);
 [TrayBatch] RaisedState released reason=...         回落触发及依据
         -foreground-changed      前台变化（可靠）
         -outside-click           鼠标边沿采样（50ms 采样器）
-        -deskbox-leave           DeskBox 曾有前台后离开（可靠）
+        -deskcue-leave           DeskCue 曾有前台后离开（可靠）
 [TrayBatch] ToggleDecision=hide|raise reason=...    F7 决策依据
 [ZOrder] ... SetForegroundWindow FAILED             激活失败（坑 #3）
 [ZOrder] Group restore ... disposition=...          整组回落使用的前台锚点和策略
@@ -268,7 +268,7 @@ SetWindowPos(hwnd, HWND_NOTOPMOST, ..., SWP_NOACTIVATE | SWP_SHOWWINDOW);
 | B | `Services/WidgetManager.TrayAnimation.cs` | 删除为旧低位机制预充的 `HasMouseButtonActivity()` 调用 |
 | D 可观测 | 两个宿主的 `ActivateRaisedFromTrayBatch` | 检查 `SetForegroundWindow` 返回值并记日志 |
 | D 看门狗 | `Services/WidgetSessionManager.cs` | 新增 `ForceResetInteractions` |
-| D 看门狗 | `Services/WidgetManager.ZOrder.cs` | `RunInteractionLeakWatchdog`：泄漏 >10s 且无 DeskBox 前台 → 强制清零 |
+| D 看门狗 | `Services/WidgetManager.ZOrder.cs` | `RunInteractionLeakWatchdog`：泄漏 >10s 且无 DeskCue 前台 → 强制清零 |
 | C toggle 语义 | — | **不改**：`visible-widgets-behind → raise` 特性经用户确认保留 |
 
 ---
@@ -280,7 +280,7 @@ SetWindowPos(hwnd, HWND_NOTOPMOST, ..., SWP_NOACTIVATE | SWP_SHOWWINDOW);
 | `Services/WidgetLayerService.cs` | 新增 `RestoreGroupPreservingForeground`；用同一个前台根窗口作为整组边界，并复用批量 peer 排序原语 |
 | `Services/WidgetManager.cs` | F7 回落先统一清理宿主状态，再以单次组操作确定全局 Z-order；取消宿主排队的过期空闲整理 |
 | `Services/WidgetManager.ZOrder.cs` | `NormalizeIdleWidgetZOrder` 改为 peer-only，不再对每个格子调用 `MoveToDesktopBottom` |
-| `tests/DeskBox.Tests/WidgetZOrderRestoreContractTests.cs` | 锁定“外部页面用组恢复”和“空闲整理不得绝对置底”两项契约 |
+| `tests/DeskCue.Tests/WidgetZOrderRestoreContractTests.cs` | 锁定“外部页面用组恢复”和“空闲整理不得绝对置底”两项契约 |
 
 预期层级示例：初始页面为 `C > B > A`，F7 后为 `格子组 > C > B > A`；用户点击 B 后必须变为 `B > 格子组 > C > A`，后续空闲排序只能改变格子组内部顺序。
 
@@ -295,7 +295,7 @@ SetWindowPos(hwnd, HWND_NOTOPMOST, ..., SWP_NOACTIVATE | SWP_SHOWWINDOW);
 | ① | `WidgetManager.ZOrder.cs`（NormalizeIdleWidgetZOrder） | 新增 band 完整性检查（非 cohesion、非 pinned、非拖拽时，`IsForeignWindowAboveRaisedPeers` 判同伴间穿插外来窗=撕裂）→ 用 `RestoreGroupPreservingForeground` 相对回落治愈；cohesion-exit 后追加一次普通扫描跟进 |
 | ② | `WidgetManager.ZOrder.cs` / `WidgetWindowBase.Collapse.cs` / `ContentWidgetWindow.xaml.cs` | 展开租约双态收口：新 `TearDownExpandedWidgetLayer`（代际守卫、无回落副作用）供 `EndExpandedWidgetLayerLease` 回缴；显示路径 `ReconcileStaleExpandedWidgetLayerLease` 清"隐藏时展开→再显示"的窗口侧残留 |
 | ③ | `ContentWidgetWindow.WindowInteraction.cs` | 动态模式原生激活（身体点击）在 Activated 非 Deactivated 分支翻 `IsAtDesktopLayer=false`，堵"回落漏斗④"（守卫 `!IsAtDesktopLayer` 永不通过、悬浮无人接管） |
-| ④ | `WidgetManager.TrayAnimation.cs` | `QueueTrayRaiseBandRecheck`：唤起确认后 80ms 一次性带完整性复检（守卫=代际+会话+DeskBox 前台+拖拽门+shell 豁免），撕裂则整组重抬——v1.2.9 删除的多次确认的安全复活形态 |
+| ④ | `WidgetManager.TrayAnimation.cs` | `QueueTrayRaiseBandRecheck`：唤起确认后 80ms 一次性带完整性复检（守卫=代际+会话+DeskCue 前台+拖拽门+shell 豁免），撕裂则整组重抬——v1.2.9 删除的多次确认的安全复活形态 |
 | ⑤ | `WidgetManager.ZOrder.cs` / `WidgetSessionManager.cs` 等 | 交互泄漏看门狗首次真实实现（见坑 #4）；`RequestRestoreRaisedWidgetsToDesktopLayer` 伪回落删除、四调用点内联会话判定；真死代码清理（`QueueRequestedLayerRestoreCheck`/`ForceRestoreRaisedWidgetsToDesktopLayer`/`BringAllVisibleWidgetsToFront`/三参 `QueueTrayRaiseTopMostConfirmation`）；`IsPhysicallyAtDesktopBottom` 归一到统一分类器语义（跳过最小化/cloaked 窗） |
 
 契约测试同步：`WidgetExpandedLayerTeardownContractTests`（新）、`WidgetZOrderRestoreContractTests`（扩充：原生激活翻转、内联挂起、延迟复检守卫、band 修复相对出口、看门狗豁免）。日志新标记：`[ZOrder] Idle band torn`、`[ZOrder] Raised band split repaired by delayed recheck`、`[ZOrder] Expanded lease torn down`（verbose）、`[ZOrder] Stale expanded lease residue cleared`（verbose）、`[TrayBatch] Interaction watchdog reset`。
@@ -315,9 +315,9 @@ SetWindowPos(hwnd, HWND_NOTOPMOST, ..., SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
 | # | 文件 | 变更 |
 |---|---|---|
-| T1 | `WidgetManager.ZOrder.cs`（sweep） | heal 前预判前台归属：DeskBox 持前台（`IsDeskBoxForegroundWindow`）→ 一律走 deferred 分支不做 heal（日志 `Idle band tear deferred; DeskBox owns foreground`）。依据：PreservePeerOrder 分支唯一"治愈"形态=把床底兄弟抬到 z 最高滞留格=无人负责回落的无标志 peer-lift；该状态下现行"治愈"即 bug 本身，跳过零损失，修复延迟到前台离开后的 BehindForeground |
-| T2 | `WidgetSessionManager.cs` + 看门狗 tick | 吞 End 记 `_lastSwallowedEndUtc`+`_beginSinceLastSwallow` 保护标记；新 `ReconcilePostResetDepth(now, foregroundConsistent)`（深度==1+吞后无 Begin+≥3s+前台非 DeskBox 系→清零）由看门狗 tick 在泄漏阈值判定前调用并排队一次整理——治"幻影深度卡 1"（成对 Begin/End 永不归零、最坏可超 22s）；吞 End 日志经构造第二委托升 info |
+| T1 | `WidgetManager.ZOrder.cs`（sweep） | heal 前预判前台归属：DeskCue 持前台（`IsDeskCueForegroundWindow`）→ 一律走 deferred 分支不做 heal（日志 `Idle band tear deferred; DeskCue owns foreground`）。依据：PreservePeerOrder 分支唯一"治愈"形态=把床底兄弟抬到 z 最高滞留格=无人负责回落的无标志 peer-lift；该状态下现行"治愈"即 bug 本身，跳过零损失，修复延迟到前台离开后的 BehindForeground |
+| T2 | `WidgetSessionManager.cs` + 看门狗 tick | 吞 End 记 `_lastSwallowedEndUtc`+`_beginSinceLastSwallow` 保护标记；新 `ReconcilePostResetDepth(now, foregroundConsistent)`（深度==1+吞后无 Begin+≥3s+前台非 DeskCue 系→清零）由看门狗 tick 在泄漏阈值判定前调用并排队一次整理——治"幻影深度卡 1"（成对 Begin/End 永不归零、最坏可超 22s）；吞 End 日志经构造第二委托升 info |
 | T3 | `WidgetManager.cs`（RefreshVisibleWidgetDesktopLayers） | `_isTogglingWidgetsDesktopLayer` 期间延迟重试（250ms 步进至动画结束）而非内联执行——防唤起动画中途被逐窗强回落拆带；该路径是 QR→动态切换下已可见窗唯一即时铺层者，故延迟永不丢弃 |
 | P3 | `ZOrder.cs`/测试 | 归一化 reason 在 `QueueIdleWidgetZOrderNormalization` 入口截断 96 字符（防链式后缀无界膨胀）；`NoDisplacementRestore` 钉改行尾无关的顺序断言（原多行字面量在 CRLF 检出上永不匹配=空钉）；格式修复 |
 
-契约钉随批加固：F1 接线钉（`ForceRestoreDesktopLayerFromManager→EndExpandedWidgetLayerLease` 先于强制回落）、撕裂门先于治愈出口的顺序钉、④守卫极性钉（`!IsForegroundDeskBoxWindow()`）、看门狗豁免刷新先于 elapsed 的顺序钉、内联挂起计数钉（每表面各≥2）、#553 跳过先于激活的顺序钉。
+契约钉随批加固：F1 接线钉（`ForceRestoreDesktopLayerFromManager→EndExpandedWidgetLayerLease` 先于强制回落）、撕裂门先于治愈出口的顺序钉、④守卫极性钉（`!IsForegroundDeskCueWindow()`）、看门狗豁免刷新先于 elapsed 的顺序钉、内联挂起计数钉（每表面各≥2）、#553 跳过先于激活的顺序钉。

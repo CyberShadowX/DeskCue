@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-4B2C2B 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-4B2C2B 完成与复盘报告
 
 - 审计日期：2026-08-22
 - 范围：x64 NativeAOT 确定性 Weather surface、真实 HWND/XamlRoot、Compact/Expanded、Day/Week、单位/皮肤/指标显隐、三进程重载、基线恢复与 postflight
@@ -7,7 +7,7 @@
 
 ## 1. 本阶段结论
 
-5B-4B2C2B 在既有 managed UI runner 中增加 `WeatherSurfacePersistenceRestart`，使用同一份受审计 NativeAOT 产物依次启动三个全新的 DeskBox 进程：
+5B-4B2C2B 在既有 managed UI runner 中增加 `WeatherSurfacePersistenceRestart`，使用同一份受审计 NativeAOT 产物依次启动三个全新的 DeskCue 进程：
 
 1. `Mutate` 从摄氏、km/h、Rich、Day、显示 UV/气压的基线开始，加载固定非空天气数据和真实 Weather Widget，再切换为华氏、mph、Standard、Week，并隐藏 UV/气压；
 2. `VerifyRestore` 在新进程中确认变更后的设置、ViewModel 和真实控件文本/可见性全部恢复，再经产品路径恢复基线；
@@ -58,9 +58,9 @@ D:\project\wingezi-local-backups\20260822-143347-pre-5b4b2c2a
 
 ### 4.1 夹具不能成为产品后门
 
-`AotWeatherSurfaceFixture` 整体位于 `#if DESKBOX_NATIVE_AOT` 中，普通 JIT 二进制不包含它。AOT 中也必须同时满足以下三项才会返回夹具服务：
+`AotWeatherSurfaceFixture` 整体位于 `#if DESKCUE_NATIVE_AOT` 中，普通 JIT 二进制不包含它。AOT 中也必须同时满足以下三项才会返回夹具服务：
 
-1. `DESKBOX_AOT_MANAGED_UI_SMOKE=WeatherSurfacePersistenceRestart`；
+1. `DESKCUE_AOT_MANAGED_UI_SMOKE=WeatherSurfacePersistenceRestart`；
 2. phase 精确为 `Mutate`、`VerifyRestore` 或 `Postflight`；
 3. Widget ID 精确为 `aot-5b4b2c2b-weather`。
 
@@ -108,7 +108,7 @@ Compact 证据不是直接调用私有布局函数或伪造宽度。runner 先�
 .artifacts/aot-managed-ui-smoke/win-x64/weather-surface-persistence-restart/verify-restore-result.json
 .artifacts/aot-managed-ui-smoke/win-x64/weather-surface-persistence-restart/postflight-result.json
 .artifacts/aot-managed-ui-smoke/win-x64/weather-surface-persistence-restart/final-settings.json
-.artifacts/aot-managed-ui-smoke/win-x64/weather-surface-persistence-restart/DeskBox.log
+.artifacts/aot-managed-ui-smoke/win-x64/weather-surface-persistence-restart/DeskCue.log
 ```
 
 关键实测值：
@@ -173,7 +173,7 @@ PID、HWND、EXE 哈希和正式数据指纹属于本次本机运行证据，不
 4. 使用三个新 AOT 进程证明变更重载、恢复和 postflight，并继续保护正式数据目录及 owned 根；
 5. 只操作 runner 创建且已验证位于 owned 根内的路径，任何删除先采用可恢复/明确清理边界；产品回收站、Shell 进度和外部拖放另设 C1B/C1C。
 
-选择 C1A 先行的原因是它覆盖 DeskBox 最核心且剩余面最大的 File Widget，同时输入完全本地、可哈希、可回滚，不依赖网络、定位授权、媒体 session 或真实鼠标拖动。复杂度为中高，主要风险是 FileSystemWatcher 时序、WinRT StorageItem/图标投影、重名策略和磁盘/UI 双向一致性。
+选择 C1A 先行的原因是它覆盖 DeskCue 最核心且剩余面最大的 File Widget，同时输入完全本地、可哈希、可回滚，不依赖网络、定位授权、媒体 session 或真实鼠标拖动。复杂度为中高，主要风险是 FileSystemWatcher 时序、WinRT StorageItem/图标投影、重名策略和磁盘/UI 双向一致性。
 
 当前不建议把 C1A 改成 Rust。文件复制移动主要受磁盘 I/O 限制，现有实现按流/逐项处理，尚无大型托管常驻或复制内存热点证据；WinUI、watcher 和 Shell 生命周期也仍应留在 C#。若后续用大目录/大文件基准确认枚举、哈希或路径规划存在显著内存峰值，再把那一段收成粗粒度 Rust 边界，不预先改写整套文件功能。
 

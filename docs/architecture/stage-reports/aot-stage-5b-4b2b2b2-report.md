@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-4B2B2B2 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-4B2B2B2 完成与复盘报告
 
 - 审计日期：2026-08-22
 - 范围：x64 NativeAOT Todo 托管附件导入、真实附件卡片投影、跨进程重载、显式附件删除、物理文件清理、任务删除与空状态复核
@@ -7,7 +7,7 @@
 
 ## 1. 本阶段结论
 
-5B-4B2B2B2 在既有 managed UI runner 中增加 `TodoAttachmentsPersistenceRestart`，使用同一份受审计 NativeAOT 产物依次启动三个全新的 DeskBox 进程：
+5B-4B2B2B2 在既有 managed UI runner 中增加 `TodoAttachmentsPersistenceRestart`，使用同一份受审计 NativeAOT 产物依次启动三个全新的 DeskCue 进程：
 
 1. `Mutate` 经真实 Todo 详情入口创建固定任务，再经 `AddAttachmentPathAsync(..., copyToManagedStorageOverride: true)` 导入 owned 文本文件；
 2. `VerifyDelete` 在新进程中重载任务、附件元数据、受管副本和实际附件 DataTemplate，经普通删除处理器共用的产品方法删除附件，再删除任务；
@@ -81,7 +81,7 @@ object[] AttachmentItemsSource => Attachments.Cast<object>().ToArray()
 .artifacts/aot-managed-ui-smoke/win-x64/todo-attachments-persistence-restart/postflight-result.json
 .artifacts/aot-managed-ui-smoke/win-x64/todo-attachments-persistence-restart/final-todo.json
 .artifacts/aot-managed-ui-smoke/win-x64/todo-attachments-persistence-restart/final-settings.json
-.artifacts/aot-managed-ui-smoke/win-x64/todo-attachments-persistence-restart/DeskBox.log
+.artifacts/aot-managed-ui-smoke/win-x64/todo-attachments-persistence-restart/DeskCue.log
 ```
 
 最终连续复跑中的一轮实测：

@@ -1,7 +1,7 @@
-# DeskBox SearchCore 原生 ABI v3
+# DeskCue SearchCore 原生 ABI v3
 
 - 日期：2026-08-23
-- 模块：`deskbox_search_core.dll`
+- 模块：`deskcue_search_core.dll`
 - 目标：`x86_64-pc-windows-msvc`
 - ABI：3
 - 结构版本：1
@@ -11,11 +11,11 @@
 
 ABI v3 保留 v2 的 DBIX v1 直载、构建、查询、复制、统计、取消和销毁操作，新增三个导出：
 
-- `deskbox_search_core_mutate_batch_v1`：事务化 upsert、精确删除、目录树删除和按扫描代次清理；
-- `deskbox_search_core_project_v1`：recent files 与 frequent folders 有界投影；
-- `deskbox_search_core_save_dbix_v1`：把当前 live entries 原子保存为 DBIX v1。
+- `deskcue_search_core_mutate_batch_v1`：事务化 upsert、精确删除、目录树删除和按扫描代次清理；
+- `deskcue_search_core_project_v1`：recent files 与 frequent folders 有界投影；
+- `deskcue_search_core_save_dbix_v1`：把当前 live entries 原子保存为 DBIX v1。
 
-当前 SearchCore 必需导出为 14 个。它仍是独立模块，不改变生产 `deskbox_native.dll` 的 ABI 2、
+当前 SearchCore 必需导出为 14 个。它仍是独立模块，不改变生产 `deskcue_native.dll` 的 ABI 2、
 能力 511 和十个导出。
 
 ## 2. 增量 mutation 契约
@@ -77,13 +77,13 @@ live entry 数、tombstone 数和目录数。
 - mutation 不保存调用方地址，save 不保存 event handle；
 - panic policy 为 abort，Rust allocator 指针、集合、字符串和异常都不跨 ABI。
 
-一次 DeskBox 会话只允许一个 resident owner：Rust 活跃时托管 `_index` 与目录池必须为空；Rust 加载
+一次 DeskCue 会话只允许一个 resident owner：Rust 活跃时托管 `_index` 与目录池必须为空；Rust 加载
 或 ABI 校验失败时先销毁任何原生句柄，再加载可用的托管 DBIX。失败不能被呈现为“后端成功但结果为空”。
 
 ## 7. 产品启用与发布边界
 
 - Direct x64/ARM64 Debug/Release 和受审计 Native AOT 构建包含对应架构的 SearchCore DLL；
-- `DESKBOX_SEARCH_CORE_DEFAULT` 在 Direct、SearchCore 模块随构建存在时对 x64/ARM64 定义；该构建中
+- `DESKCUE_SEARCH_CORE_DEFAULT` 在 Direct、SearchCore 模块随构建存在时对 x64/ARM64 定义；该构建中
   `SearchRustIndexerPreviewEnabled` 默认值为 `true`，Store 中为 `false`；
 - 已经落盘的显式用户选择优先于新的构建默认值，因此升级不会覆盖用户保存的 `false`；
 - DLL 缺失、架构、ABI、导出、DBIX 版本或时间语义失败会显示 managed fallback 原因；query、
@@ -92,7 +92,7 @@ live entry 数、tombstone 数和目录数。
 - 只有用户显式重新配置搜索后端时才清除会话隔离并重试 Rust，避免故障循环；
 - ARM64 已通过 GitHub 托管原生 ARM64 ABI、Unicode 查询和产品绑定门禁；Store 仍排除本模块，等待
   7C1 单独验证 MSIX 内容、框架依赖和升级策略；
-- 普通 `deskbox_native.dll` 的选择策略与 ABI 完全不受 SearchCore 影响。
+- 普通 `deskcue_native.dll` 的选择策略与 ABI 完全不受 SearchCore 影响。
 
 ## 8. 阶段 6D 可靠性与默认决策
 

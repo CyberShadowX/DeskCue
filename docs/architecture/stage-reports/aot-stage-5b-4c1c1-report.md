@@ -1,4 +1,4 @@
-# DeskBox AOT 阶段 5B-4C1C1 完成报告
+# DeskCue AOT 阶段 5B-4C1C1 完成报告
 
 - 日期：2026-08-23
 - 状态：5B-4C1C1 已完成到定义的 x64 Native AOT 实际运行边界
@@ -29,7 +29,7 @@
 
 runner 分别驱动一次取消和一次选择。应用在打开 picker 前冻结可见顶层窗口基线，只接受同一 AOT 进程中新出现的可见 `#32770`，并记录窗口 HWND、线程、进程、类名、标题、direct owner、root owner 和完整 owner chain。两次窗口的 owner chain 都包含精确 File Widget HWND。
 
-首次实现只用 UI Automation 的根子项查找公共对话框，但当前系统不会把该窗口暴露为 DeskBox UIA 根的子元素。最终先用 Win32 枚举精确定位同进程可见 `#32770`，再由 `AutomationElement.FromHandle` 进入 UIA。当前 Windows 上文件名输入框和按钮也没有暴露可用的 Value/Invoke pattern，因此 runner 先尝试标准 UIA pattern，再对精确 AutomationId `1148`、`1`、`2` 的真实 Win32 控件使用 `WM_SETTEXT` 或 `BM_CLICK`，并把实际方法写入证据。
+首次实现只用 UI Automation 的根子项查找公共对话框，但当前系统不会把该窗口暴露为 DeskCue UIA 根的子元素。最终先用 Win32 枚举精确定位同进程可见 `#32770`，再由 `AutomationElement.FromHandle` 进入 UIA。当前 Windows 上文件名输入框和按钮也没有暴露可用的 Value/Invoke pattern，因此 runner 先尝试标准 UIA pattern，再对精确 AutomationId `1148`、`1`、`2` 的真实 Win32 控件使用 `WM_SETTEXT` 或 `BM_CLICK`，并把实际方法写入证据。
 
 真实运行还发现 picker 关闭后 Windows 可能很快复用同一个 HWND。仅用 `IsWindow(hwnd)` 会把新窗口误认作旧窗口仍未销毁；最终销毁判断同时冻结并核对窗口线程、进程、direct owner 和类名，避免句柄复用造成假失败。
 
@@ -44,7 +44,7 @@ runner 分别驱动一次取消和一次选择。应用在打开 picker 前冻�
 
 两轮共同结果：
 
-- 两个系统窗口均为同一 DeskBox AOT 进程的真实可见 `#32770`，标题为“打开”；
+- 两个系统窗口均为同一 DeskCue AOT 进程的真实可见 `#32770`，标题为“打开”；
 - direct owner 与完整 owner chain 均指向精确 File Widget HWND；
 - 取消使用真实控件 `BM_CLICK`，surface 与物理目录均无变化；
 - 选择使用真实控件 `WM_SETTEXT` 后 `BM_CLICK`，选择文件进入产品导入路径；
@@ -78,7 +78,7 @@ profile 50 / schema 47 的完整 x64 发布审计通过：
 
 本阶段新增 12 条契约，定向运行 12/12 通过。最终回归为全部 AOT 相关测试 407/407、x64 全量 2402/2402 和 Rust workspace 57/57；`cargo fmt --check`、Clippy `-D warnings` 与四个阶段 PowerShell 脚本解析也全部通过。
 
-代码复盘确认：普通 JIT 与 NativeAOT 使用同一现代 picker 服务和同一 StorageItems 解析器；AOT fixture 只在 `DESKBOX_NATIVE_AOT` 且精确场景、phase、run ID 和 owned 根成立时记录；全局剪贴板没有被测试场景修改；Rust 模块、JSON 产品格式和安装发布策略均未变化。
+代码复盘确认：普通 JIT 与 NativeAOT 使用同一现代 picker 服务和同一 StorageItems 解析器；AOT fixture 只在 `DESKCUE_NATIVE_AOT` 且精确场景、phase、run ID 和 owned 根成立时记录；全局剪贴板没有被测试场景修改；Rust 模块、JSON 产品格式和安装发布策略均未变化。
 
 ## 8. 下一阶段建议
 

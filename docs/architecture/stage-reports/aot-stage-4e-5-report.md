@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 4E-5 完成与复盘报告
+# DeskCue Native AOT 阶段 4E-5 完成与复盘报告
 
 - 日期：2026-08-21
 - 范围：`SearchResultRowControl` 的 8 条搜索结果行 Binding
@@ -107,7 +107,7 @@ Debug 生成的 `SearchResultRowControl.g.cs` 确认：
 | 4E-5 契约 | 12/12 |
 | 4E-3 至 4E-5 组合契约 | 34/34 |
 | AOT/Rust 扩大定向契约 | 198/198 |
-| DeskBox x64 全量测试 | 2124/2124 |
+| DeskCue x64 全量测试 | 2124/2124 |
 | canonical Debug 构建 | 0 错误，24 条既有警告 |
 | PowerShell 语法解析 | 0 错误 |
 | x64 AOT 审计 | profile 28 / schema 25，通过 |
@@ -115,9 +115,9 @@ Debug 生成的 `SearchResultRowControl.g.cs` 确认：
 最终隔离 AOT 审计用时 216,213 毫秒，源码指纹前后一致；产生 39 个发布文件，共
 84,996,037 字节，以及 3 个分离 PDB，共 181,366,784 字节。三个本地产物均为 x64 PE：
 
-- `DeskBox.exe`：39,357,440 字节；
-- `DeskBox.Updater.exe`：2,020,352 字节；
-- `deskbox_native.dll`：146,944 字节。
+- `DeskCue.exe`：39,357,440 字节；
+- `DeskCue.Updater.exe`：2,020,352 字节；
+- `deskcue_native.dll`：146,944 字节。
 
 Rust DLL 保持 ABI 2、能力掩码 255、9 个必需导出，staging/publish SHA-256 一致。
 
@@ -172,11 +172,11 @@ Rust DLL 保持 ABI 2、能力掩码 255、9 个必需导出，staging/publish S
 
 下一阶段调整为 **5A：x64 AOT 隔离启动与基础存活验证**，停止继续做微型 Binding 批次。
 
-当前 `DESKBOX_DEV_DATA_ROOT` 只在 DEBUG 编译中生效，不能直接保护 Release NativeAOT 产物。
+当前 `DESKCUE_DEV_DATA_ROOT` 只在 DEBUG 编译中生效，不能直接保护 Release NativeAOT 产物。
 因此 5A 应先完成一个窄范围的 AOT-preview 隔离入口，再启动本次审计产物：
 
-1. 让 `DESKBOX_NATIVE_AOT` 构建在显式 opt-in 时支持独立 preview data root，默认路径继续保持
-   `%LOCALAPPDATA%\DeskBox`；
+1. 让 `DESKCUE_NATIVE_AOT` 构建在显式 opt-in 时支持独立 preview data root，默认路径继续保持
+   `%LOCALAPPDATA%\DeskCue`；
 2. 启动脚本必须拒绝 production data root，记录被启动 exe、summary、Rust DLL 哈希和数据根；
 3. 首次只验证进程存活、日志无启动异常、PRI/XAML/资源加载、单实例、托盘、退出和重启；
 4. 核对正式数据目录在运行前后没有变化；

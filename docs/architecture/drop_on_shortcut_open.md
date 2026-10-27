@@ -155,7 +155,7 @@ Evaluate(isShortcut, path, targetPath, targetIsDirectory) → Launch | None
 | XAML 路径：拒绝 → `e.Handled = true` + `AcceptedOperation = None` + 标记闩锁（防另一路径重复委托/重复提示）+ 提示 | `Controls/WidgetContents/FileSurfaceContent.ItemVisuals.cs` |
 | 新增反馈方法 `ShowShortcutLaunchRefusedFeedback`（Warning 级，名字缺失回落 `Widget.OpenItemFailed`） | `Controls/WidgetContents/FileSurfaceContent.xaml.cs` |
 | 新键 `Widget.DropOnShortcutCannotOpen` ×12 语言 | `Strings/*.json` |
-| 测试：`ConsumedShortcutDrops_NeverFallBackToImport`（钉住"拒绝绝不回退导入"）+ `RefusedShortcutDrop_ReportsTheApplicationThatCouldNotOpenIt` | `tests/DeskBox.Tests/ItemDropBehaviorPolicyTests.cs` |
+| 测试：`ConsumedShortcutDrops_NeverFallBackToImport`（钉住"拒绝绝不回退导入"）+ `RefusedShortcutDrop_ReportsTheApplicationThatCouldNotOpenIt` | `tests/DeskCue.Tests/ItemDropBehaviorPolicyTests.cs` |
 
 ### 10.1 第二轮：实机复现后查出委托层三个缺陷（同日）
 
@@ -182,7 +182,7 @@ Evaluate(isShortcut, path, targetPath, targetIsDirectory) → Launch | None
 
 ```
 [20:34:31.726] [DropTarget] NativeDrop received count=1
-[20:34:35.647] [ShortcutLaunch] Delegated drop on 'E:\DeskBox\AI工具\Obsidiand.lnk' hr=0x00000000 effect=0 handled=False.
+[20:34:35.647] [ShortcutLaunch] Delegated drop on 'E:\DeskCue\AI工具\Obsidiand.lnk' hr=0x00000000 effect=0 handled=False.
 [20:34:35.650] [DropDiagnostic] stage=NativeDropFiles count=1
 ```
 
@@ -190,7 +190,7 @@ Evaluate(isShortcut, path, targetPath, targetIsDirectory) → Launch | None
 - 随后 Windows 自己弹出 **"打开方式"选择器**（截图确认：该菜单不是我们的文案——我们的键是「用 “{0}” 打开」）；用户明确不要这个弹窗；
 - 好消息：`stage=NativeDropFiles` 之后**没有** `[Import]` 行 → §10.1 的闩锁生效，**文件没有被移动**。
 
-补充事实（探针 + 脚本实测）：该 `.lnk` 指向 `D:\Obsidian\Obsidian.exe`（无参数、目标存在）；被拖的是 `deskbox插件化复盘文章-雷军重写版.md`，其默认关联是 MarkText（Electron）。`ELECTRON_RUN_AS_NODE` 假说已排除（当前环境干净）。
+补充事实（探针 + 脚本实测）：该 `.lnk` 指向 `D:\Obsidian\Obsidian.exe`（无参数、目标存在）；被拖的是 `deskcue插件化复盘文章-雷军重写版.md`，其默认关联是 MarkText（Electron）。`ELECTRON_RUN_AS_NODE` 假说已排除（当前环境干净）。
 
 **结论：原设计前提被证伪。** "`BindToHandler(BHID_SFUIObject, IID_IDropTarget)` 就是 Explorer 拖到快捷方式上跑的同一代码路径"不成立——Explorer 的"拖到快捷方式=用该程序打开"是它**视图层**的行为；通过 .lnk 的 `GetUIObjectOf(IDropTarget)` 拿到的处理器对这类 drop 会拒绝并触发系统"打开方式"UI，而这个 UI 我们无法从委托内部抑制。且在 UI 线程上调用它还有阻塞风险（§10.1 缺陷 5 实测 >2 分钟）。
 
@@ -231,7 +231,7 @@ Evaluate(isShortcut, path, targetPath, targetIsDirectory) → Launch | None
 
 **需求**：格子里的文件拖到同一格子的应用快捷方式格子上，也要"用该程序打开"（Simon 反馈：格子外可以了，格子内不行）。
 
-**第一个发现（判定层）**：`TryHandleLaunchTargetDragOver` 原本把 `IsInternalReorder` 一律放行给重排。内部的载荷已经带着真实路径（`FileItemDragPackage` 写入 `DeskBoxSourcePaths` + `DeskBoxInternalDragToken`），所以只需把判定放宽为 `ShortcutLaunchPolicy.EvaluateInternalDrag(isDeskBoxFileDrag, isStackPopoverMemberDrag, paths)`：内部拖拽+有路径=`Launch`，叠放弹层成员拖动仍排除。拖放命中后按文件夹瓦片同契约 `PersistSurfaceReorder()` 取消重排预览。
+**第一个发现（判定层）**：`TryHandleLaunchTargetDragOver` 原本把 `IsInternalReorder` 一律放行给重排。内部的载荷已经带着真实路径（`FileItemDragPackage` 写入 `DeskCueSourcePaths` + `DeskCueInternalDragToken`），所以只需把判定放宽为 `ShortcutLaunchPolicy.EvaluateInternalDrag(isDeskCueFileDrag, isStackPopoverMemberDrag, paths)`：内部拖拽+有路径=`Launch`，叠放弹层成员拖动仍排除。拖放命中后按文件夹瓦片同契约 `PersistSurfaceReorder()` 取消重排预览。
 
 **第二个发现（投递层，实测）**：判定改对之后仍然"没反应、无提示"。加 5 个日志点实测（2026-09-12 21:24 / 21:39）得到：
 
@@ -276,7 +276,7 @@ if (e.AcceptedOperation == None) { ClearFolderDropTarget(); return; }   // ← �
 
 **连带改动**：AOT 冒烟探针 `GetAotNativeFolderVisualState` 原先靠**边框粗细 + brush alpha** 判定 `DropTarget`，视觉不再画边框后会永远报 `Normal` → 改为 `IsActiveChildDropTarget(border)`（按 `_folderDropTarget` / `_stackMemberDropTarget` / `_launchDropTarget` 引用判定）；`AotStage5B4C1C2AContractTests` 里对应的 `thickness.Left >= 0.5` / `borderBrush.Color.A > 0` 断言同步替换。
 
-**悬停提示**：内部拖拽没有 Shell drop description（那只有原生 OLE 拖拽才有），所以提示走 XAML 侧——命中时调 `ApplyDeskBoxFileDragFeedback(e, e.AcceptedOperation, Format("Widget.DropOnShortcutOpenWith", tile.Name))`，即"用 "X" 打开"（12 语言现成）。注意它必须在 `SuppressExternalDragOperationBadge`（会把 caption 关掉）**之后**调用。
+**悬停提示**：内部拖拽没有 Shell drop description（那只有原生 OLE 拖拽才有），所以提示走 XAML 侧——命中时调 `ApplyDeskCueFileDragFeedback(e, e.AcceptedOperation, Format("Widget.DropOnShortcutOpenWith", tile.Name))`，即"用 "X" 打开"（12 语言现成）。注意它必须在 `SuppressExternalDragOperationBadge`（会把 caption 关掉）**之后**调用。
 
 **保留**：拖到**文件夹/叠放**瓦片的内部拖拽语义不变（谓词挡在前面）；叠放弹层成员拖动不变。`TryHandleLaunchTargetDropAsync` 的 launch 分支保留未删（若将来 WinUI 恢复投递 Drop，它是第一顺位）。
 
@@ -293,13 +293,13 @@ if (e.AcceptedOperation == None) { ClearFolderDropTarget(); return; }   // ← �
 
 | 改动 | 内容 |
 |---|---|
-| **命中区收窄（仅 DeskBox 来源的拖拽）** | `EvaluateInternalDrag` 判 Launch 后还须 `IsPointerOverLaunchIcon`（图标宿主矩形 + 6px 余量，`ShortcutLaunchPolicy.IsPointInsideRectWithSlack`）。落在标签/内边距 → 不处理该 DragOver，事件冒泡回根部，实时排序预照常推进（`HandleSurfaceRealTimeReorder` 对已取消的排序状态有完整的从载荷重臂逻辑，与 folder 瓦片今天的"armed 取消→离开重臂"同一条被日常使用的路径）。**外部拖入（Explorer）保持整格命中**：它落空的后果是掉入根导入=移动用户文件，与内部拖拽落空=无害重排不对称；native OLE 命中（`FindElementsInHostCoordinates`）只服务外部源，零改动 |
+| **命中区收窄（仅 DeskCue 来源的拖拽）** | `EvaluateInternalDrag` 判 Launch 后还须 `IsPointerOverLaunchIcon`（图标宿主矩形 + 6px 余量，`ShortcutLaunchPolicy.IsPointInsideRectWithSlack`）。落在标签/内边距 → 不处理该 DragOver，事件冒泡回根部，实时排序预照常推进（`HandleSurfaceRealTimeReorder` 对已取消的排序状态有完整的从载荷重臂逻辑，与 folder 瓦片今天的"armed 取消→离开重臂"同一条被日常使用的路径）。**外部拖入（Explorer）保持整格命中**：它落空的后果是掉入根导入=移动用户文件，与内部拖拽落空=无害重排不对称；native OLE 命中（`FindElementsInHostCoordinates`）只服务外部源，零改动 |
 | **松手判定改活几何** | `IsCursorInsideLaunchIcon`：经 `_internalLaunchHoverBorder` 找回图标宿主（`DataContext` 路径校验防容器回收顶替）→ `GetCursorPos` 对图标矩形判定。删除"记录点 + 150px 半径"（`TryGetScreenPoint` / `IsCursorAtRecordedLaunchPoint` / `LaunchReleaseSlackPixels` 一并退役） |
 
 **必须同步的三处（实现时验证过的遗漏）**：
 
 1. **离开图标区由 launch 分支自清**：根部反馈入口（`ApplySurfaceDragOverFeedback`）与 `ClearStaleChildDropTargets` 只清文件夹/叠放目标，三类子目标的互斥只在"设置时"成立（`SetFolderDropTarget`/`SetStackMemberDropTarget` 清 launch），从 launch 滑走没有反向兜底 → 新增 `DisarmLaunchHover`（DragOver 与 routed Drop 的提前返回路径都调）。
-2. **routed Drop 的内部分支不是死代码**：主网格自拖确实收不到 routed Drop，但**叠放弹层瓦片**（`StackPopoverFileIconTemplate` 等，挂同一对 handler）对主网格来源的拖拽是跨视图投放，Drop 会真投递 → `TryHandleLaunchTargetDropAsync` 的 internal-launch 分支同样加了 `IsPointerOverLaunchIcon` 门，且跨格子（`IsDeskBoxFileDrag` 但非本格 reorder）拖拽在 DragOver/Drop 两侧同口径收窄，避免"DragOver 承诺打开、Drop 却走导入"的分裂。
+2. **routed Drop 的内部分支不是死代码**：主网格自拖确实收不到 routed Drop，但**叠放弹层瓦片**（`StackPopoverFileIconTemplate` 等，挂同一对 handler）对主网格来源的拖拽是跨视图投放，Drop 会真投递 → `TryHandleLaunchTargetDropAsync` 的 internal-launch 分支同样加了 `IsPointerOverLaunchIcon` 门，且跨格子（`IsDeskCueFileDrag` 但非本格 reorder）拖拽在 DragOver/Drop 两侧同口径收窄，避免"DragOver 承诺打开、Drop 却走导入"的分裂。
 3. **顺手修现存残留 bug**：内部拖拽从快捷方式瓦片滑到根部空白区，launch 高亮会残留到手势结束（`ItemSurface_DragLeave` 的 launch 分支只清记录不清视觉；外部拖拽不受影响——native 链的 launch 高亮走 `SetFolderDropTarget` 通道，folder 陈旧检查顺带清掉）。修法：该分支真离开瓦片时补 `ClearLaunchDropTarget()`。
 
 **图标元素暴露**：`FileItemSurface` 两个布局模板的图标宿主 Grid 加 `x:Name`（`IconItemIconHost` / `ListItemIconHost`），`CreateLayout` 用既有 `FindName` 模式一并取出，暴露 `IconHitTestElement`（按当前 Mode 取）。list 模式同样收窄到行首小图标，规则一致。

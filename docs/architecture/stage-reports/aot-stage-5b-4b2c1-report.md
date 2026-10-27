@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-4B2C1 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-4B2C1 完成与复盘报告
 
 - 审计日期：2026-08-22
 - 范围：x64 NativeAOT Glance owned 本地图片、显示偏好、真实图片 surface、跨进程重载、基线恢复与 postflight
@@ -7,7 +7,7 @@
 
 ## 1. 本阶段结论
 
-5B-4B2C1 在既有 managed UI runner 中增加 `GlancePersistenceRestart`，使用同一份受审计 NativeAOT 产物依次启动三个全新的 DeskBox 进程：
+5B-4B2C1 在既有 managed UI runner 中增加 `GlancePersistenceRestart`，使用同一份受审计 NativeAOT 产物依次启动三个全新的 DeskCue 进程：
 
 1. `Mutate` 从固定基线开始，经与普通设置入口共用的产品方法选择 owned PNG，设置时间、日期、年份、Editorial 布局、Strong 可读性、静态播放和照片操作层；
 2. `VerifyRestore` 在新进程中重载 Glance store、ViewModel 和真实 WinUI surface，确认同一图片已被解码为活动 `ImageBrush`，再通过产品方法恢复空本地图片与 Centered 基线；
@@ -47,7 +47,7 @@
 
 ### 3.1 Glance 的运行时 Binding 在 AOT 中需要属性提供器
 
-`GlanceWidgetContent.xaml` 仍使用运行时 `{Binding}`。真实 AOT surface 需要 `GlanceWidgetViewModel` 提供 `ICustomProperty` 元数据，因此只在 `DESKBOX_NATIVE_AOT` 下增加一个 `GeneratedBindableCustomProperty`，并将允许属性精确冻结为 33 个。
+`GlanceWidgetContent.xaml` 仍使用运行时 `{Binding}`。真实 AOT surface 需要 `GlanceWidgetViewModel` 提供 `ICustomProperty` 元数据，因此只在 `DESKCUE_NATIVE_AOT` 下增加一个 `GeneratedBindableCustomProperty`，并将允许属性精确冻结为 33 个。
 
 该桥不改变普通 JIT 类型表面，也不把所有 ViewModel 属性公开给 WinRT。第一次 AOT 编译还证明当前 CsWinRT 特性的构造函数必须同时提供读属性和写属性两个参数；补齐空写属性清单后发布成功。
 
@@ -78,7 +78,7 @@ Glance XAML 的运行时 Binding 会产生既有 `WMC1510`。本阶段已经用�
 .artifacts/aot-managed-ui-smoke/win-x64/glance-persistence-restart/final-glance.json
 .artifacts/aot-managed-ui-smoke/win-x64/glance-persistence-restart/final-settings.json
 .artifacts/aot-managed-ui-smoke/win-x64/glance-persistence-restart/glance-local.png
-.artifacts/aot-managed-ui-smoke/win-x64/glance-persistence-restart/DeskBox.log
+.artifacts/aot-managed-ui-smoke/win-x64/glance-persistence-restart/DeskCue.log
 ```
 
 已观察到的关键值：
@@ -118,7 +118,7 @@ Glance XAML 的运行时 Binding 会产生既有 `WMC1510`。本阶段已经用�
 
 仍需明确以下边界：
 
-1. 产品保存的是用户文件路径，不会把图片复制到 DeskBox owned 存储。用户移动、重命名或删除原图后，该图片会失效；本阶段没有改变这一产品语义。
+1. 产品保存的是用户文件路径，不会把图片复制到 DeskCue owned 存储。用户移动、重命名或删除原图后，该图片会失效；本阶段没有改变这一产品语义。
 2. 自动化使用 68 字节的有效 PNG，只证明最小本地图片解码。JPEG/WebP/GIF、EXIF 方向、超大图片、损坏图片和多图片轮播的性能与视觉仍未覆盖。
 3. 本轮直接调用与普通设置入口共用的产品方法，不触发 FileOpenPicker、FolderPicker，也没有人工验证 Picker owner、取消、键盘、触控、动画或实际大图观感。
 4. 在线图片、Bing 来源、缓存下载、网络失败、文件夹枚举和日历展示继续在本阶段之外。

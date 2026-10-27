@@ -1,5 +1,5 @@
 {
-  "schema": "deskbox.rust-crt-stage7c0-evidence.v1",
+  "schema": "deskcue.rust-crt-stage7c0-evidence.v1",
   "status": "passed",
   "evidenceLevel": "architecture-aware-crt-ab",
   "startedUtc": "2026-08-23T14:30:15.4862268Z",
@@ -51,7 +51,7 @@
           "vcRuntimeImports": [
             "VCRUNTIME140.dll"
           ],
-          "path": "C:\\a\\DeskBox\\DeskBox\\.artifacts\\rust-crt-stage7c0-arm64\\arm64\\dynamic\\native\\deskbox_native.dll"
+          "path": "C:\\a\\DeskCue\\DeskCue\\.artifacts\\rust-crt-stage7c0-arm64\\arm64\\dynamic\\native\\deskcue_native.dll"
         },
         "searchCore": {
           "linkage": "Dynamic",
@@ -78,7 +78,7 @@
           "vcRuntimeImports": [
             "VCRUNTIME140.dll"
           ],
-          "path": "C:\\a\\DeskBox\\DeskBox\\.artifacts\\rust-crt-stage7c0-arm64\\arm64\\dynamic\\search\\deskbox_search_core.dll"
+          "path": "C:\\a\\DeskCue\\DeskCue\\.artifacts\\rust-crt-stage7c0-arm64\\arm64\\dynamic\\search\\deskcue_search_core.dll"
         },
         "pairFileBytes": 312320,
         "pairImageBytes": 339968,
@@ -142,7 +142,7 @@
             "propsys.dll"
           ],
           "vcRuntimeImports": [],
-          "path": "C:\\a\\DeskBox\\DeskBox\\.artifacts\\rust-crt-stage7c0-arm64\\arm64\\static\\native\\deskbox_native.dll"
+          "path": "C:\\a\\DeskCue\\DeskCue\\.artifacts\\rust-crt-stage7c0-arm64\\arm64\\static\\native\\deskcue_native.dll"
         },
         "searchCore": {
           "linkage": "Static",
@@ -165,7 +165,7 @@
             "ntdll.dll"
           ],
           "vcRuntimeImports": [],
-          "path": "C:\\a\\DeskBox\\DeskBox\\.artifacts\\rust-crt-stage7c0-arm64\\arm64\\static\\search\\deskbox_search_core.dll"
+          "path": "C:\\a\\DeskCue\\DeskCue\\.artifacts\\rust-crt-stage7c0-arm64\\arm64\\static\\search\\deskcue_search_core.dll"
         },
         "pairFileBytes": 503296,
         "pairImageBytes": 544768,
@@ -217,7 +217,7 @@
         "error": 0,
         "timeout": 0,
         "aborted": 0,
-        "trx": "C:\\a\\DeskBox\\DeskBox\\.artifacts\\rust-crt-stage7c0-arm64\\arm64\\static-product-tests\\static-product-arm64.trx",
+        "trx": "C:\\a\\DeskCue\\DeskCue\\.artifacts\\rust-crt-stage7c0-arm64\\arm64\\static-product-tests\\static-product-arm64.trx",
         "sha256": "00C284BBD733F23AAEE044AEA37F73E229DE60571244D97DCB60720072F69DCD"
       },
       "recommendation": "Static"

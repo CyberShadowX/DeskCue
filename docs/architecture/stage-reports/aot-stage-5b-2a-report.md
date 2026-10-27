@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-2A 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-2A 完成与复盘报告
 
 - 报告日期：2026-08-22
 - 阶段范围：x64 Native AOT 进程中的 Explorer 托管启动与 Quick Access 只读查询真实边界
@@ -41,7 +41,7 @@
 
 ### 2.3 隔离与结构化证据
 
-新入口只在 `DESKBOX_NATIVE_AOT` 中编译，并且必须显式设置 `DESKBOX_AOT_SHELL_SMOKE=ExplorerQuickAccessReadOnly`。执行前要求当前数据根是显式 AOT preview 根，夹具只允许位于：
+新入口只在 `DESKCUE_NATIVE_AOT` 中编译，并且必须显式设置 `DESKCUE_AOT_SHELL_SMOKE=ExplorerQuickAccessReadOnly`。执行前要求当前数据根是显式 AOT preview 根，夹具只允许位于：
 
 `<preview-root>\aot-shell-smoke\explorer-quick-access-read-only`
 
@@ -71,9 +71,9 @@
 
 | 文件 | 大小 | SHA-256 |
 | --- | ---: | --- |
-| `DeskBox.exe` | 39,532,544 | `42BE72835A6B7DA68FC0A07348B0E11B3908CDD0A710040893A1500D3D479ED2` |
-| `DeskBox.Updater.exe` | 2,020,352 | `EFBBA4C8669728D8429CADE79141AC258CF4A873B06F0A37F4875F240911E5C9` |
-| `deskbox_native.dll` | 146,944 | `D5F0966B62EED9A982A9675F3CC7D2FDA8F70E35C0C9790DC83FE60865E45CE7` |
+| `DeskCue.exe` | 39,532,544 | `42BE72835A6B7DA68FC0A07348B0E11B3908CDD0A710040893A1500D3D479ED2` |
+| `DeskCue.Updater.exe` | 2,020,352 | `EFBBA4C8669728D8429CADE79141AC258CF4A873B06F0A37F4875F240911E5C9` |
+| `deskcue_native.dll` | 146,944 | `D5F0966B62EED9A982A9675F3CC7D2FDA8F70E35C0C9790DC83FE60865E45CE7` |
 
 ## 4. 自动化与构建验证
 

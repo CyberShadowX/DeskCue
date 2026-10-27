@@ -1,4 +1,4 @@
-# DeskBox AOT 阶段 5B-4C1B2A 完成报告
+# DeskCue AOT 阶段 5B-4C1B2A 完成报告
 
 - 日期：2026-08-22
 - 状态：5B-4C1B2A 已完成到定义的 x64 Native AOT 实际运行边界
@@ -11,7 +11,7 @@
 
 此前这条链虽然选择了 Shell progress 路径，但 File Widget 的窗口句柄没有穿过 ViewModel 和 Organizer，`SHFileOperationW` 最终收到的 owner 为 0。当前菜单动作以及拖出失败后的桌面回退都会把 `_hostWindowHandle` 一路传至 `SHFILEOPSTRUCT.hwnd`。两次实际矩阵捕获的四次调用 owner 均与真实 File Widget HWND 相同且非 0。
 
-本阶段没有扩展 Rust。Shell move 是现有 Win32/Shell 边界，数据量主要位于文件系统和 Shell 进程，不存在本轮可量化的大型托管常驻或复制内存热点。把该路径改写成 Rust 不能直接降低 DeskBox 常驻内存，反而会增加新的 ABI、Shell 行为差分和恢复面。生产 Rust 模块因此继续保持 ABI 2、能力 511 和十个必需导出。
+本阶段没有扩展 Rust。Shell move 是现有 Win32/Shell 边界，数据量主要位于文件系统和 Shell 进程，不存在本轮可量化的大型托管常驻或复制内存热点。把该路径改写成 Rust 不能直接降低 DeskCue 常驻内存，反而会增加新的 ABI、Shell 行为差分和恢复面。生产 Rust 模块因此继续保持 ABI 2、能力 511 和十个必需导出。
 
 ## 2. 实现范围
 
@@ -69,7 +69,7 @@
 - 正式数据目录前后指纹均为 `66B2723312E2FA671895765D5C6DFC92C9719F801FD4C3EBA405174DC5E86886`；
 - 运行错误日志为 0；
 - 两轮 preview root 和 `-Recovery` sibling 均已验证 ownership 后清理；
-- 审计发布目录没有残留运行中的 `DeskBox.exe`。
+- 审计发布目录没有残留运行中的 `DeskCue.exe`。
 
 最新结构化证据位于 `.artifacts/aot-managed-ui-smoke/win-x64/shell-move-persistence-restart-e44567d412e24a099acb80cd135d93e6/`。这是本地审计产物，不作为仓库源文件。
 
@@ -88,7 +88,7 @@ profile 48 / schema 45 的完整 x64 发布审计通过：
 - 新阶段源码没有新增 AOT 分析警告；
 - Properties、Picker、physical drag/drop、`IFileOperation` 和新 Rust ABI 均未进入本阶段。
 
-第一次 AOT 编译发现一个集合表达式缺少目标类型、菜单 probe 缺少 `WidgetStackItem` 命名空间，以及 owned desktop provider 的可空返回警告；修正后完整发布通过。第一次完整发布后的静态门禁还发现 launcher 版本文本仍冻结为 47/44，以及禁用词把 `DESKBOX_NATIVE_AOT` 误判为 Rust API；这两项属于审计脚本问题，修正后 profile 48 / schema 45 通过。
+第一次 AOT 编译发现一个集合表达式缺少目标类型、菜单 probe 缺少 `WidgetStackItem` 命名空间，以及 owned desktop provider 的可空返回警告；修正后完整发布通过。第一次完整发布后的静态门禁还发现 launcher 版本文本仍冻结为 47/44，以及禁用词把 `DESKCUE_NATIVE_AOT` 误判为 Rust API；这两项属于审计脚本问题，修正后 profile 48 / schema 45 通过。
 
 ## 5. 证据边界
 
@@ -108,7 +108,7 @@ profile 48 / schema 45 的完整 x64 发布审计通过：
 - 系统 Properties 窗口的目标、owner 和关闭行为；
 - File/Folder Picker 交互。
 
-Partial、Cancel 和 Late 是 AOT-only、精确 owned、默认不可达的确定性分支，用来验证 DeskBox 在 Shell 返回这些结果时的产品行为；其中只有 Real 分支是本轮实际操作系统 Shell 调用。该区分保留在结构化证据和 runner 断言中，不能把确定性分支表述为物理用户操作证据。
+Partial、Cancel 和 Late 是 AOT-only、精确 owned、默认不可达的确定性分支，用来验证 DeskCue 在 Shell 返回这些结果时的产品行为；其中只有 Real 分支是本轮实际操作系统 Shell 调用。该区分保留在结构化证据和 runner 断言中，不能把确定性分支表述为物理用户操作证据。
 
 ## 6. 回归与复盘
 

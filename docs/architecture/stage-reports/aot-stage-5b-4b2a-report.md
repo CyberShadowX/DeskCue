@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-4B2A 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-4B2A 完成与复盘报告
 
 - 审计日期：2026-08-22
 - 范围：x64 NativeAOT 设置与固定 Widget 拓扑写入、正常退出、跨进程重载和基线恢复
@@ -7,7 +7,7 @@
 
 ## 1. 本阶段结论
 
-5B-4B2A 在既有 managed UI runner 中增加 `SettingsWidgetPersistenceRestart`，使用同一受审计 NativeAOT 产物依次启动三个全新的 DeskBox 进程：
+5B-4B2A 在既有 managed UI runner 中增加 `SettingsWidgetPersistenceRestart`，使用同一受审计 NativeAOT 产物依次启动三个全新的 DeskCue 进程：
 
 1. `Mutate` 从固定基线写入设置与 File Widget 变更，显式 flush 后正常退出；
 2. `VerifyRestore` 在新进程中逐字段确认变更已重载，再恢复原始基线，显式 flush 后正常退出；
@@ -21,7 +21,7 @@
 - `AppSettings`、Settings ViewModel、Widget 配置、File Widget ViewModel 和已加载窗口状态在每个阶段均一致；
 - 固定 Search Widget 保持不变，用于发现非目标拓扑漂移；
 - 三个进程均由应用正常关闭路径退出，没有依靠外层脚本强制结束；
-- 最终 owned preview 根已清理，正式 `%LOCALAPPDATA%\DeskBox` 前后指纹一致，运行日志失败数为 0。
+- 最终 owned preview 根已清理，正式 `%LOCALAPPDATA%\DeskCue` 前后指纹一致，运行日志失败数为 0。
 
 本阶段没有改写或扩展 Rust 产品边界。普通 JIT 仍默认使用原 C# shortcut、音乐音量、Explorer 启动和 Quick Access 实现；NativeAOT 编译期继续使用已经冻结的 Rust 粗粒度边界。
 
@@ -36,10 +36,10 @@ scripts/run-aot-managed-ui-smoke.ps1 -Scenario SettingsWidgetPersistenceRestart
 应用内场景和阶段变量为：
 
 ```text
-DESKBOX_AOT_MANAGED_UI_SMOKE=SettingsWidgetPersistenceRestart
-DESKBOX_AOT_MANAGED_UI_PERSISTENCE_PHASE=Mutate|VerifyRestore|Postflight
+DESKCUE_AOT_MANAGED_UI_SMOKE=SettingsWidgetPersistenceRestart
+DESKCUE_AOT_MANAGED_UI_PERSISTENCE_PHASE=Mutate|VerifyRestore|Postflight
 .artifacts/aot-managed-ui-smoke/win-x64/preview-root
-.deskbox-aot-managed-ui-owned.json
+.deskcue-aot-managed-ui-owned.json
 ```
 
 安全边界如下：
@@ -99,7 +99,7 @@ Postflight.before == Postflight.after
 .artifacts/aot-managed-ui-smoke/win-x64/settings-widget-persistence-restart/verify-restore-result.json
 .artifacts/aot-managed-ui-smoke/win-x64/settings-widget-persistence-restart/postflight-result.json
 .artifacts/aot-managed-ui-smoke/win-x64/settings-widget-persistence-restart/final-settings.json
-.artifacts/aot-managed-ui-smoke/win-x64/settings-widget-persistence-restart/DeskBox.log
+.artifacts/aot-managed-ui-smoke/win-x64/settings-widget-persistence-restart/DeskCue.log
 ```
 
 本次实测使用三个不同 PID，`ProcessCount=3`、`NaturalExitCount=3`、`PreviewRootCleaned=true`、`Running=false`、`RuntimeFailureLogCount=0`。外层脚本还确认矩阵结束后没有同一受审计 EXE 的残留进程。
@@ -130,7 +130,7 @@ Postflight.before == Postflight.after
 | `BasicReadOnly` 回归 | 2 个表面、6 个主设置分区、12 套语言、6 次筛选、8 次排序，运行日志失败数 0 |
 | `DeepSettingsReadOnly` 回归 | 24 个页面、非空搜索、breadcrumb 返回、非空集合投影，运行日志失败数 0 |
 
-上述 UI 项是实际运行受审计 `DeskBox.exe` 的自动化证据，不是仅靠源码扫描。它仍不替代用户对视觉、焦点、键鼠手感、动画和目标系统差异的人工验收。
+上述 UI 项是实际运行受审计 `DeskCue.exe` 的自动化证据，不是仅靠源码扫描。它仍不替代用户对视觉、焦点、键鼠手感、动画和目标系统差异的人工验收。
 
 ## 7. 复盘与遗漏检查
 

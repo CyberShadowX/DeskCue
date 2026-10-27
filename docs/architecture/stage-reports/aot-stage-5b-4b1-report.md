@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-4B1 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-4B1 完成与复盘报告
 
 - 审计日期：2026-08-22
 - 范围：x64 NativeAOT 设置搜索、24 个深层设置路由、breadcrumb 与设置页 managed collection 投影
@@ -17,7 +17,7 @@
 6. 设置窗口及六个设置子区直接使用的 `SettingsViewModel` Binding 已建立精确的 NativeAOT 生成绑定清单，当前为 282/282；
 7. 真实运行中发现的 `SettingsOption`、文件 Widget 选项和天气城市建议投影问题均已做窄修复；
 8. AOT 进程停止后，外层脚本再次检查运行日志，未发现未处理异常或备份清单投影失败；
-9. 正式 `%LOCALAPPDATA%\DeskBox` 在矩阵前后保持相同指纹，测试数据只存在于本阶段 owned preview 根。
+9. 正式 `%LOCALAPPDATA%\DeskCue` 在矩阵前后保持相同指纹，测试数据只存在于本阶段 owned preview 根。
 
 本阶段没有改写 Rust 产品边界。普通 JIT 仍默认使用原 C# shortcut、音乐音量、Explorer 启动和 Quick Access 实现；NativeAOT 编译期继续使用已经冻结的 Rust 粗粒度边界。
 
@@ -32,9 +32,9 @@ scripts/run-aot-managed-ui-smoke.ps1 -Scenario DeepSettingsReadOnly
 场景使用：
 
 ```text
-DESKBOX_AOT_MANAGED_UI_SMOKE=DeepSettingsReadOnly
+DESKCUE_AOT_MANAGED_UI_SMOKE=DeepSettingsReadOnly
 .artifacts/aot-managed-ui-smoke/win-x64/preview-root
-.deskbox-aot-managed-ui-owned.json
+.deskcue-aot-managed-ui-owned.json
 ```
 
 安全边界如下：
@@ -157,7 +157,7 @@ SettingsViewModel.AotBindableProperties.cs
 | `DeepSettingsReadOnly` | 24 个页面、非空搜索、breadcrumb 返回、1 条文件规则、非空备份清单，运行日志失败数 0 |
 | `BasicReadOnly` 回归 | 2 个表面、6 个主设置分区、12 套语言、6 次筛选、8 次排序，运行日志失败数 0 |
 
-上述 AOT UI 项是实际运行受审计 `DeskBox.exe` 的自动化证据，不只是源码扫描。它仍不能替代用户对视觉、焦点、键鼠手感、动画和目标系统差异的人工验收。
+上述 AOT UI 项是实际运行受审计 `DeskCue.exe` 的自动化证据，不只是源码扫描。它仍不能替代用户对视觉、焦点、键鼠手感、动画和目标系统差异的人工验收。
 
 ## 7. 复盘与遗漏检查
 

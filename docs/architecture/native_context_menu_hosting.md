@@ -16,7 +16,7 @@
 | 注册表 {86ca1aa0} 强制经典菜单 | **红线，永不执行** | 用户级全局 hack，改的是整台机器 Explorer 行为，不是 API |
 | 等待 Win11 新菜单宿主 API | 不可行（已验证缺席） | 新菜单是 twinui.pcshell 内部 CommandBarFlyout，微软只开放"提供方"（IExplorerCommand）方向；Files/SO 均撞墙（E_NOINTERFACE / REGDB_E_CLASSNOTREGISTERED） |
 
-支撑证据：Directory Opus 13（2023-12）新增"尽可能进程外访问上下文菜单"选项，官方文档原话"上下文菜单扩展是最容易出问题的 shell 扩展"——与 DeskBox 架构趋同进化；微软 Win11 博客自认"大量命令在 Explorer 进程内运行造成性能与可靠性问题"。性能手段（预热/池化/懒加载/动词直调）见 §4。
+支撑证据：Directory Opus 13（2023-12）新增"尽可能进程外访问上下文菜单"选项，官方文档原话"上下文菜单扩展是最容易出问题的 shell 扩展"——与 DeskCue 架构趋同进化；微软 Win11 博客自认"大量命令在 Explorer 进程内运行造成性能与可靠性问题"。性能手段（预热/池化/懒加载/动词直调）见 §4。
 
 ## 1. 用户反馈与根因（2026-09-12 定位，均已复核代码证据）
 
@@ -25,7 +25,7 @@
 
 | # | 根因 | 证据 | 归属症状 |
 |---|---|---|---|
-| R1 | 代理进程**零 DPI 声明**（无 manifest、无 API 调用），主程序 PerMonitorV2 传物理像素 → 缩放≠100% 时菜单位置错 + DWM 位图拉伸模糊/裁切；100% 缩放不复现 | `native/deskbox-thumbnail-proxy/` 全目录无 DPI 痕迹；`main.rs` TrackPopupMenuEx 直接消费 `screen_x/y` | A（渲染坏，最高嫌疑） |
+| R1 | 代理进程**零 DPI 声明**（无 manifest、无 API 调用），主程序 PerMonitorV2 传物理像素 → 缩放≠100% 时菜单位置错 + DWM 位图拉伸模糊/裁切；100% 缩放不复现 | `native/deskcue-thumbnail-proxy/` 全目录无 DPI 痕迹；`main.rs` TrackPopupMenuEx 直接消费 `screen_x/y` | A（渲染坏，最高嫌疑） |
 | R2 | 菜单 owner 是**非置顶**隐藏窗口，叠放弹层宿主**永久 WS_EX_TOPMOST** 且菜单期间被刻意保活 → 菜单弹在弹层后面 | `StackPopoverHostWindow.cs:63-128`；`SelectionAndMenus.cs:494-501` | A（弹层路径确定性遮挡） |
 | N1 | `InvokeCommand` 返回后**立即 process::exit**，无消息泵/宽限 → post-message 完成、以 owner 为父的异步 UI、STA 回调类动词被杀在半路 | `main.rs:536→854` | B（点击无反应，头号） |
 | N2 | 裸 ANSI `CMINVOKECOMMANDINFO`（`fMask:0`，无 UNICODE/PTINVOKE/lpDirectory）→ 部分处理器退化或拒绝；失败只映射为小反馈气泡 | `main.rs:523-533` | B（次要） |
@@ -51,13 +51,13 @@
 | P1 | **单发兜底**：server 轮在"菜单尚未显示"阶段失败时，自动回落一次自包含的单发轮（`--context-menu`），用户总能拿到菜单；两条路径共用同一原生构建代码与契约测试 | `TryShowOneShotAsync` |
 | P1 | **菜单关闭**：`cancel` 命令 + 读取线程 post ESC（见 §4.1）；点击收口在格子窗口/叠放弹层窗口的 WndProc 子类；右键其他条目=关旧开新（`s_pendingRequest`）；server 模式 invoke 后立即回 `result` | Rust `dismiss_open_menu` + `CancelOpenMenu` |
 | P1 | **子菜单不再为空**：去掉 `TPM_NONOTIFY`（见 §4.2） | Rust `track_flags` |
-| P1 | **菜单跟随明暗主题**：代理进程通过 uxtheme 序号 opt-in（见 §4.3），DeskBox 每轮传主题 | Rust `apply_menu_theme` + C# `MenuThemeToken` |
+| P1 | **菜单跟随明暗主题**：代理进程通过 uxtheme 序号 opt-in（见 §4.3），DeskCue 每轮传主题 | Rust `apply_menu_theme` + C# `MenuThemeToken` |
 | P1 | **预热**：启动后/开关开启时后台拉起 server 并对 `C:\` 做一次 throwaway QueryContextMenu（Files 同款）。实测有效：同一路径真实构建 2343ms（冷）→ 299ms（预热后） | Rust `warmup` 命令 + C# `Prewarm()` |
 | — | 单发模式 `--context-menu <path> <x> <y>` 保留（同等修复；契约测试直接覆盖该 CLI） | 兼容 |
 
 ## 4. 协议规范（server 模式 v2）
 
-- 启动：`DeskBox.ThumbnailProxy.exe --context-menu-server`，stdin/stdout 均 UTF-8 文本行协议；stderr 为诊断流（父端持续排空）。
+- 启动：`DeskCue.ThumbnailProxy.exe --context-menu-server`，stdin/stdout 均 UTF-8 文本行协议；stderr 为诊断流（父端持续排空）。
 - 子端就绪即输出 `ready`。父端命令：
   - `menu\t<x>\t<y>\t<path>`（路径可为任意含空格串；制表符分隔，路径取第 3 个制表符后的全部）
   - `warmup`（对 `C:\` 建 + 弃一次菜单，应答 `warm ok` / `warm err`）
@@ -72,14 +72,14 @@
 **现象**：菜单弹出后关不掉——右键其他格子、点空白区域、点桌面、点其他软件都留着（只有左键点**同一个**格子能关）。
 
 **根因（两层）**：
-1. 宿主菜单主要靠 owner 的**激活变化/鼠标捕获**自行关闭，而 DeskBox 的格子窗口是**置顶且非激活**的窗口，点击它们既不改前台也不触发菜单的关闭逻辑；菜单 owner 又是**隐藏窗口**，永远收不到 `WM_ACTIVATE(WA_INACTIVE)`。
+1. 宿主菜单主要靠 owner 的**激活变化/鼠标捕获**自行关闭，而 DeskCue 的格子窗口是**置顶且非激活**的窗口，点击它们既不改前台也不触发菜单的关闭逻辑；菜单 owner 又是**隐藏窗口**，永远收不到 `WM_ACTIVATE(WA_INACTIVE)`。
 2. 已实测：在代理**确实拿到前台**、且点击落在普通可激活窗口上时，系统路径能关（探针 `src=menu`）；一旦环境不满足（真实交互里常见），就完全不关。**不能依赖前台**。
 
 **方案（两条独立机制，互为兜底）**：
 
 | 机制 | 覆盖 | 实现 |
 |---|---|---|
-| `cancel` 命令 → 读取线程 post ESC | DeskBox 自己的点击（格子窗口子类、叠放弹层子类） | 见下 |
+| `cancel` 命令 → 读取线程 post ESC | DeskCue 自己的点击（格子窗口子类、叠放弹层子类） | 见下 |
 | **`WH_MOUSE_LL` 鼠标钩子** → 任何外部鼠标按下即 post ESC | **所有情况**：非激活格子、桌面、其他软件 | **专职泵线程**上安装，菜单存活期内存在，菜单一关立即卸载 |
 
 **钩子线程模型（第五轮修复，2026-09-12）**：低级鼠标钩子的回调由**安装它的线程的泵**送达。该线程一旦阻塞（`InvokeCommand` 里跑 1-2 秒的 Shell 动词、或慢处理器填子菜单），系统**停止向钩子递送鼠标事件、整条桌面输入管线卡顿**——用户侧即"点了菜单项后全系统鼠标卡 1-2s"。实验定案（注入 72 个鼠标事件、坐标走廊过滤排除真实鼠标）：钩子线程 Sleep 1.5s 期间**只有 2 个事件到达回调**，第一个 pending 调用等满 800ms 测量上限；泵着时中位 16ms。因此：
@@ -108,19 +108,19 @@
 
 ### 4.3 菜单跟随明暗主题（uxtheme 私有序号）
 
-**现象**：Explorer 的原生菜单跟随明暗主题，DeskBox 里的原生菜单**永远是亮色**。
+**现象**：Explorer 的原生菜单跟随明暗主题，DeskCue 里的原生菜单**永远是亮色**。
 
 **根因**：宿主经典菜单的暗色渲染需要**拥有菜单的进程**主动 opt-in，而微软**没有公开 API**（WindowsAppSDK #2943/#5543/#95 都是这个诉求，微软明确回答"普通 Win32 窗口的系统菜单就是亮色的，这是 Win32 的行为"）。Explorer 自己走的是 uxtheme.dll 的**未文档化序号导出**。代理进程此前一次都没调用过，所以一直亮色。
 
-**修复**（`native/deskbox-thumbnail-proxy/src/main.rs`，全部带空指针检查、失败即静默降级回亮色）：
+**修复**（`native/deskcue-thumbnail-proxy/src/main.rs`，全部带空指针检查、失败即静默降级回亮色）：
 
 | 序号 | 作用 |
 |---|---|
-| 135 `SetPreferredAppMode` | 进程级 opt-in（本机实测 `previous` 返回 `0`=`Default`，证明序号 135 确实指向真函数）；DeskBox 深色→`ForceDark`，浅色→`ForceLight`（用 `Force*` 而非 `AllowDark`，否则浅色系统上选择深色的用户仍会拿到亮菜单） |
+| 135 `SetPreferredAppMode` | 进程级 opt-in（本机实测 `previous` 返回 `0`=`Default`，证明序号 135 确实指向真函数）；DeskCue 深色→`ForceDark`，浅色→`ForceLight`（用 `Force*` 而非 `AllowDark`，否则浅色系统上选择深色的用户仍会拿到亮菜单） |
 | 104 `RefreshImmersiveColorPolicyState` + 136 `FlushMenuThemes` | 运行时切换主题时必须（顺序：先 refresh 再 set 再 flush），否则缓存的菜单主题不刷新 |
 | 133 `AllowDarkModeForWindow` + `SetWindowTheme(owner, "DarkMode_Explorer"/"Explorer")` | owner 窗口层级的登记 |
 
-- 进程级模式在**创建任何窗口之前**设置（server 启动时按 CLI 主题、单发模式按参数），每轮再按 DeskBox 当前主题幂等应用。
+- 进程级模式在**创建任何窗口之前**设置（server 启动时按 CLI 主题、单发模式按参数），每轮再按 DeskCue 当前主题幂等应用。
 - 主题来源：C# `App.Current.ThemeService.CurrentTheme`（`System` 时取 `Application.Current.RequestedTheme`），随 `menu` 命令第四个字段传入；server/单发各自也带一个初始主题 token。
 - **实测对照**（探针采样菜单区域平均亮度）：请求 `dark` → luma **61**（暗）；请求 `light` → luma **231**（亮）。五种调用组合（force/allow × 窗口主题 default/explorer/none）均得到暗色菜单，说明关键就是 135。
 - 已知边界：菜单**栏**与 Alt+Space 系统菜单无法通过此路径变暗（平台限制，需 owner-draw）；第三方**自绘**菜单项保持其自身配色；若某天序号被移除，代码会退化为亮色菜单（不崩）。
@@ -147,12 +147,12 @@ GetUIObjectOf(IID_IContextMenu) → QueryContextMenu（HMENU 归宿主，用毕 
 | 新建 server → 真实构建（`C:\Windows\notepad.exe`） | `shown` 2343ms（冷启动处理器加载） |
 | 预热 → 真实构建 | `shown` 299ms |
 | 预热 → 不存在路径 | `result 3` 即时 |
-| 失败那条确切口径 `E:\DeskBox\AI工具\MiniMax Hub.lnk` | `shown` 693ms |
+| 失败那条确切口径 `E:\DeskCue\AI工具\MiniMax Hub.lnk` | `shown` 693ms |
 | 同目录其他 .lnk / 目录 | `shown` 648ms / 368ms |
 
 **一处真实且已修的缺陷（但非本次现象）**：`StandardInputEncoding = Encoding.UTF8` 在**首次写入**子进程 stdin 时会写 UTF-8 BOM（EF BB BF）。已用文件喂入实验证实：带 BOM 的 `menu\t…` 行会被原生端 `strip_prefix("menu\t")` 判为噪音**静默丢弃**（无 `result`、无 stderr）。修复 = C# 改用 `UTF8Encoding(encoderShouldEmitUTF8Identifier: false)` + 原生端 `normalize_command_line` 容忍 BOM + 未知输入行上报 stderr（不再静默）。
 
-**仍未坐实**：应用内曾出现 `Menu build timed out timeoutMs=15000 serverMs=38 error=`（`E:\DeskBox\AI工具\MiniMax Hub.lnk`，15s 后重试同样失败），且**未能在应用外复现**。已知该轮次原生端既无 stdout 也无 stderr 输出，即命令未被处理。
+**仍未坐实**：应用内曾出现 `Menu build timed out timeoutMs=15000 serverMs=38 error=`（`E:\DeskCue\AI工具\MiniMax Hub.lnk`，15s 后重试同样失败），且**未能在应用外复现**。已知该轮次原生端既无 stdout 也无 stderr 输出，即命令未被处理。
 
 **下次复现要看的三行**（已加进代码，都是 `App.Log`）：
 1. `Ignored unexpected native output generation=N line='…'`——协议行被当成噪音丢弃（能直接抓到 BOM 类污染）；

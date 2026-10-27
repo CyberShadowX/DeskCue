@@ -5,7 +5,7 @@
 
 ## 0. 全局约定
 
-- **构建**：`Debug` = `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`；`AOT` = Native AOT 零售包（`.artifacts/test-installer-x64/.../DeskBox_Setup_*.exe`）。**凡标 "AOT" 的项 Debug 验证不了**（绑定桥白名单/转换器投影只在 AOT 发病，历史两次实证）。
+- **构建**：`Debug` = `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`；`AOT` = Native AOT 零售包（`.artifacts/test-installer-x64/.../DeskCue_Setup_*.exe`）。**凡标 "AOT" 的项 Debug 验证不了**（绑定桥白名单/转换器投影只在 AOT 发病，历史两次实证）。
 - **渠道**：Store MSIX 与直装各跑一遍升级项（I 组）；其余项任一渠道。
 - 新字段默认值速查：静默启动=关 / 拖出=跟随 Windows / 两个拖出提示=开 / 整理时机=实时(10s) / 错峰=关。`schemaVersion` v1.5.5 与本包**同为 9**（无迁移）。
 - **AOT 必验项汇总**（§H 有理由链）：A1、A2、A3、A7、C2、D2、D3、D7、D8、G1。
@@ -253,12 +253,12 @@
 
 ## J. 天气图标风格（10-01 晚并入批，未提交）
 
-> 位置：功能格子→天气→皮肤卡片下方"图标风格"。四档：**Fluent（Win11 风格，排最上）/ DeskBox 简笔 / 扁平彩色 / 线框描边**（10-02 再调整：系统 Emoji 档已删，emoji 渲染支路整体拔除；默认=Fluent，旧 settings 里残留的 `"Emoji"`/`"Fill"`/未知值加载时全部归一为 Fluent）。内置 SVG 目的=图标在 Win10/Win11 观感一致（不再依赖 Segoe Emoji 字体差异）。
+> 位置：功能格子→天气→皮肤卡片下方"图标风格"。四档：**Fluent（Win11 风格，排最上）/ DeskCue 简笔 / 扁平彩色 / 线框描边**（10-02 再调整：系统 Emoji 档已删，emoji 渲染支路整体拔除；默认=Fluent，旧 settings 里残留的 `"Emoji"`/`"Fill"`/未知值加载时全部归一为 Fluent）。内置 SVG 目的=图标在 Win10/Win11 观感一致（不再依赖 Segoe Emoji 字体差异）。
 
 ### J1 四档切换 × 三布局
 - **前置**：天气格子已配置城市且有数据。
 - **步骤**：图标风格依次切四档（确认下拉第一项是 Fluent、无 Emoji 项），每档看：展开布局（当前天气大图标+逐小时行图标）、紧凑布局、迷你布局；再切"今天/整周"视图。
-- **预期**：每档图标即切即变（含逐小时/逐日行）；Fluent=彩色渐变（Win11 emoji 观感）；DeskBox 档=手绘简笔（雾=单色 fog、阵雨=rain-showers 等独立命名）；扁平/线框=Meteocons 命名（雾分昼夜、阵雨 80/阵雪 85-86 有专用图标）。
+- **预期**：每档图标即切即变（含逐小时/逐日行）；Fluent=彩色渐变（Win11 emoji 观感）；DeskCue 档=手绘简笔（雾=单色 fog、阵雨=rain-showers 等独立命名）；扁平/线框=Meteocons 命名（雾分昼夜、阵雨 80/阵雪 85-86 有专用图标）。
 - **级别**：切换不生效/空白图标 = **P1**；仅逐小时行不刷新 = P2。构建：both。OS：both。`[待验]`
 
 ### J2 紧凑胶囊图标

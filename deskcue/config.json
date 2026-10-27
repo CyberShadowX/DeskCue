@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "productName": "DeskCue",
+  "repository": "CyberShadowX/DeskCue",
+  "upstreamRepository": "Tianyu199509/DeskBox",
+  "upstreamRef": "v1.5.9",
+  "upstreamCommit": "1fdf0bd9f84affe889318173a7f3141843c79604",
+  "upstreamReleaseCommit": "4cae1d4ebb0e416af7d66a764f52f6ccaafdda3a",
+  "upstreamVersion": "1.5.9",
+  "brandingRevision": 1,
+  "productVersion": "1.5.9.1",
+  "packageIdentity": "CyberShadowX.DeskCue",
+  "productionInstanceScope": "0F10D29D",
+  "forkPatches": [
+    "001-fork-boundaries.patch"
+  ],
+  "identityMappings": {
+    "5E052824-3456-427E-9759-3BCAE078A1D3": "F90973DE-39B2-508A-8DEC-088C53758F37",
+    "3B75AA4A-2433-4F71-9CC1-B644B26F474A": "32AFF2BA-34E3-56BE-83E3-671BEBBFA32F",
+    "7bb59608-421d-4fd4-8f12-8929f87d086a": "D61F048B-B5EE-5CC8-87BC-D28E118A8CBB",
+    "4D54EEC6-13BE-4C8F-A8F7-81FE72F4B2C9": "E5662752-7950-51E8-9830-6A12DE878954"
+  }
+}

@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-2B 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-2B 完成与复盘报告
 
 - 审计日期：2026-08-22
 - 范围：Quick Access 临时目录 pin/unpin、应用内失败补偿、进程终止后的独立补偿
@@ -19,7 +19,7 @@
 
 ## 2. 实现边界
 
-新增 `App.AotQuickAccessMutationSmoke.cs`，只在 `DESKBOX_NATIVE_AOT` 中编译，并通过显式环境变量 `DESKBOX_AOT_QUICK_ACCESS_MUTATION_SMOKE` 启用。入口仍位于 `OnLaunched completed successfully` 之后，不改变普通 JIT 启动行为。
+新增 `App.AotQuickAccessMutationSmoke.cs`，只在 `DESKCUE_NATIVE_AOT` 中编译，并通过显式环境变量 `DESKCUE_AOT_QUICK_ACCESS_MUTATION_SMOKE` 启用。入口仍位于 `OnLaunched completed successfully` 之后，不改变普通 JIT 启动行为。
 
 夹具位于隔离 preview 根：
 

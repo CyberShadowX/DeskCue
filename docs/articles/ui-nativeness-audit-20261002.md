@@ -1,4 +1,4 @@
-# DeskBox UI 原生度全量审查（2026-10-02）
+# DeskCue UI 原生度全量审查（2026-10-02）
 
 六路并行审查的汇总：设置窗口、格子外壳、格子内容控件、弹层/窗口/菜单、文案与本地化、全局设计 token。
 第一性原则：能用原生组件就用原生（WinUI 3 系统控件 + ThemeResource + Segoe Fluent Icons + CommunityToolkit 官方控件），自绘只在原生真不满足时保留。
@@ -80,7 +80,7 @@
 - **设置导航图标 SVG(28×28) → FontIcon**（`SettingsWindow.xaml:320-409`，8 个 NavigationViewItem；品牌多色语言 vs 原生一致性的取舍，字形会立刻与全页 HeaderIcon 统一）。
 - **WidgetShell 标题钮 5 组自绘 Path → FontIcon**（`WidgetShell.xaml:174-206`：Add=E710、More=E712、关闭=E74D 保留移除语义、锁=E72E 系；需同步 `WidgetShell.xaml.cs:768-774` 暴露的 icon 属性；PositionLock/SizeLock 双态语义可保留 Path）。
 - **Stack 组切换器 hover/pressed 从代码快照迁回 VSM**（`WidgetGroupTitleSwitcher.xaml:21-38` 裸模板 + `Interaction.cs:953-1012` 手写 alpha 阶梯；给模板加 VisualState 引用真实 ThemeResource，先只迁 hover/pressed 两态）。
-- **文件项 hover/选中 alpha 表对齐 Neutral 调色板**（`FileItemSurfaceStyleCache.cs:103-128`，hover 浓度比其它 neutral 面近一倍；未选中档改 `DeskBoxNeutralFillSecondary/Tertiary`，选中档对齐 SystemListLow 语义；需肉眼回归壁纸/材质组合）。
+- **文件项 hover/选中 alpha 表对齐 Neutral 调色板**（`FileItemSurfaceStyleCache.cs:103-128`，hover 浓度比其它 neutral 面近一倍；未选中档改 `DeskCueNeutralFillSecondary/Tertiary`，选中档对齐 SystemListLow 语义；需肉眼回归壁纸/材质组合）。
 - **音乐 IconButton 模板 → 轻量样式覆写**（`MusicWidgetContent.xaml:16-95` 自绘 4 态 VSM；GlanceWidgetContent.xaml:28-31 已有 `ButtonBackgroundPointerOver=SubtleFillColorSecondaryBrush` 正例；内容透明度阶梯 0.92/1/0.78 若要保留则留模板）。
 - **存储迁移对话框按钮搬进 ContentDialog 命令位**（`Services/ManagedStorageMigrationDialog.cs:354-399`；恢复 Enter→主按钮/标准度量/无障碍语义；三态状态机的按钮 IsEnabled 同步要小心）。
 - **ReleaseNotes "在线查看" → HyperlinkButton**（`ReleaseNotesWindow.xaml:94-100`，参考 TaskView 的 AbandonRecoveryButton；⚠️ 别动被 `FrostedActionSurfaceContractTests` 冻结的 FooterAcrylicSurface）。

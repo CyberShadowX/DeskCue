@@ -54,7 +54,7 @@ jobs:
       - name: Restore ARM64 assets
         shell: pwsh
         run: >-
-          dotnet restore .\DeskBox.sln
+          dotnet restore .\DeskCue.sln
           --locked-mode
           -p:Platform=ARM64
           -p:RuntimeIdentifier=win-arm64

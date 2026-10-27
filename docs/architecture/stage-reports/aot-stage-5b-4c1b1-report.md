@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-4C1B1 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-4C1B1 完成与复盘报告
 
 - 审计日期：2026-08-22
 - 范围：owned 回收站删除、唯一身份查询、精确恢复、File Widget 单选/多选菜单真实路由与三进程恢复
@@ -7,7 +7,7 @@
 
 ## 1. 本阶段结论
 
-5B-4C1B1 在既有 managed UI runner 中增加 `RecycleBinMenuPersistenceRestart`，只操作每轮由 32 位小写十六进制 run ID 标识的三个 owned 项目。最终矩阵使用同一份受审计 NativeAOT 产物依次启动三个全新 DeskBox 进程：
+5B-4C1B1 在既有 managed UI runner 中增加 `RecycleBinMenuPersistenceRestart`，只操作每轮由 32 位小写十六进制 run ID 标识的三个 owned 项目。最终矩阵使用同一份受审计 NativeAOT 产物依次启动三个全新 DeskCue 进程：
 
 1. `Mutate` 加载真实 File Widget，经真实单选和多选 `MenuFlyout` 的删除菜单项进入产品删除链；
 2. `VerifyRestore` 在新进程中确认三个原路径均消失、回收站中各有且仅有一个精确匹配，再通过 Rust 边界逐项恢复并核对长度与 SHA-256；
@@ -29,7 +29,7 @@ FileItemMenuBuilder
 
 该路径是小数据量同步 P/Invoke，没有需要通过 Rust 降低的托管常驻内存，也没有 Native AOT COM 阻断。因此保留 C# 可以维持普通 JIT 和 AOT 的同一产品行为。
 
-精确恢复需要 Shell 回收站 namespace、`FolderItem`/`FolderItem2`、`VARIANT`、来源目录属性及 `undelete` verb。若继续在 C# 中实现，需要重建一组带继承和自动化类型的 Shell COM 接口。本阶段按“完整 Rust 边界明显更简单时直接使用 Rust”的原则，增加单个粗粒度 `deskbox_recycle_bin_v1` 导出，只返回阶段 HRESULT、匹配数和恢复数。生产模块保持 ABI 2，能力从 255 扩为 511，必需导出从 9 个扩为 10 个。
+精确恢复需要 Shell 回收站 namespace、`FolderItem`/`FolderItem2`、`VARIANT`、来源目录属性及 `undelete` verb。若继续在 C# 中实现，需要重建一组带继承和自动化类型的 Shell COM 接口。本阶段按“完整 Rust 边界明显更简单时直接使用 Rust”的原则，增加单个粗粒度 `deskcue_recycle_bin_v1` 导出，只返回阶段 HRESULT、匹配数和恢复数。生产模块保持 ABI 2，能力从 255 扩为 511，必需导出从 9 个扩为 10 个。
 
 ## 3. 精确身份与安全门禁
 
@@ -54,7 +54,7 @@ FileItemMenuBuilder
 | `WidgetManager.AotLocalFileSurfaceSmoke.cs` | 复用真实 File Widget 宿主定位与 surface 等待 |
 | `RecycleBinNativeBackend.cs` | ABI/能力/导出加载、输入校验和防御性结果验证 |
 | `recycle_bin.rs` | Shell 回收站完整枚举、精确身份比较和唯一恢复 |
-| `deskbox_native.h` | C ABI、能力位、结构尺寸、阶段位及导出声明 |
+| `deskcue_native.h` | C ABI、能力位、结构尺寸、阶段位及导出声明 |
 | `run-aot-managed-ui-smoke.ps1` | 唯一根、三进程矩阵、独立补偿、正式数据指纹和双 owned 根清理 |
 | `publish-aot-audit.ps1` | profile 47 / schema 44 的源码、范围、ABI、恢复顺序和警告门禁 |
 | `AotStage5B4C1B1ContractTests.cs` | 产品链、菜单、fixture、Rust/托管 ABI、runner、补偿和延期范围契约 |
@@ -69,7 +69,7 @@ FileItemMenuBuilder
 
 ### 5.2 公共 C 头文件未同步新边界
 
-Rust、托管加载器和构建脚本已经扩展到能力 511，但复盘发现 `deskbox_native.h` 尚缺少回收站结构、常量、尺寸断言和导出声明。现已补齐 80 字节请求、104 字节结果以及 C/C++ 静态断言，避免只由 Rust/C# 私有布局维持 ABI。
+Rust、托管加载器和构建脚本已经扩展到能力 511，但复盘发现 `deskcue_native.h` 尚缺少回收站结构、常量、尺寸断言和导出声明。现已补齐 80 字节请求、104 字节结果以及 C/C++ 静态断言，避免只由 Rust/C# 私有布局维持 ABI。
 
 ### 5.3 首次真实运行触发了补偿路径
 

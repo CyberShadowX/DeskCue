@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-4B2C2A 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-4B2C2A 完成与复盘报告
 
 - 审计日期：2026-08-22
 - 范围：x64 NativeAOT 天气本地设置、固定 Weather Widget 日/周视图元数据、三进程重载、基线恢复与 postflight
@@ -7,7 +7,7 @@
 
 ## 1. 本阶段结论
 
-5B-4B2C2A 在既有 managed UI runner 中增加 `WeatherSettingsPersistenceRestart`，使用同一份受审计 NativeAOT 产物依次启动三个全新的 DeskBox 进程：
+5B-4B2C2A 在既有 managed UI runner 中增加 `WeatherSettingsPersistenceRestart`，使用同一份受审计 NativeAOT 产物依次启动三个全新的 DeskCue 进程：
 
 1. `Mutate` 从固定上海基线开始，经与普通设置入口共用的本地产品策略写入成都、华氏、mph、Today、Standard、指标显隐和 15 分钟刷新设置，并将固定 Weather Widget 的视图覆盖从 Day 改为 Week；
 2. `VerifyRestore` 在新进程中逐字段确认上述变更已恢复，再经同一产品路径恢复上海、摄氏、km/h、Week、Rich、显示项基线、60 分钟刷新和 Widget Day 覆盖；
@@ -105,7 +105,7 @@ D:\project\wingezi-local-backups\20260822-143347-pre-5b4b2c2a
 .artifacts/aot-managed-ui-smoke/win-x64/weather-settings-persistence-restart/verify-restore-result.json
 .artifacts/aot-managed-ui-smoke/win-x64/weather-settings-persistence-restart/postflight-result.json
 .artifacts/aot-managed-ui-smoke/win-x64/weather-settings-persistence-restart/final-settings.json
-.artifacts/aot-managed-ui-smoke/win-x64/weather-settings-persistence-restart/DeskBox.log
+.artifacts/aot-managed-ui-smoke/win-x64/weather-settings-persistence-restart/DeskCue.log
 ```
 
 关键实测值：

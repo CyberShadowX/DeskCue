@@ -1,7 +1,7 @@
 # 设置窗口主题不跟随系统：根因分析与修复方案
 
 - 日期：2026-09-20
-- 症状：DeskBox 设置为跟随系统主题时，系统明暗切换后格子正常切换，设置页面停留在深色
+- 症状：DeskCue 设置为跟随系统主题时，系统明暗切换后格子正常切换，设置页面停留在深色
 - 结论：**设置窗口的"关闭即隐藏复用"与 `ThemeService` 的"Closed 即注销"语义冲突**。窗口被用户关闭（实际隐藏）后即被移出主题跟踪列表，`RequestedTheme` 冻结在最后一次应用的值。属 `0ea2ddbe`（2026-09-01，perf: fix window/material leaks）引入隐藏复用后的回归。
 - 状态：写本文时只做了分析、未动代码；§4 的 P0–P3 方案**已随后续批次全部落地**（`SettingsWindow` 迁 `AppWindow.Closing`+Cancel 门闸、`WindowTrackingRegistry` 弱引用登记等）。下文行号锚点基于实现前的代码，阅读时以当前源码为准。
 
@@ -22,9 +22,9 @@
 
 ### 2.1 冲突的两端
 
-**ThemeService 端**：`TrackWindow` 订阅 `window.Closed += OnTrackedWindowClosed`（[ThemeService.cs:158](../../src/DeskBox/Services/ThemeService.cs#L158)）。回调**不检查 `args.Handled`**，一进 Closed 就把窗口从 `_trackedWindows` 移除并退订（[ThemeService.cs:161-170](../../src/DeskBox/Services/ThemeService.cs#L161)）。该语义自 `c32265eb` 起如此——当时所有窗口都是真关闭，没有问题。
+**ThemeService 端**：`TrackWindow` 订阅 `window.Closed += OnTrackedWindowClosed`（[ThemeService.cs:158](../../src/DeskCue/Services/ThemeService.cs#L158)）。回调**不检查 `args.Handled`**，一进 Closed 就把窗口从 `_trackedWindows` 移除并退订（[ThemeService.cs:161-170](../../src/DeskCue/Services/ThemeService.cs#L161)）。该语义自 `c32265eb` 起如此——当时所有窗口都是真关闭，没有问题。
 
-**SettingsWindow 端**：`0ea2ddbe` 为修设置树泄漏，把关闭改成"取消关闭 + 隐藏复用"——用户点 X 时 `SettingsWindow_Closed` 设 `args.Handled = true` 然后 `_appWindow.Hide()`，实例保留整进程生命周期（[SettingsWindow.xaml.cs:305-320](../../src/DeskBox/Views/SettingsWindow.xaml.cs#L305)）。此改动未同步 ThemeService 的注销语义。
+**SettingsWindow 端**：`0ea2ddbe` 为修设置树泄漏，把关闭改成"取消关闭 + 隐藏复用"——用户点 X 时 `SettingsWindow_Closed` 设 `args.Handled = true` 然后 `_appWindow.Hide()`，实例保留整进程生命周期（[SettingsWindow.xaml.cs:305-320](../../src/DeskCue/Views/SettingsWindow.xaml.cs#L305)）。此改动未同步 ThemeService 的注销语义。
 
 ### 2.2 触发时序
 
@@ -37,13 +37,13 @@
 
 ### 2.3 之后的一切
 
-- 系统切换 → `UISettings.ColorValuesChanged` → 防抖 200ms → `RefreshAppearance()` → `ApplyToAllWindows()` 遍历 `_trackedWindows`（[ThemeService.cs:213-218](../../src/DeskBox/Services/ThemeService.cs#L213)）——列表已无设置窗口，`SettingsRoot.RequestedTheme` 不再被赋值；
-- 重新打开 → `ShowWindow → RefreshOnReopen` 只刷新功能格子列表/页面数据/响应式布局（[SettingsWindow.xaml.cs:268-279](../../src/DeskBox/Views/SettingsWindow.xaml.cs#L268)），既不重新 Track 也不 `ApplyToWindow`；`App.OpenSettings`（[App.xaml.cs:2885-2890](../../src/DeskBox/App.xaml.cs#L2885)）同样不做主题重应用；
+- 系统切换 → `UISettings.ColorValuesChanged` → 防抖 200ms → `RefreshAppearance()` → `ApplyToAllWindows()` 遍历 `_trackedWindows`（[ThemeService.cs:213-218](../../src/DeskCue/Services/ThemeService.cs#L213)）——列表已无设置窗口，`SettingsRoot.RequestedTheme` 不再被赋值；
+- 重新打开 → `ShowWindow → RefreshOnReopen` 只刷新功能格子列表/页面数据/响应式布局（[SettingsWindow.xaml.cs:268-279](../../src/DeskCue/Views/SettingsWindow.xaml.cs#L268)），既不重新 Track 也不 `ApplyToWindow`；`App.OpenSettings`（[App.xaml.cs:2885-2890](../../src/DeskCue/App.xaml.cs#L2885)）同样不做主题重应用；
 - 隐藏期间 `AppearanceChanged` 订阅仍存活（只在真关闭解除），但 `OnAppearanceChanged` 只刷标题栏按钮颜色和格子列表，不应用主题；且 `IsEffectiveSettingsThemeDark()` 读的 `SettingsRoot.ActualTheme` 是冻结值——连标题栏也内外一致地卡深色。
 
 ### 2.4 为什么格子正常
 
-格子窗口（`WidgetWindowBase`，由 `WidgetManager` Track，[WidgetManager.cs:2636](../../src/DeskBox/Services/WidgetManager.cs#L2636)）常驻桌面、从不走"用户关闭→隐藏"路径，一直在跟踪列表里，每次系统切换都被重新赋值 `RequestedTheme = EffectiveTheme`；其内容控件靠 `ActualThemeChanged` 联动刷新。
+格子窗口（`WidgetWindowBase`，由 `WidgetManager` Track，[WidgetManager.cs:2636](../../src/DeskCue/Services/WidgetManager.cs#L2636)）常驻桌面、从不走"用户关闭→隐藏"路径，一直在跟踪列表里，每次系统切换都被重新赋值 `RequestedTheme = EffectiveTheme`；其内容控件靠 `ActualThemeChanged` 联动刷新。
 
 ### 2.5 排除项
 
@@ -56,13 +56,13 @@
 
 | # | 事实 | 对本问题的意义 |
 |---|---|---|
-| 1 | 官方取消关闭的契约是 **`Window.Closing`（`WindowClosingEventArgs.Cancel`，WinAppSDK 1.4+ 加入）或更底层的 `AppWindow.Closing`（`AppWindowClosingEventArgs.Cancel`）**。Uno 文档、microsoft-ui-xaml issue、Microsoft Q&A 一致指向此模式 | DeskBox 现用的 `Window.Closed + args.Handled = true` 是**未承诺行为**：`WindowEventArgs.Handled` 文档只写 "Gets or sets whether a Window event was handled"，未承诺在 Closed 上取消销毁。实践中在 packaged + WinAppSDK 1.x+ 生效（DeskBox 复用确实在工作），但存在确认场景下崩溃的 issue 报告 |
-| 2 | `UISettings.ColorValuesChanged` 有**已知的不触发 bug**（microsoft-ui-xaml #9372，2024-02），社区 workaround 为 `WM_SETTINGCHANGE` 消息钩子 | DeskBox 只靠这一个信号驱动系统主题跟随 → "显示时自愈"（P2）有真实兜底价值，不是纯防御 |
-| 3 | `ColorValuesChanged` 在**后台线程**触发，必须 marshal 回 UI 线程 | DeskBox 已正确处理（`App.UiDispatcherQueue.TryEnqueue`，[ThemeService.cs:32](../../src/DeskBox/Services/ThemeService.cs#L32)），无需改动 |
-| 4 | WinUI Gallery 官方 `ThemeService` 模式 = root element `RequestedTheme` + `ActualThemeChanged` + 持久化 | DeskBox 架构方向与官方一致（且更强：多窗口 Track + `EffectiveTheme` 解析），问题只在注销时机 |
-| 5 | 已知平台 bug：运行时切主题且窗口无 backdrop 时可能表现异常（microsoft-ui-xaml issue，编号未核实到原文） | 风险备注：DeskBox 格子多为 Solid 无 backdrop，但实测切换正常，暂不行动 |
+| 1 | 官方取消关闭的契约是 **`Window.Closing`（`WindowClosingEventArgs.Cancel`，WinAppSDK 1.4+ 加入）或更底层的 `AppWindow.Closing`（`AppWindowClosingEventArgs.Cancel`）**。Uno 文档、microsoft-ui-xaml issue、Microsoft Q&A 一致指向此模式 | DeskCue 现用的 `Window.Closed + args.Handled = true` 是**未承诺行为**：`WindowEventArgs.Handled` 文档只写 "Gets or sets whether a Window event was handled"，未承诺在 Closed 上取消销毁。实践中在 packaged + WinAppSDK 1.x+ 生效（DeskCue 复用确实在工作），但存在确认场景下崩溃的 issue 报告 |
+| 2 | `UISettings.ColorValuesChanged` 有**已知的不触发 bug**（microsoft-ui-xaml #9372，2024-02），社区 workaround 为 `WM_SETTINGCHANGE` 消息钩子 | DeskCue 只靠这一个信号驱动系统主题跟随 → "显示时自愈"（P2）有真实兜底价值，不是纯防御 |
+| 3 | `ColorValuesChanged` 在**后台线程**触发，必须 marshal 回 UI 线程 | DeskCue 已正确处理（`App.UiDispatcherQueue.TryEnqueue`，[ThemeService.cs:32](../../src/DeskCue/Services/ThemeService.cs#L32)），无需改动 |
+| 4 | WinUI Gallery 官方 `ThemeService` 模式 = root element `RequestedTheme` + `ActualThemeChanged` + 持久化 | DeskCue 架构方向与官方一致（且更强：多窗口 Track + `EffectiveTheme` 解析），问题只在注销时机 |
+| 5 | 已知平台 bug：运行时切主题且窗口无 backdrop 时可能表现异常（microsoft-ui-xaml issue，编号未核实到原文） | 风险备注：DeskCue 格子多为 Solid 无 backdrop，但实测切换正常，暂不行动 |
 
-仓库内先例：`DesktopOrganizationWindow` 已经在用 `AppWindow.Closing + args.Cancel + _allowClose` 门闸模式（[DesktopOrganizationWindow.xaml.cs:67,146-161](../../src/DeskBox/Views/DesktopOrganizationWindow.xaml.cs#L146)）——迁移有成熟的同仓样板。项目使用 WinAppSDK 2.4.0，`Window.Closing` 可用。
+仓库内先例：`DesktopOrganizationWindow` 已经在用 `AppWindow.Closing + args.Cancel + _allowClose` 门闸模式（[DesktopOrganizationWindow.xaml.cs:67,146-161](../../src/DeskCue/Views/DesktopOrganizationWindow.xaml.cs#L146)）——迁移有成熟的同仓样板。项目使用 WinAppSDK 2.4.0，`Window.Closing` 可用。
 
 > 可信度标注：#1/#3/#4 来自官方文档与多个独立来源交叉；#2 来自 GitHub issue 标题与摘要；#5 两次抓取原文超时，仅凭搜索摘要，行动前需复核。
 
@@ -113,7 +113,7 @@ private void SettingsWindow_AppWindowClosing(AppWindow sender, AppWindowClosingE
 
 - Track/Untrack/RefreshAppearance 各打一行 verbose 日志（窗口类型 + 动作 + 计数）——本次排查若有日志五分钟定位；
 - `OnColorValuesChanged` 里 `App.UiDispatcherQueue` 为 null 时静默丢弃，补日志；
-- 可选：`WM_SETTINGCHANGE` 兜底监听（仅当真机复现 #9372；DeskBox 已有 subclass/消息泵基建，不急做）。
+- 可选：`WM_SETTINGCHANGE` 兜底监听（仅当真机复现 #9372；DeskCue 已有 subclass/消息泵基建，不急做）。
 
 ### 刻意不做
 
@@ -133,7 +133,7 @@ private void SettingsWindow_AppWindowClosing(AppWindow sender, AppWindowClosingE
 ## 6. 内存安全性论证（P0 + P1 之后）
 
 - **实例数不增长**：隐藏复用窗口全进程单例，`App._settingsWindow` 强持有；`OpenSettings` 的 `?? CreateSettingsWindow()` 只创建一次；`TrackWindow` 有 `Contains` 短路，不重复登记、不重复订阅。
-- **刷新幂等无累积**：`ApplyToWindow` 只做 `RequestedTheme` 赋值（无分配）、`AccentResourceScope.Apply`（固定覆盖同组 6 个资源 key，已存在时只改 `brush.Color`，[AccentResourceScope.cs:13-42](../../src/DeskBox/Helpers/AccentResourceScope.cs#L13)）、`SetWindowTheme`（DWM 属性）。多次系统切换内存平稳——格子窗口现状即此跑法。
+- **刷新幂等无累积**：`ApplyToWindow` 只做 `RequestedTheme` 赋值（无分配）、`AccentResourceScope.Apply`（固定覆盖同组 6 个资源 key，已存在时只改 `brush.Color`，[AccentResourceScope.cs:13-42](../../src/DeskCue/Helpers/AccentResourceScope.cs#L13)）、`SetWindowTheme`（DWM 属性）。多次系统切换内存平稳——格子窗口现状即此跑法。
 - **与 `0ea2ddbe` 防泄漏目标不冲突**：那次防的是"真关闭窗口的 XAML 树被原生引用拖住、每次开关泄漏一棵树"。P0 之后保留在列表里的是从未真关闭的复用窗口（树本来就活着）；真关闭路径仍正常注销。
 - **结构性保险**：弱引用簿记下，即使未来任何注销路径出 bug，ThemeService 也拖不住窗口——内存安全不依赖逻辑正确性。
 
@@ -155,7 +155,7 @@ private void SettingsWindow_AppWindowClosing(AppWindow sender, AppWindowClosingE
 1. `SettingsWindow` 构造函数：`_appWindow.Closing += SettingsWindow_AppWindowClosing`（新增）；
 2. 新增 Closing handler：`_allowRealClose` 门闸 + `args.Cancel = true` + `Hide()` + `ReleaseRaisedBandGuest`（逻辑搬自现 `SettingsWindow_Closed` 隐藏分支）；
 3. `SettingsWindow_Closed`：删隐藏分支，只留 `_isClosed = true` 起的完整清理（真关闭时才执行）；
-4. App 侧 `SettingsWindow_ClosedForApp`（[App.xaml.cs:2899-2907](../../src/DeskBox/App.xaml.cs#L2899)）：`args.Handled` 检查分支随迁移失效，`ScheduleBackgroundMemoryCleanup("settings-hidden")` 移入 Closing 路径；真关闭分支保留；
+4. App 侧 `SettingsWindow_ClosedForApp`（[App.xaml.cs:2899-2907](../../src/DeskCue/App.xaml.cs#L2899)）：`args.Handled` 检查分支随迁移失效，`ScheduleBackgroundMemoryCleanup("settings-hidden")` 移入 Closing 路径；真关闭分支保留；
 5. 检查 `ShowWindow` 的 `_isClosed` guard、`IsVisibleToUser`、subclass `WM_NcDestroy` 路径不受影响（均为真关闭语义，无假关闭依赖）。
 
 ## 参考资料
@@ -167,4 +167,4 @@ private void SettingsWindow_AppWindowClosing(AppWindow sender, AppWindowClosingE
 - [Window.Closing support tracking — microsoft-ui-xaml issues](https://github.com/microsoft/microsoft-ui-xaml/issues?q=is%3Aissue+Window.Closing)（早期无 `Window.Closing`，1.4+ 补齐）
 - [FrameworkElement.RequestedTheme — Microsoft Learn](https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.xaml.frameworkelement.requestedtheme)
 - WinUI Gallery `ThemeService` 模式（经 Context7 摘要转述）；albertakhmetov.com 主题切换文章（原文 404，仅搜索摘要）
-- 仓库内先例：`DesktopOrganizationWindow` 的 `AppWindow.Closing` 门闸（`src/DeskBox/Views/DesktopOrganizationWindow.xaml.cs:146`）
+- 仓库内先例：`DesktopOrganizationWindow` 的 `AppWindow.Closing` 门闸（`src/DeskCue/Views/DesktopOrganizationWindow.xaml.cs:146`）

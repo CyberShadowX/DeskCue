@@ -31,7 +31,7 @@
 自动回归覆盖分数刷新率、24–500Hz 周期、60/144Hz 混合调度、慢回调不重复降速、负载恢复、取消、强制末帧、原生事务失败、晚到的失败等待方、缩放输入合并和诊断计数。
 
 ```powershell
-dotnet test .\tests\DeskBox.Tests\DeskBox.Tests.csproj --no-restore --verbosity:minimal -p:Platform=x64 -p:RuntimeIdentifier=win-x64
+dotnet test .\tests\DeskCue.Tests\DeskCue.Tests.csproj --no-restore --verbosity:minimal -p:Platform=x64 -p:RuntimeIdentifier=win-x64
 ```
 
 设备验收仍须分别进行，自动策略测试不替代以下项目：
@@ -51,6 +51,6 @@ dotnet test .\tests\DeskBox.Tests\DeskBox.Tests.csproj --no-restore --verbosity:
 
 - x64 / win-x64 全量回归：3300 项通过，0 失败，0 跳过。
 - 标准 Debug 构建：0 错误，24 个警告，涉及可空引用、成员隐藏和未使用字段。
-- 已启动 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，确认仅此一个 DeskBox 进程，Medium 权限，启动日志记录 `OnLaunched completed successfully`。
+- 已启动 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，确认仅此一个 DeskCue 进程，Medium 权限，启动日志记录 `OnLaunched completed successfully`。
 - 当前设备为 Win11 build 26200，活动显示器报告 1920×1080 / 60Hz。Win10、混合刷新率和 DRR 的策略测试已覆盖，设备验收仍待进行。
 - 启动日志记录了一次 Todo 预布局耗时 66.2ms；这是内容准备耗时，不能据此判断交互呈现帧率。调度改造不消除内容布局本身的成本。

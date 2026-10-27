@@ -1,4 +1,4 @@
-# DeskBox AOT 阶段 4D-3A 完成与复盘报告
+# DeskCue AOT 阶段 4D-3A 完成与复盘报告
 
 - 日期：2026-08-21
 - 范围：OLE `IDataObject`/`IStream` 数据读取侧 AOT 化；不修改 `IDropTarget` 注册与回调侧
@@ -65,8 +65,8 @@ OLE 回调传入的 `IDataObject*` 只在回调期间同步借用，读取层直
 - Rust 保持 ABI 2、能力 63、七个导出，staging/publish 哈希一致；
 - 审计前后源码指纹一致。
 - 规范 Debug 构建通过，0 个错误、30 个既有警告；随后启动唯一仓库实例，路径为
-  `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，进程响应正常；默认 JIT
-  策略下没有加载 `deskbox_native.dll`。
+  `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，进程响应正常；默认 JIT
+  策略下没有加载 `deskcue_native.dll`。
 
 原始警告计数保持为 IL2026 44、IL2050 2、IL2072 4、IL2075 9、IL3050 77、WMC1506 6、
 WMC1510 1265，另有既有 C# 编译告警。4D-3A 没有通过抑制或宽泛 trimming root 隐藏告警。

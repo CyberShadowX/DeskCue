@@ -19,7 +19,7 @@ SearchCore 独立 ABI 从 1 升到 2，保留全部 v1 操作并新增 DBIX 直�
 - 已打开句柄不受随后源文件损坏或替换影响；
 - 独立 Release C#/Rust 基准进程和结果签名门禁。
 
-没有编辑 `SearchIndexService` 的产品所有权，也没有将 DLL 加入 `DeskBox.csproj` 或 AOT publish。
+没有编辑 `SearchIndexService` 的产品所有权，也没有将 DLL 加入 `DeskCue.csproj` 或 AOT publish。
 
 ## 2. 基准方法
 
@@ -33,7 +33,7 @@ SearchCore 独立 ABI 从 1 升到 2，保留全部 v1 操作并新增 DBIX 直�
 - result gate：完整路径、类型、UTC ticks、分数和顺序生成 SHA-256，C#/Rust 必须逐组相同；
 - cancellation：查询任务进入后立即取消，记录取消是否被观察和返回延迟。
 
-表中的 private/working 值是各自子进程相对 baseline 的增量，不是整个 DeskBox 工作集。
+表中的 private/working 值是各自子进程相对 baseline 的增量，不是整个 DeskCue 工作集。
 
 ## 3. 实测结果
 
@@ -61,7 +61,7 @@ SearchCore 独立 ABI 从 1 升到 2，保留全部 v1 操作并新增 DBIX 直�
 ## 4. 结论边界
 
 这些数据已经足以确认 SearchCore 是明显适合 Rust 的内存热点，继续使用完整原生数据边界比在 C#
-字典上做零碎微优化更合理。但它还不能直接宣称 DeskBox 总工作集下降 68 MiB，原因包括：
+字典上做零碎微优化更合理。但它还不能直接宣称 DeskCue 总工作集下降 68 MiB，原因包括：
 
 - 当前是确定性合成 DBIX，不是用户实际目录分布；
 - 每档内存是一次隔离进程测量，查询延迟有 30 个样本但内存不是多轮置信区间；
@@ -83,10 +83,10 @@ SearchCore 独立 ABI 从 1 升到 2，保留全部 v1 操作并新增 DBIX 直�
 - x64 Native AOT：profile 56 / schema 53，源码稳定，39 个发布文件、88.9 MiB，`WMC1510=1211`、
   `always-throw=0`；
 - 生产 Rust：ABI 2、能力 511、十个必需导出不变，AOT publish 中不存在
-  `deskbox_search_core.dll`。
+  `deskcue_search_core.dll`。
 
 canonical Debug 构建完成（24 warning、0 error），并从规范路径启动 PID 37780；仓库内仅此一个
-`DeskBox.exe`，路径核对一致，Debug 输出中不存在 `deskbox_search_core.dll`。`git diff --check` 通过。
+`DeskCue.exe`，路径核对一致，Debug 输出中不存在 `deskcue_search_core.dll`。`git diff --check` 通过。
 
 ## 6. 下一阶段建议
 

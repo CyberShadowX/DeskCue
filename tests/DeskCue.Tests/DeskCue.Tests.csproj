@@ -1,0 +1,74 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <DeskCueNativeTestPlatform Condition="'$(Platform)' == 'ARM64' Or '$(RuntimeIdentifier)' == 'win-arm64'">ARM64</DeskCueNativeTestPlatform>
+    <DeskCueNativeTestPlatform Condition="'$(DeskCueNativeTestPlatform)' == ''">x64</DeskCueNativeTestPlatform>
+    <DeskCueRustCrtLinkage Condition="'$(DeskCueRustCrtLinkage)' == ''">Static</DeskCueRustCrtLinkage>
+    <DeskCueNativeTestIntermediateDir>$(MSBuildProjectDirectory)\obj\rust-native\$(Configuration)\$(Platform)\$(RuntimeIdentifier)\$(DeskCueRustCrtLinkage)</DeskCueNativeTestIntermediateDir>
+    <DeskCueNativeTestCargoTargetDir>$(DeskCueNativeTestIntermediateDir)\cargo-target</DeskCueNativeTestCargoTargetDir>
+    <DeskCueNativeTestDll>$(DeskCueNativeTestIntermediateDir)\deskcue_native.dll</DeskCueNativeTestDll>
+    <DeskCueNativeTestPdb>$(DeskCueNativeTestIntermediateDir)\deskcue_native.pdb</DeskCueNativeTestPdb>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <DeskCueNativeTestInput Include="$(MSBuildProjectDirectory)\..\..\rust-toolchain.toml" />
+    <DeskCueNativeTestInput Include="$(MSBuildProjectDirectory)\..\..\native\Cargo.toml" />
+    <DeskCueNativeTestInput Include="$(MSBuildProjectDirectory)\..\..\native\Cargo.lock" />
+    <DeskCueNativeTestInput Include="$(MSBuildProjectDirectory)\..\..\native\deskcue-native\Cargo.toml" />
+    <DeskCueNativeTestInput Include="$(MSBuildProjectDirectory)\..\..\native\deskcue-native\src\**\*" />
+    <DeskCueNativeTestInput Include="$(MSBuildProjectDirectory)\..\..\native\include\deskcue_native.h" />
+    <DeskCueNativeTestInput Include="$(MSBuildProjectDirectory)\..\..\scripts\build-rust-native.ps1" />
+    <DeskCueNativeTestInput Include="$(MSBuildProjectDirectory)\..\..\scripts\native-pe-contract.ps1" />
+    <DeskCueNativeTestInput Include="$(MSBuildProjectDirectory)\..\..\scripts\rust-arm64-msvc-environment.ps1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.5.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DeskCue\DeskCue.csproj" />
+    <ProjectReference Include="..\..\src\DeskCue.Updater\DeskCue.Updater.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="DeskCue.Platform" />
+  </ItemGroup>
+
+  <Target
+    Name="BuildDeskCueNativeTestModule"
+    BeforeTargets="CoreCompile"
+    Inputs="@(DeskCueNativeTestInput)"
+    Outputs="$(DeskCueNativeTestDll);$(DeskCueNativeTestPdb)">
+    <Error
+      Condition="'$(DeskCueRustCrtLinkage)' != 'Dynamic' and '$(DeskCueRustCrtLinkage)' != 'Static'"
+      Text="DeskCue test Rust CRT linkage must be Dynamic or Static." />
+    <Exec
+      Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\build-rust-native.ps1&quot; -Platform $(DeskCueNativeTestPlatform) -Configuration $(Configuration) -CrtLinkage $(DeskCueRustCrtLinkage) -OutputDirectory &quot;$(DeskCueNativeTestIntermediateDir)&quot; -CargoTargetDirectory &quot;$(DeskCueNativeTestCargoTargetDir)&quot;" />
+  </Target>
+
+  <Target
+    Name="CopyDeskCueNativeTestModule"
+    AfterTargets="Build"
+    DependsOnTargets="BuildDeskCueNativeTestModule">
+    <Copy
+      SourceFiles="$(DeskCueNativeTestDll);$(DeskCueNativeTestPdb)"
+      DestinationFolder="$(OutDir)"
+      SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

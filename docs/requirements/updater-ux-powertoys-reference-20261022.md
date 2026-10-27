@@ -3,7 +3,7 @@
 - 日期：2026-10-22
 - 状态：待 Simon 拍板分批
 - 参考源码：microsoft/PowerToys 浅克隆于 `D:\temp\PowerToys`（本方案所有 PowerToys 引用均出自该树）
-- DeskBox 侧现状由本仓库代码梳理（关键文件见第二节）
+- DeskCue 侧现状由本仓库代码梳理（关键文件见第二节）
 
 ---
 
@@ -96,7 +96,7 @@ PowerToys 把更新拆成三个角色：**runner 后台进程**（检查/下载/
 
 ---
 
-## 二、DeskBox 现状（关键事实）
+## 二、DeskCue 现状（关键事实）
 
 | 环节 | 现状 | 位置 |
 |---|---|---|
@@ -108,16 +108,16 @@ PowerToys 把更新拆成三个角色：**runner 后台进程**（检查/下载/
 | 失败回告 | 取消/失败/路径不符→带参重启弹 ContentDialog；**成功路径零提示** | App.xaml.cs:969-1050 |
 | 更新日志 | 独立 ReleaseNotesWindow（820×640 Mica + 自研 Markdown 渲染），**仅手动打开**；数据三级（manifest 内联/磁盘缓存/在线） | ReleaseNotesWindow.xaml(.cs), ReleaseNotesService.cs:44-107 |
 
-DeskBox 基础设施相当扎实（哈希校验、预更新备份、路径一致性校验、Shell 拉回、12 语言安装器参数均强于 PowerToys），**差距集中在"可见性与节奏"，不在可靠性**。
+DeskCue 基础设施相当扎实（哈希校验、预更新备份、路径一致性校验、Shell 拉回、12 语言安装器参数均强于 PowerToys），**差距集中在"可见性与节奏"，不在可靠性**。
 
 ---
 
 ## 三、差距分析（体验视角）
 
-1. **长挂进程错过更新**：DeskBox 桌面常驻数天不重启就永远不再检查；PowerToys 24h 周期 + 2h 退避。
+1. **长挂进程错过更新**：DeskCue 桌面常驻数天不重启就永远不再检查；PowerToys 24h 周期 + 2h 退避。
 2. **更新动作埋得深**：Toast/托盘点击 → 开设置页 → 用户自己找到第三张卡里的按钮；PowerToys toast 按钮=直接动作，设置页按钮=打开浮层即刻可操作。
-3. **状态无常驻可见性**：DeskBox 不开设置窗就看不到任何更新状态；PowerToys 托盘角标 + 版本区徽章 + 浮层三处持续在线。
-4. **装完零感知（最大缺口）**：DeskBox 成功安装静默回桌面；PowerToys 新版首启自动弹 What's New。DeskBox 已有 ReleaseNotesWindow + 数据链，**只差触发**。
+3. **状态无常驻可见性**：DeskCue 不开设置窗就看不到任何更新状态；PowerToys 托盘角标 + 版本区徽章 + 浮层三处持续在线。
+4. **装完零感知（最大缺口）**：DeskCue 成功安装静默回桌面；PowerToys 新版首启自动弹 What's New。DeskCue 已有 ReleaseNotesWindow + 数据链，**只差触发**。
 5. **Toast 按钮语义弱**：「Go to update」是导航不是动作。
 6. **更新日志单版本视图**：跨多版本累积更新后（用户落后几个版本），没有版本组导航和"这轮更新一共带来了什么"的聚合视角。
 
@@ -146,12 +146,12 @@ DeskBox 基础设施相当扎实（哈希校验、预更新备份、路径一致
 
 - `ScheduleBackgroundUpdateCheck` 从一次性改为循环：成功后 24h 再查，失败 2h 后重试（照抄 PowerToys 节奏）。
 - 尊重现有 `AutoCheckForUpdates` 开关与 `LastUpdateCheckAt` 字段（时间锚点复用）。
-- 可选增强（若将来加"自动下载"设置项再做）：PowerToys 式 `IsMeteredConnection`（WWAN/漫游/超限）检测——DeskBox 当前无自动下载，此条挂账不实施。
+- 可选增强（若将来加"自动下载"设置项再做）：PowerToys 式 `IsMeteredConnection`（WWAN/漫游/超限）检测——DeskCue 当前无自动下载，此条挂账不实施。
 - 涉及：App.xaml.cs:2306-2341、可能的 System.Threading.Timer 生命周期管理（挂到现有后台步骤框架）。
 
 ### 批 4（P1）：状态常驻可见（徽章 + 直达定位）
 
-- 复刻 `UpdateStateBadgeControl`（20px 渐变圆徽 + 5 态 VisualState）放 About 区版本行/状态卡行；状态映射对齐 DeskBox 现有 `Settings.Update.Status.*` 状态集。
+- 复刻 `UpdateStateBadgeControl`（20px 渐变圆徽 + 5 态 VisualState）放 About 区版本行/状态卡行；状态映射对齐 DeskCue 现有 `Settings.Update.Status.*` 状态集。
 - 托盘/Toast 直达时自动展开更新 Expander 并滚动定位到状态卡（确认 `OpenAboutSettingsFromTray` 现有行为，缺定位补定位）。
 - 主按钮文案随状态切换：现有 OneClick.UpdateTo/Install/Retry 已基本齐，核对 Checking/Downloading 态禁用逻辑对齐 `CanStartAction` 语义。
 - 涉及：SettingsWindow.xaml:3301-3418、新控件文件、主题资源。
@@ -164,10 +164,10 @@ DeskBox 基础设施相当扎实（哈希校验、预更新备份、路径一致
 
 ### 不跟的部分（明确记录）
 
-- **GPO/企业策略**（禁用通知/暂停 N 版、预览通道）：DeskBox 无企业场景。
-- **独立更新器 UI**：DeskBox.Updater 静默链已更稳（哈希+备份+路径校验+降权重启），无需照搬 PowerToys.Update.exe。
-- **设置页右下角浮层卡片**：PowerToys 用它是因为状态由另一进程驱动需要浮层承接；DeskBox 单进程、更新卡就在设置页内，浮层收益低、噪光大，不引入。
-- **托盘图标本体换角标**：DeskBox 托盘是自绘菜单体系，换图标成本高于收益，靠托盘菜单项「Update x.y.z available」承担同等职责（已有）。
+- **GPO/企业策略**（禁用通知/暂停 N 版、预览通道）：DeskCue 无企业场景。
+- **独立更新器 UI**：DeskCue.Updater 静默链已更稳（哈希+备份+路径校验+降权重启），无需照搬 PowerToys.Update.exe。
+- **设置页右下角浮层卡片**：PowerToys 用它是因为状态由另一进程驱动需要浮层承接；DeskCue 单进程、更新卡就在设置页内，浮层收益低、噪光大，不引入。
+- **托盘图标本体换角标**：DeskCue 托盘是自绘菜单体系，换图标成本高于收益，靠托盘菜单项「Update x.y.z available」承担同等职责（已有）。
 
 ### 实施注意
 
@@ -191,7 +191,7 @@ DeskBox 基础设施相当扎实（哈希校验、预更新备份、路径一致
 
 | 批 | Win10 直发 | Win11 直发 | 商店版 |
 |---|---|---|---|
-| 批 1 自动弹日志窗 | ✅ 触发钩子=更新器 Shell 拉回重启后版本变化；失败重启版本未变→不弹，天然正确 | ✅ 同左 | ⚠️ **依赖前置修复**（上节）。触发本身成立：MSIX 商店更新在下次启动生效，版本变化可检测。首装（LastRunVersion 空）/onboarding 期间必须跳过——DeskBox onboarding 承担首启引导，对应 PowerToys「OOBE 优先于 Scoobe」规则 |
+| 批 1 自动弹日志窗 | ✅ 触发钩子=更新器 Shell 拉回重启后版本变化；失败重启版本未变→不弹，天然正确 | ✅ 同左 | ⚠️ **依赖前置修复**（上节）。触发本身成立：MSIX 商店更新在下次启动生效，版本变化可检测。首装（LastRunVersion 空）/onboarding 期间必须跳过——DeskCue onboarding 承担首启引导，对应 PowerToys「OOBE 优先于 Scoobe」规则 |
 | 批 2 Toast 动作化 | ✅ AppNotification 按钮激活链已在 Win10 生产验证（现有 Go to update 按钮）；焦点助手/全屏吞 toast → 托盘菜单项兜底已存在 | ✅ | ➖ 天然不涉及：商店版后台检查入口直接 return（App.xaml.cs:2308），无 toast 可改；商店更新交给 Store UI 是既定产品决策，不破例 |
 | 批 3 24h 周期检查 | ✅ Direct-only。注意睡眠/恢复：定时器在睡眠期不计时，恢复后应按 `LastUpdateCheckAt` 锚点**重算剩余等待**（PowerToys 循环醒来先读落盘时间补差，UpdateUtils.cpp:250-262），不做盲 24h 延时。DNS 失败（deskbox.fun 不通是既有实况）走 2h 退避，周期重试反而改善现状 | ✅ 同左 | ➖ 同批 2，商店版不进检查循环 |
 | 批 4 徽章+直达定位 | ✅ 纯 XAML：渐变画笔/VisualStateManager/Segoe MDL2（E73E/E895/E896/EDB1/E711 全部为 Win10 时代标准字形）；ScrollIntoView+Expander 展开无平台差异 | ✅ | ⚠️ 状态集不同：商店版只有 Ready/Checking/UpToDate/Store 失败态（`Settings.Update.Status.Store*`），无下载三态——徽章映射需为商店版单列（或商店版仅 UpToDate/Checking 两态显示），随批实现 |
@@ -207,7 +207,7 @@ DeskBox 基础设施相当扎实（哈希校验、预更新备份、路径一致
 **Win11**：无渠道特有风险。亚克力采黑族（#521/#730，26200）与 Mica 相关组件无关（日志窗/设置页均为既有窗口）；不动 backdrop。
 
 **商店版（MSIX）**：
-- 文件虚拟化：release-notes 缓存目录 `%LOCALAPPDATA%\DeskBox\updates\` 在商店版写入会被虚拟化到包 LocalCache——**自写自读透明**（同进程同路径视图一致），批 5 枚举同路径同样一致；本方案不新增注册表写入（注册表虚拟化是既往坑，不触雷）。
+- 文件虚拟化：release-notes 缓存目录 `%LOCALAPPDATA%\DeskCue\updates\` 在商店版写入会被虚拟化到包 LocalCache——**自写自读透明**（同进程同路径视图一致），批 5 枚举同路径同样一致；本方案不新增注册表写入（注册表虚拟化是既往坑，不触雷）。
 - 商店更新节奏不受我们控制（Store 客户端策略），批 1 在商店版的弹窗时机=「商店装完后的下一次启动」，语义正确。
 - `LastRunVersion` 存设置文件：Direct 在 %LOCALAPPDATA%、商店在包 LocalState，各自一致，无跨渠道串味。
 

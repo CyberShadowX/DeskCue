@@ -1,4 +1,4 @@
-# DeskBox Rust / Native AOT 阶段 7A ARM64 静态分发报告
+# DeskCue Rust / Native AOT 阶段 7A ARM64 静态分发报告
 
 - 日期：2026-08-23
 - 范围：固定 ARM64 工具链、两个 Rust DLL、Direct ARM64 Native AOT 交叉发布、PE/导出/依赖/PDB/MSBuild 分发边界
@@ -12,9 +12,9 @@
 `Microsoft.VisualStudio.Component.VC.Tools.ARM64`，实际使用 x64 host 的 MSVC 14.44.35207 ARM64
 linker 和 Windows SDK 10.0.26100.0 ARM64 UCRT/UM 库。
 
-`deskbox_native.dll` 与 `deskbox_search_core.dll` 均已从当前源码交叉构建为 ARM64 PE32+：前者保持
+`deskcue_native.dll` 与 `deskcue_search_core.dll` 均已从当前源码交叉构建为 ARM64 PE32+：前者保持
 ABI 2、能力掩码 511 和 10 个导出，后者保持 ABI 3 和 14 个导出。Direct ARM64 Native AOT 的
-`DeskBox.exe`、`DeskBox.Updater.exe` 及两个 Rust DLL 也全部为 PE machine `0xAA64`。两个 DLL 的
+`DeskCue.exe`、`DeskCue.Updater.exe` 及两个 Rust DLL 也全部为 PE machine `0xAA64`。两个 DLL 的
 isolated staging 与 publish SHA-256 分别完全一致，PDB 已与发布目录分离。
 
 本阶段没有在 x64 主机加载或执行 ARM64 DLL，也没有把 ARM64 EXE 的成功生成解释成真机可运行。
@@ -40,7 +40,7 @@ rustfmt、Clippy 和两个 Windows MSVC target；没有使用浮动 stable 或�
 
 本阶段开始前的本地备份为：
 
-- `D:\project\wingezi-backups\DeskBox-stage6d-before-7a-20260823T113303Z.zip`
+- `D:\project\wingezi-backups\DeskCue-stage6d-before-7a-20260823T113303Z.zip`
 - SHA-256：`F6E78390CA991EA7F95B5CDD4821066115B024F2F6643B3888F0251D8FF88DB8`
 
 ## 3. 实现边界
@@ -85,12 +85,12 @@ Native AOT 只接受以下完整组合：
 | `x64` | `win-arm64` | 提前拒绝 |
 | `ARM64` | `win-x64` | 提前拒绝 |
 
-Direct ARM64 构建现在会构建并打包 SearchCore DLL，但 `DESKBOX_SEARCH_CORE_DEFAULT` 仍只对 Direct x64
+Direct ARM64 构建现在会构建并打包 SearchCore DLL，但 `DESKCUE_SEARCH_CORE_DEFAULT` 仍只对 Direct x64
 定义。也就是说 ARM64 模块已经可供 7B 显式启用验证，新安装的产品默认仍使用 managed owner；Store
 x64/ARM64 继续不构建两个 Rust 模块，直到 7C 单独审计 MSIX 内容和 fallback。
 
-Direct 安装脚本已排除 `deskbox_search_core.pdb`，防止符号随产品安装。当前 ARM64 普通 JIT 安装脚本
-仍排除 AOT-only 的 `deskbox_native.dll`，但会通过通配规则包含 SearchCore DLL；最终 AOT 安装输入和模块
+Direct 安装脚本已排除 `deskcue_search_core.pdb`，防止符号随产品安装。当前 ARM64 普通 JIT 安装脚本
+仍排除 AOT-only 的 `deskcue_native.dll`，但会通过通配规则包含 SearchCore DLL；最终 AOT 安装输入和模块
 策略属于 7C，不能用本阶段的裸 publish 目录代替安装包验收。
 
 ## 4. ARM64 产物证据
@@ -108,23 +108,23 @@ Direct 安装脚本已排除 `deskbox_search_core.pdb`，防止符号随产品�
 
 | 文件 | PE | 大小 | SHA-256 |
 | --- | --- | ---: | --- |
-| `DeskBox.exe` | `0xAA64` | 48,854,528 | `8568F7F493917208B032D53B0ED716327E38CB7CACBA5BDFEE42FD1B632DE781` |
-| `DeskBox.Updater.exe` | `0xAA64` | 2,057,728 | `2B8E0BC6C70C421A0F512E465BC5AA5F2F8766E783BAC2955C233462F56E4D2F` |
-| `deskbox_native.dll` | `0xAA64` | 150,016 | `2C465236204F4B5A7F43B7AE02E7F7FA614B9ED4D4E9994366B0811DE40D0352` |
-| `deskbox_search_core.dll` | `0xAA64` | 160,768 | `2B125636E2D75717FB7CD85E9CE3361EF209A7127C7741A7230F5E2DA3699029` |
+| `DeskCue.exe` | `0xAA64` | 48,854,528 | `8568F7F493917208B032D53B0ED716327E38CB7CACBA5BDFEE42FD1B632DE781` |
+| `DeskCue.Updater.exe` | `0xAA64` | 2,057,728 | `2B8E0BC6C70C421A0F512E465BC5AA5F2F8766E783BAC2955C233462F56E4D2F` |
+| `deskcue_native.dll` | `0xAA64` | 150,016 | `2C465236204F4B5A7F43B7AE02E7F7FA614B9ED4D4E9994366B0811DE40D0352` |
+| `deskcue_search_core.dll` | `0xAA64` | 160,768 | `2B125636E2D75717FB7CD85E9CE3361EF209A7127C7741A7230F5E2DA3699029` |
 
-`deskbox_native.dll` 的 staging/publish 哈希均为 `2C46...0352`；SearchCore 的 staging/publish 哈希均为
+`deskcue_native.dll` 的 staging/publish 哈希均为 `2C46...0352`；SearchCore 的 staging/publish 哈希均为
 `2B12...9029`。publish 根中每个模块恰好一份，四个 PDB 均移到独立 symbols 根，publish 中没有 PDB、
-`DeskBox.dll`、deps/runtimeconfig、CoreCLR、JIT、hostfxr 或 hostpolicy 文件。
+`DeskCue.dll`、deps/runtimeconfig、CoreCLR、JIT、hostfxr 或 hostpolicy 文件。
 
 ## 5. PE 依赖清单与分发风险
 
 四个 PE 共出现 25 个直接导入。主程序与 Updater 只导入 Windows 系统库和 UCRT API set；两个 Rust
 DLL 还直接导入以下关键项：
 
-- `deskbox_native.dll`：`combase.dll`、`ole32.dll`、`oleaut32.dll`、`propsys.dll`、
+- `deskcue_native.dll`：`combase.dll`、`ole32.dll`、`oleaut32.dll`、`propsys.dll`、
   `vcruntime140.dll` 等；
-- `deskbox_search_core.dll`：`bcryptprimitives.dll`、`icuuc.dll`、`vcruntime140.dll` 等。
+- `deskcue_search_core.dll`：`bcryptprimitives.dll`、`icuuc.dll`、`vcruntime140.dll` 等。
 
 `VCRUNTIME140.dll` 在当前开发机存在不等于所有受支持 Windows 设备都具备。7C 在生成可发布安装包前必须
 二选一并在干净环境验证：
@@ -171,7 +171,7 @@ runtime-download 安装流程也不等同于 Visual C++ Runtime 的已验证保�
 完成：
 
 1. 在隔离数据根启动本阶段 ARM64 AOT 产物，验证唯一进程、正常退出、双 DLL 实际加载、ABI 2/3 与
-   `deskbox_native` 能力 511；
+   `deskcue_native` 能力 511；
 2. 在 SearchCore 默认关闭的前提下先跑 managed 基线，再显式启用 Rust，完成真实文件/应用结果、筛选、
    名称/大小/日期/类型各双向排序；
 3. 覆盖 watcher create/rename/delete、树移动、overflow/reconciliation、idle unload/reload、DBIX 重启、

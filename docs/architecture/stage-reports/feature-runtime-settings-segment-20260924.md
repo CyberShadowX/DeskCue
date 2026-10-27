@@ -42,7 +42,7 @@ form. No C/D registration or Surface helper is referenced by this branch.
 - Isolated Release AOT audit/smoke conditional build with Rust native:
   **0 errors, 890 warnings**. This is not Native AOT publish/link or packaged
   runtime validation.
-- `git diff --check`: passed. The shared checkout and its DeskBox process were
+- `git diff --check`: passed. The shared checkout and its DeskCue process were
   not changed or stopped for this extraction.
 
 This branch is a local delivery candidate. It is not pushed or merged. The
@@ -64,7 +64,7 @@ restore marker. A successfully scheduled restore relaunch keeps its marker.
 
 The focused tests passed **129/129**. The complete x64 suite passed
 **4,161/4,161**; the ignored local result is
-`tests/DeskBox.Tests/TestResults/architecture-ab-review-fixes-20260924.trx`.
+`tests/DeskCue.Tests/TestResults/architecture-ab-review-fixes-20260924.trx`.
 Release AOT audit/smoke conditional compilation passed with **0 errors, 888
 warnings**; Native AOT publish/link was not run. The canonical Debug build
 passed with **0 errors, 22 warnings**. An isolated development-data launch
@@ -93,7 +93,7 @@ rejects an invalid archive, but this is not a promise of zero residue.
 
 Non-cooperative-backend and marker-compatibility focused tests passed **150/150**.
 The complete x64 suite passed **4,163/4,163**; the ignored local result is
-`tests/DeskBox.Tests/TestResults/architecture-ab-bounded-shutdown-20260924.trx`.
+`tests/DeskCue.Tests/TestResults/architecture-ab-bounded-shutdown-20260924.trx`.
 Release AOT audit/smoke conditional compilation passed with **0 errors, 888
 warnings**. The canonical Debug build passed with **0 errors, 22 warnings**.
 Native AOT publish/link and physical Search, Todo, and backup interactions have
@@ -119,7 +119,7 @@ stored zero/inherited size. Batch-22 QuickCapture text-size ownership remains
 outside this segment.
 
 The final A+B full x64 suite passed **4,167/4,167**; ignored local TRX:
-`tests/DeskBox.Tests/TestResults/architecture-ab-final-20260924.trx`.
+`tests/DeskCue.Tests/TestResults/architecture-ab-final-20260924.trx`.
 Release AOT audit/smoke conditional compilation passed with **0 errors, 888
 warnings**. The canonical Debug build passed with **0 errors, 22 warnings**.
 The complete x64 Native AOT publish/link and `publish-aot-audit.ps1` audit also

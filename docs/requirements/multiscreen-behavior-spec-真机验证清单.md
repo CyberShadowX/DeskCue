@@ -1,6 +1,6 @@
 # 多屏功能 v2 — 真机验证清单（2026-10-08）
 
-> 按依赖顺序排列：A 单机可做 → B 双屏核心 → C 特殊硬件 → D 拍板项。逐条验证，**失败时记录：条目编号 + 截图 + 大致时间点**（我去查 DeskBox.log 对应行）。构建：`src\DeskBox\bin\Debug\net10.0-windows10.0.22621.0\DeskBox.exe`（当前已运行此版本）。
+> 按依赖顺序排列：A 单机可做 → B 双屏核心 → C 特殊硬件 → D 拍板项。逐条验证，**失败时记录：条目编号 + 截图 + 大致时间点**（我去查 DeskCue.log 对应行）。构建：`src\DeskCue\bin\Debug\net10.0-windows10.0.22621.0\DeskCue.exe`（当前已运行此版本）。
 
 ---
 
@@ -34,7 +34,7 @@
 
 **B1｜拖动跨屏 = 归属更新（核心心智，S6）**
 把一个格子从 L 拖到 E 松手。
-✅ 预期：格子留在 E；右键菜单打勾在 E；设置页该行显示 E。之后 F7 隐藏再唤起、重启 DeskBox，格子仍在 E。
+✅ 预期：格子留在 E；右键菜单打勾在 E；设置页该行显示 E。之后 F7 隐藏再唤起、重启 DeskCue，格子仍在 E。
 
 **B2｜右键菜单移动（S19）**
 右键格子 → 移到显示器 → 选另一块。
@@ -134,4 +134,4 @@ Windows 显示设置里拖动 E 从 L 右边换到左边。
 
 ## 失败报告格式
 
-每条失败时发我：**条目编号（如 B11）+ 现象描述 + 截图 + 大致时间**。我按时间点查 `%LOCALAPPDATA%\DeskBox\DeskBox.log` 对应日志（`[ScreenHome]`/`[DisplayTopology]`/`[Displays]` 前缀）定位。
+每条失败时发我：**条目编号（如 B11）+ 现象描述 + 截图 + 大致时间**。我按时间点查 `%LOCALAPPDATA%\DeskCue\DeskCue.log` 对应日志（`[ScreenHome]`/`[DisplayTopology]`/`[Displays]` 前缀）定位。

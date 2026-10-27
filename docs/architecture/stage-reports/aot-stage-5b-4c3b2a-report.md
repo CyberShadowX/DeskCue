@@ -1,4 +1,4 @@
-# DeskBox AOT 阶段 5B-4C3B2A 完成与复盘报告
+# DeskCue AOT 阶段 5B-4C3B2A 完成与复盘报告
 
 - 日期：2026-08-23
 - 状态：已完成 x64 Native AOT 下的 activation grammar 与确定性 Todo 动作路由
@@ -12,7 +12,7 @@
 
 产品解析器现在同时接受 Windows App SDK 实际生成的 `;` 和既有 `&` 分隔格式。正文点击、Complete、Snooze `10m`、`30m`、`1h`、`tomorrow` 与旧版 `snooze10` 都进入同一个路由器；缺失 selection、未知 selection、未知 action、缺失目标和非 Todo 来源均明确拒绝，不再把异常输入静默降级为 10 分钟。
 
-同一受审计 AOT 可执行文件连续启动三个全新进程，完成 18 条首次路由、2 条重启路由和清空后的 postflight。三个 PID 不同、EXE SHA-256 一致、相邻进程的 store 长度和哈希连续，正式 DeskBox 数据目录指纹不变，owned preview root 已清理。
+同一受审计 AOT 可执行文件连续启动三个全新进程，完成 18 条首次路由、2 条重启路由和清空后的 postflight。三个 PID 不同、EXE SHA-256 一致、相邻进程的 store 长度和哈希连续，正式 DeskCue 数据目录指纹不变，owned preview root 已清理。
 
 本阶段没有弹出系统通知，也没有模拟真实 Windows activation。它证明的是产品参数语法、业务动作和进程间持久化，不把受控输入描述成真人点击或外部生命周期证据。
 

@@ -1,4 +1,4 @@
-# DeskBox AOT 阶段 5B-4C1C2A 完成报告
+# DeskCue AOT 阶段 5B-4C1C2A 完成报告
 
 - 日期：2026-08-23
 - 状态：5B-4C1C2A 已完成到 x64 Native AOT 自动化实际运行边界

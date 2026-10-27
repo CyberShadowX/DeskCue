@@ -1,4 +1,4 @@
-# DeskBox AOT 阶段 5B-4C3B2B2A 完成与复盘报告
+# DeskCue AOT 阶段 5B-4C3B2B2A 完成与复盘报告
 
 - 日期：2026-08-23
 - 状态：已完成；产品修正、定向测试、x64 Native AOT 审计、真实 Todo surface 运行矩阵、全量回归和 Rust 回归均通过
@@ -66,7 +66,7 @@ Complete/Snooze 的刷新只接受已加载的 `TodoWidgetContentAdapter`。刷�
 
 - 审计耗时 261,088 ms，`sourceStableDuringAudit=true`；
 - publish 39 个文件、93,040,085 bytes；symbols 3 个文件、212,709,376 bytes；
-- `DeskBox.exe` SHA-256 为 `BD5B804B93F9AEE95BF5E3806ED6B13B74EAC9249AC06D8F4452A6EECDF37D66`；
+- `DeskCue.exe` SHA-256 为 `BD5B804B93F9AEE95BF5E3806ED6B13B74EAC9249AC06D8F4452A6EECDF37D66`；
 - WMC1506=0、WMC1510=1211、完整 `always-throw`=0，原始 IL2026/IL2050/IL2072/IL2075/IL3050 均为 0；
 - B2B2A 的 scenario/product/runner 缩减模式、越界模式和目标源码 warning 均为 0；
 - JSON 固定清单继续为 29 个文件、65/65 处 source-generated 调用和 27 个 context 所有者；本阶段复用现有结果 context，没有增加反射 JSON；

@@ -3,21 +3,21 @@
 version = 4
 
 [[package]]
-name = "deskbox-audio-session-fixture"
+name = "deskcue-audio-session-fixture"
 version = "0.1.0"
 dependencies = [
  "windows",
 ]
 
 [[package]]
-name = "deskbox-native"
+name = "deskcue-native"
 version = "0.1.0"
 dependencies = [
  "windows",
 ]
 
 [[package]]
-name = "deskbox-thumbnail-proxy"
+name = "deskcue-thumbnail-proxy"
 version = "0.1.0"
 dependencies = [
  "windows",

@@ -1,0 +1,232 @@
+name: DeskCue stable upstream delivery
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deskcue-stable-delivery
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    if: github.repository == 'CyberShadowX/DeskCue' && github.ref == 'refs/heads/main'
+    runs-on: windows-2022
+    timeout-minutes: 30
+    outputs:
+      build: ${{ steps.detect.outputs.build }}
+      rebuild: ${{ steps.detect.outputs.rebuild }}
+      version: ${{ steps.detect.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Test trusted source-delivery helpers
+        shell: pwsh
+        run: |
+          python -m unittest discover -s deskcue/tests -v
+          if ($LASTEXITCODE -ne 0) { throw 'Delivery/branding helper tests failed.' }
+
+      - name: Detect pending stable source
+        id: detect
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python deskcue/delivery.py detect --root . --output "$env:RUNNER_TEMP/deskcue-plan.json"
+          if ($LASTEXITCODE -ne 0) { throw 'Stable release detection failed.' }
+          $plan = Get-Content -LiteralPath "$env:RUNNER_TEMP/deskcue-plan.json" -Raw | ConvertFrom-Json
+          "build=$($plan.build.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          $rebuild = $plan.build -and $plan.rebuild -eq $true
+          "rebuild=$($rebuild.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          if ($plan.build) { "version=$($plan.version)" >> $env:GITHUB_OUTPUT }
+
+      - name: Prepare exact source or restore the original frozen delivery
+        if: steps.detect.outputs.build == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python deskcue/delivery.py prepare --root . --plan "$env:RUNNER_TEMP/deskcue-plan.json" --destination "$env:RUNNER_TEMP/deskcue-candidate-source" --output-dir "$env:RUNNER_TEMP/deskcue-candidate"
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate preparation failed; no source was promoted.' }
+
+      - uses: actions/upload-artifact@v4
+        if: steps.detect.outputs.build == 'true'
+        with:
+          name: deskcue-candidate
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+          path: |
+            ${{ runner.temp }}/deskcue-candidate/candidate.bundle
+            ${{ runner.temp }}/deskcue-candidate/candidate.json
+            ${{ runner.temp }}/deskcue-candidate/provenance.json
+            ${{ runner.temp }}/deskcue-candidate/frozen-delivery.zip
+
+  build:
+    needs: candidate
+    if: needs.candidate.outputs.rebuild == 'true'
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: x64
+            rid: win-x64
+            runner: windows-2022
+            host: x86_64-pc-windows-msvc
+          - platform: ARM64
+            rid: win-arm64
+            runner: windows-11-vs2026-arm
+            host: aarch64-pc-windows-msvc
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 180
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+      RestoreLockedMode: 'true'
+    steps:
+      - name: Checkout trusted management scripts without saved credentials
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: management
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: deskcue-candidate
+          path: source-candidate
+
+      - name: Verify and materialize the identical candidate
+        shell: pwsh
+        run: |
+          python management/deskcue/delivery.py verify --metadata source-candidate/candidate.json --bundle source-candidate/candidate.bundle
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate bundle verification failed.' }
+          git init candidate
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate repository creation failed.' }
+          git -C candidate -c core.hooksPath= -c core.autocrlf=false fetch --no-tags ../source-candidate/candidate.bundle refs/heads/deskcue-candidate
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate import failed.' }
+          git -C candidate -c core.hooksPath= -c core.autocrlf=false -c core.eol=lf checkout --detach FETCH_HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate checkout failed.' }
+          $metadata = Get-Content source-candidate/candidate.json -Raw | ConvertFrom-Json
+          $actual = git -C candidate rev-parse HEAD
+          if ($LASTEXITCODE -ne 0 -or $actual -ne $metadata.sourceCommit) { throw 'Candidate commit mismatch.' }
+
+      - name: Install pinned .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.402
+
+      - name: Install pinned native Rust toolchain and components
+        shell: pwsh
+        env:
+          DESKCUE_RUST_HOST: ${{ matrix.host }}
+        run: |
+          $toolchain = "1.96.0-$env:DESKCUE_RUST_HOST"
+          rustup toolchain install $toolchain --profile minimal --component clippy --component rustfmt
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned Rust installation failed.' }
+          rustup target add $env:DESKCUE_RUST_HOST --toolchain $toolchain
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned Rust target installation failed.' }
+          "RUSTUP_TOOLCHAIN=$toolchain" >> $env:GITHUB_ENV
+          $details = rustup run $toolchain rustc -vV | Out-String
+          if ($LASTEXITCODE -ne 0 -or $details -notmatch 'rustc 1\.96\.0' -or $details -notmatch "host: $([regex]::Escape($env:DESKCUE_RUST_HOST))") { throw 'Native Rust toolchain identity mismatch.' }
+
+      - name: Verify native builder and Inno Setup 6
+        id: tools
+        shell: pwsh
+        env:
+          DESKCUE_PLATFORM: ${{ matrix.platform }}
+        run: |
+          $actualArchitecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
+          if (($env:DESKCUE_PLATFORM -eq 'ARM64' -and $actualArchitecture -ne 'Arm64') -or ($env:DESKCUE_PLATFORM -eq 'x64' -and $actualArchitecture -ne 'X64')) { throw 'Expected a native architecture builder.' }
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if (-not (Test-Path -LiteralPath $iscc -PathType Leaf)) { throw 'The standard hosted image must supply Inno Setup 6.' }
+          $innoVersion = (Get-Item -LiteralPath $iscc).VersionInfo.FileVersion
+          if ($innoVersion -notmatch '^6\.7\.1(?:\.|\s|$)') { throw "Expected pinned Inno Setup 6.7.1; found $innoVersion." }
+          "iscc=$iscc" >> $env:GITHUB_OUTPUT
+
+      - name: Run shared tests and Full Native AOT offline installer build
+        shell: pwsh
+        env:
+          DESKCUE_PLATFORM: ${{ matrix.platform }}
+          DESKCUE_ISCC: ${{ steps.tools.outputs.iscc }}
+        run: |
+          & ./candidate/deskcue/Build-DeskCue.ps1 -Platform $env:DESKCUE_PLATFORM -SourceRoot ./candidate -IsccPath $env:DESKCUE_ISCC
+          if ($LASTEXITCODE -ne 0) { throw 'Shared DeskCue retail build failed.' }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.rid }}
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+          path: |
+            candidate/.artifacts/deskcue-release/${{ matrix.rid }}/receipt.json
+            candidate/.artifacts/deskcue-release/${{ matrix.rid }}/*.exe
+            candidate/.artifacts/deskcue-release/${{ matrix.rid }}/*.sha256
+
+  deliver:
+    needs: [candidate, build]
+    if: >-
+      always() && github.repository == 'CyberShadowX/DeskCue' && github.ref == 'refs/heads/main' &&
+      needs.candidate.result == 'success' && needs.candidate.outputs.build == 'true' &&
+      ((needs.candidate.outputs.rebuild == 'true' && needs.build.result == 'success') ||
+      (needs.candidate.outputs.rebuild == 'false' && needs.build.result == 'skipped'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout trusted management only
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: management
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: deskcue-candidate
+          path: source-candidate
+
+      - uses: actions/download-artifact@v4
+        if: needs.candidate.outputs.rebuild == 'true'
+        with:
+          pattern: win-*
+          path: packages
+          merge-multiple: false
+
+      - name: Reverify all bytes, fast-forward source, publish immutable assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DESKCUE_REBUILD: ${{ needs.candidate.outputs.rebuild }}
+        run: |
+          $credential = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("x-access-token:$env:GH_TOKEN"))
+          $env:GIT_CONFIG_COUNT = '1'
+          $env:GIT_CONFIG_KEY_0 = 'http.https://github.com/.extraheader'
+          $env:GIT_CONFIG_VALUE_0 = "AUTHORIZATION: basic $credential"
+          # Trusted delivery.py parses candidate objects/receipts without checking out
+          # or executing candidate code in this write-permission job.
+          $deliveryArguments = @('management/deskcue/delivery.py', 'promote', '--root', 'management', '--metadata', 'source-candidate/candidate.json', '--bundle', 'source-candidate/candidate.bundle', '--artifacts', 'packages', '--release-dir', 'release-assets', '--output', 'delivery-result.json')
+          if ($env:DESKCUE_REBUILD -eq 'false') {
+            $deliveryArguments += @('--resume-archive', 'source-candidate/frozen-delivery.zip')
+          }
+          python @deliveryArguments
+          if ($LASTEXITCODE -ne 0) { throw 'Delivery stopped. Existing release bytes were not overwritten; retry resumes matching pending source/draft.' }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deskcue-delivery-result
+          path: delivery-result.json
+          retention-days: 1
+          if-no-files-found: error

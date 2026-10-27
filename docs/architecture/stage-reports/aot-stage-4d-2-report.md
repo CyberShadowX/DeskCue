@@ -1,4 +1,4 @@
-# DeskBox AOT 阶段 4D-2 完成与复盘报告
+# DeskCue AOT 阶段 4D-2 完成与复盘报告
 
 - 日期：2026-08-21
 - 范围：删除未使用的 `FileOperationHelper`，冻结真实 `FileService` 文件操作路径，升级 AOT 审计门禁
@@ -20,14 +20,14 @@
 
 删除前的全仓库扫描确认，`FileOperationHelper`、`DeleteToRecycleBin` 和
 `MoveItemsWithProgress` 在该文件之外均为零引用。实际产品文件操作仍由
-`src/DeskBox/Services/FileService.cs` 承担：
+`src/DeskCue/Services/FileService.cs` 承担：
 
 - `ExecuteShellMovePlanAsync` 负责 Shell 移动计划和异步等待；
 - `DeleteEntryToRecycleBin` 负责回收站删除；
 - `MoveEntriesWithShellProgress` 负责带 Shell 进度 UI 的移动；
 - `SHFileOperation` 仍是上述真实路径使用的 Win32 入口。
 
-4D-2 没有修改 `FileService.cs`。新增契约同时冻结真实入口仍存在，并扫描 `src/DeskBox`
+4D-2 没有修改 `FileService.cs`。新增契约同时冻结真实入口仍存在，并扫描 `src/DeskCue`
 全部非 `bin`/`obj` C# 源码，拒绝重新引入 `FileOperationHelper` 引用。
 
 删除后的静态互操作清单为：
@@ -52,8 +52,8 @@
 - JSON 默认反射仍为关闭；Rust 保持 ABI 2、能力 63、七个导出，staging/publish 哈希一致；
 - 审计前后源码指纹一致。
 - 规范 Debug 构建通过，0 个错误、30 个既有警告；随后启动唯一仓库实例，路径为
-  `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，进程响应正常；默认 JIT
-  策略下没有加载 `deskbox_native.dll`。
+  `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，进程响应正常；默认 JIT
+  策略下没有加载 `deskcue_native.dll`。
 
 当前原始警告计数为 IL2026 44、IL2050 2、IL2072 4、IL2075 9、IL3050 77、WMC1506 6、
 WMC1510 1265，另有既有 C# 编译告警。原始次数包含重复分析通道；4D-2 的完成判断以目标

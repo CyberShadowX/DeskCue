@@ -1,4 +1,4 @@
-# DeskBox AOT 阶段 4D-4A 完成与复盘报告
+# DeskCue AOT 阶段 4D-4A 完成与复盘报告
 
 - 日期：2026-08-21
 - 范围：`ExplorerShellLaunchService` 的 Explorer 托管环境启动；不包含快速访问操作
@@ -9,8 +9,8 @@
 ## 1. 完成结论
 
 4D-4A 已完成实现和 AOT 结构审计。原 C# `Shell.Application` dynamic 链没有被删除，而是
-完整放入 `#if !DESKBOX_NATIVE_AOT`，继续作为普通 JIT 默认行为基准。显式 Rust JIT 和
-Native AOT 使用新增的 `deskbox_explorer_shell_launch_v1`。
+完整放入 `#if !DESKCUE_NATIVE_AOT`，继续作为普通 JIT 默认行为基准。显式 Rust JIT 和
+Native AOT 使用新增的 `deskcue_explorer_shell_launch_v1`。
 
 本批采用完整 Rust 操作而非生成式 C# COM，是因为这条链依赖 `IDispatch` Automation，
 .NET COM 源生成器面向 IUnknown 型接口。用 C# 重建 DISPIDs、参数逆序、VARIANT/BSTR 与多层
@@ -63,8 +63,8 @@ document、Application 和 Execute 七个阶段都有独立 HRESULT 与位标记
 由 `.artifacts/aot-audit/win-x64/summary.json` 留档，不作为跨构建固定 ABI 值。
 
 最终 `git diff --check` 没有空白错误。规范非平台 Debug 构建通过，0 个错误、30 个既有警告；
-随后从 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe` 启动唯一仓库实例。
-PID 36260 响应正常，普通 JIT 默认策略在启动阶段加载的 `deskbox_native.dll` 数量为 0。
+随后从 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe` 启动唯一仓库实例。
+PID 36260 响应正常，普通 JIT 默认策略在启动阶段加载的 `deskcue_native.dll` 数量为 0。
 
 ## 5. 完成后复盘
 
@@ -82,8 +82,8 @@ PID 36260 响应正常，普通 JIT 默认策略在启动阶段加载的 `deskbo
 
 ## 6. 开放项与下一阶段
 
-4D-4A 尚有一项交互门槛：用 `DeskBoxRustNative=true` 构建并在进程启动前设置
-`DESKBOX_EXPLORER_SHELL_BACKEND=rust`，人工验证已有文件、文件夹、URL、未知扩展名、缺失
+4D-4A 尚有一项交互门槛：用 `DeskCueRustNative=true` 构建并在进程启动前设置
+`DESKCUE_EXPLORER_SHELL_BACKEND=rust`，人工验证已有文件、文件夹、URL、未知扩展名、缺失
 目标和环境继承矩阵。这项验证涉及实际打开应用或系统对话框，未由自动化擅自执行。
 
 下一开发批建议为 **4D-4B 快速访问固定状态与操作**，仍保持独立：先冻结

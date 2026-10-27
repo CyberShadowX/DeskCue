@@ -6,7 +6,7 @@
 
 #### New features
 
-- **A recovery offer when your configuration gets wiped.** If DeskBox starts with missing or corrupted settings and a valid automatic backup survived, a one-time prompt shows the backup's date and widget count and offers to restore it or start fresh; closing the prompt also counts as starting fresh, and the question never returns. Until you choose, scheduled automatic backups stay paused (manual "back up now" keeps working, and the pending backup cannot be pushed out of retention) with a reminder at most once per app run, and the settings page now discloses that snapshots in a custom backup folder must be restored manually after a wipe.
+- **A recovery offer when your configuration gets wiped.** If DeskCue starts with missing or corrupted settings and a valid automatic backup survived, a one-time prompt shows the backup's date and widget count and offers to restore it or start fresh; closing the prompt also counts as starting fresh, and the question never returns. Until you choose, scheduled automatic backups stay paused (manual "back up now" keeps working, and the pending backup cannot be pushed out of retention) with a reminder at most once per app run, and the settings page now discloses that snapshots in a custom backup folder must be restored manually after a wipe.
 - **Windows 11-native right-click menus for files.** A single-column menu whose rows each carry an inline icon, laid out in Explorer's classic order and rendered directly on acrylic (the tray menu shares the material); an "Open with" submenu lists real associated apps — including UWP ones — with their icons and a "Choose another app" fallback; the blank-area menu gains a "New" submenu (folder plus ShellNew-registered types) and separate "View"/"Sort by" submenus; in list view only the icon-and-name block of a row right-clicks into the file's menu — the rest of the row opens the blank-area menu (and clears the selection) exactly like Explorer, so "View → Icons" is always reachable; a right-button drag on blank space runs Explorer's marquee selection, opening the context menu for whatever it swept — and the marquee starts from a list row's blank remainder with either button, never stealing the item drag from the icon-and-name block; the New list itself now mirrors Explorer exactly: every registration layout Windows and installers use (including the Office one), one row per file type sorted by extension, OS-localized labels, ready-made "新建…" file names, valid empty ZIPs, and each row carrying its file type's application icon — plus a "Shortcut" row that creates the placeholder and opens its properties to finish it. Native ZIP support covers compress (with tar variants and multi-select) and extract-all. Namespace shortcuts (This PC, Recycle Bin, Control Panel) inherit their target's verbs — the Recycle Bin shortcut can be emptied right from its menu (greyed out when already empty), every item gains "Create shortcut", and options Windows never offered there (Open file location, Compress) are hidden.
 - **The Recycle Bin shortcut in a box accepts drops as deletes.** Drag files onto it — from the desktop, Explorer, or another box — and they go to the Recycle Bin with the same confirmation Windows itself would show; the shortcut's empty/full icon updates right after you empty the bin or drop something in.
 - **Drag Shell locations into boxes to create shortcuts.** Dropping Recycle Bin, This PC, and similar Explorer locations onto a box now creates a working shortcut, with toast feedback when the source has nothing to offer or is busy.
@@ -37,7 +37,7 @@
 
 #### 新功能
 
-- **配置被清空后的恢复提议。** DeskBox 启动时若发现设置缺失或损坏、且有一份有效的自动备份幸存，会弹出一次性询问窗（列明备份时间与格子数量）：可从备份恢复，也可全新开始；直接关窗同样视为全新开始，此后不再追问。做出选择前定时自动备份保持暂停（手动“立即备份”不受影响，待决议的备份也不会被保留策略挤出），每次运行至多提醒一次；设置页同时披露：自定义备份目录中的快照不会被自动提议，需手动从“备份与还原 > 本机快照”恢复。
+- **配置被清空后的恢复提议。** DeskCue 启动时若发现设置缺失或损坏、且有一份有效的自动备份幸存，会弹出一次性询问窗（列明备份时间与格子数量）：可从备份恢复，也可全新开始；直接关窗同样视为全新开始，此后不再追问。做出选择前定时自动备份保持暂停（手动“立即备份”不受影响，待决议的备份也不会被保留策略挤出），每次运行至多提醒一次；设置页同时披露：自定义备份目录中的快照不会被自动提议，需手动从“备份与还原 > 本机快照”恢复。
 - **文件右键菜单换装 Windows 11 原生形态。** 单竖列菜单、每行行内图标，按资源管理器经典序排列，直出毛玻璃材质（托盘菜单同享）；「打开方式」子菜单列出真实关联应用（含 UWP）并带图标，尾部「选择其他应用」兜底；空白处菜单新增「新建」子菜单（文件夹 + ShellNew 注册表同源项），「查看」「排序」拆分独立子菜单；列表视图下仅行内「图标+名称」区块右键弹出文件菜单，行的其余部分右键打开空白处菜单（并清除选中）——与资源管理器一致，「查看 → 图标」随时可点；空白处右键拖动即资源管理器式跑马圈选，松开弹出作用于圈选结果的菜单；圈选从列表行的空白部分即可起手（左右键皆可，且不会抢走图标+名称区的文件拖拽）；新建列表本身与资源管理器完全同源：覆盖 Windows 与安装器实际使用的全部注册布局（含 Office 布局）、每类型一行并按扩展名排序、标签取系统本地化文案、新建文件直接用注册的「新建…」现成名（新建的 ZIP 是合法空档）、每行带该文件类型的应用图标——另增「快捷方式」行：创建占位链接并打开其属性页完成目标填写。原生 ZIP 支持压缩（含 tar 变体与多选打包）与全部解压缩。命名空间快捷方式（此电脑/回收站/控制面板）继承目标动词——回收站快捷方式可直接「清空回收站」（已空时置灰），全部条目新增「创建快捷方式」，Windows 本就不提供的目标选项（打开文件位置、压缩）相应隐藏。
 - **格子内的回收站快捷方式成为删除投放目标。** 从桌面、资源管理器或其它格子把文件拖到回收站快捷方式上即移入回收站（确认框与 Windows 一致）；清空回收站或投放后，快捷方式的空/满图标即时刷新。
 - **Shell 位置拖入格子即建快捷方式。** 回收站、此电脑等资源管理器位置拖到格子上直接创建可用快捷方式；来源无内容或正忙时给出 toast 提示。
@@ -70,11 +70,11 @@
 
 #### Fixes
 
-- More accurate administrator notices. The "running as administrator" notice now appears only when DeskBox runs above the shell, so fully elevated desktops — for example company-managed computers — no longer see it. When it appears, it closes the elevated instance in one click and provides the steps to restart with normal privileges, including how to clear a shortcut's "Run as administrator" checkbox. Autostart continues to restart itself with normal privileges silently. Available in all 12 languages.
-- One-click updates no longer bring DeskBox back as administrator: the updater restarts the app at the shell's own level whenever the shell offers a standard-user context, so the app no longer restarts as administrator after an update on machines where it ran elevated.
-- When Explorer itself runs elevated above DeskBox, the app stays usable: the reveal hotkey and settings keep working, an explanatory notice replaces the untranslated failure box, and the rare fatal-startup dialog is localized and lists the diagnosed environment causes (elevated Explorer, compatibility layers, shortcut run-as).
+- More accurate administrator notices. The "running as administrator" notice now appears only when DeskCue runs above the shell, so fully elevated desktops — for example company-managed computers — no longer see it. When it appears, it closes the elevated instance in one click and provides the steps to restart with normal privileges, including how to clear a shortcut's "Run as administrator" checkbox. Autostart continues to restart itself with normal privileges silently. Available in all 12 languages.
+- One-click updates no longer bring DeskCue back as administrator: the updater restarts the app at the shell's own level whenever the shell offers a standard-user context, so the app no longer restarts as administrator after an update on machines where it ran elevated.
+- When Explorer itself runs elevated above DeskCue, the app stays usable: the reveal hotkey and settings keep working, an explanatory notice replaces the untranslated failure box, and the rare fatal-startup dialog is localized and lists the diagnosed environment causes (elevated Explorer, compatibility layers, shortcut run-as).
 - Maintenance-wave drag and startup fixes: dragging Todo items no longer crashes; switching groups no longer loses stacked-member icons; cutting a subfolder and pasting it into the parent folder no longer hangs; auto-organization rules stay enabled across restarts instead of being silently switched off.
-- When the desktop repeatedly crashes, DeskBox no longer restarts in a loop at sign-in: a startup ledger breaks the cycle, and diagnostics now include recent DeskBox and Explorer crash events for support.
+- When the desktop repeatedly crashes, DeskCue no longer restarts in a loop at sign-in: a startup ledger breaks the cycle, and diagnostics now include recent DeskCue and Explorer crash events for support.
 - Settings: an update-download failure no longer raises an error when another dialog happens to be open at the same time.
 - The drag-and-drop diagnostic detects a shortcut-level "Run as administrator" flag — an elevation source invisible to the compatibility-layer scan — and explains exactly how to clear it.
 - An instance relaunched with normal privileges can be ended again by an unelevated Task Manager.
@@ -83,11 +83,11 @@
 
 #### 修复
 
-- 更准确的管理员运行提示。「以管理员身份运行」提示现在只在 DeskBox 以高于资源管理器的权限运行时出现，因此整台电脑都以管理员权限运行的环境（例如公司统一管理的电脑）不再显示该提示。提示出现时，可一键退出当前实例，并按照步骤以普通权限重新打开，其中包含取消快捷方式"以管理员身份运行"勾选的方法；开机自启仍会自动以普通权限重启。全部 12 种语言同步。
-- 一键更新不再把 DeskBox 以管理员身份带回来：只要资源管理器提供标准用户环境，更新器就按其权限级别重启应用，此前以管理员运行的电脑，更新后不会再以管理员身份重新启动。
-- 资源管理器以管理员运行（高于 DeskBox）时，应用保持可用：唤出热键和设置继续工作，说明弹窗替代原先未本地化的错误提示；极少出现的启动失败提示已本地化，并列出诊断到的环境成因（资源管理器提权、兼容层、快捷方式管理员勾选）。
+- 更准确的管理员运行提示。「以管理员身份运行」提示现在只在 DeskCue 以高于资源管理器的权限运行时出现，因此整台电脑都以管理员权限运行的环境（例如公司统一管理的电脑）不再显示该提示。提示出现时，可一键退出当前实例，并按照步骤以普通权限重新打开，其中包含取消快捷方式"以管理员身份运行"勾选的方法；开机自启仍会自动以普通权限重启。全部 12 种语言同步。
+- 一键更新不再把 DeskCue 以管理员身份带回来：只要资源管理器提供标准用户环境，更新器就按其权限级别重启应用，此前以管理员运行的电脑，更新后不会再以管理员身份重新启动。
+- 资源管理器以管理员运行（高于 DeskCue）时，应用保持可用：唤出热键和设置继续工作，说明弹窗替代原先未本地化的错误提示；极少出现的启动失败提示已本地化，并列出诊断到的环境成因（资源管理器提权、兼容层、快捷方式管理员勾选）。
 - 维护波次的拖拽与启动修复：拖动待办不再崩溃；切换分组不再丢失叠放成员图标；剪切子文件夹后粘贴回主目录不再卡死；自动整理规则跨重启保持开启，不再被悄悄关闭。
-- 桌面反复崩溃时，DeskBox 不再在登录时反复重启：启动账本切断循环，诊断包新增近期的 DeskBox 与资源管理器崩溃事件，便于支持排查。
+- 桌面反复崩溃时，DeskCue 不再在登录时反复重启：启动账本切断循环，诊断包新增近期的 DeskCue 与资源管理器崩溃事件，便于支持排查。
 - 设置：更新下载失败时若恰好有其它对话框打开，不再报错。
 - 拖拽诊断可识别快捷方式级"以管理员身份运行"勾选——这是兼容层扫描看不到的提权来源——并给出精确的取消方法。
 - 以普通权限重启的实例重新可以被未提权的任务管理器结束。
@@ -98,12 +98,12 @@
 
 #### Fixes
 
-- Exiting from the tray now reliably ends the process. On machines where the system's application-exit handshake stalls — typically Windows with UAC fully disabled and an elevated Explorer — a background DeskBox process could stay resident after "exit": the tray vanished and a restart worked, but the leftover process slowly ate memory and kept the right-click menu proxy alive beside it. Every shutdown path now carries a delayed hard-exit backstop, and the elevation notice and search popup close along with shutdown.
+- Exiting from the tray now reliably ends the process. On machines where the system's application-exit handshake stalls — typically Windows with UAC fully disabled and an elevated Explorer — a background DeskCue process could stay resident after "exit": the tray vanished and a restart worked, but the leftover process slowly ate memory and kept the right-click menu proxy alive beside it. Every shutdown path now carries a delayed hard-exit backstop, and the elevation notice and search popup close along with shutdown.
 - Windows 10: the "drag out" card under File widgets → drag-and-drop behavior shows its title and question-mark tip again, and the Windows 10 explanation renders in the description area under the title instead of stretching the card out of shape or spilling outside it on scaled, narrower windows.
 - Long auxiliary texts in settings cards (the cloud-backup remote-path hint, runtime-health detail, and backup snapshot summaries) are width-capped so they can no longer push a card's title aside.
 - Dialogs and preview cards — the desktop-organization abandon dialog, its preview cards, and the hotkey recorder — follow the app's theme override again instead of the raw system theme, and desktop-organization rule rows rebuild when the applied theme flips.
 - Desktop-organization rule rows are clickable again; a leftover chevron (double arrows) and a click guard that swallowed every row click shipped together in 1.5.6.
-- Store packaging: the display-name resource consistently resolves to the reserved store name ("DeskBox Widgets"), completing the 1.5.6 packaging follow-up.
+- Store packaging: the display-name resource consistently resolves to the reserved store name ("DeskCue Widgets"), completing the 1.5.6 packaging follow-up.
 
 ### 中文
 
@@ -114,7 +114,7 @@
 - 设置卡片里的长辅助文字（云备份远端路径提示、运行时健康详情、备份快照摘要）限宽显示，不会再把卡片标题挤开。
 - 对话框与预览卡——桌面整理的放弃确认、预览卡、热键录制弹窗——重新跟随应用主题覆盖而非系统主题；应用主题切换时桌面整理规则行同步重建配色。
 - 桌面整理规则行恢复可点击；1.5.6 曾同时带入残留箭头（双箭头）和吞掉整行点击的守卫。
-- 商店包：显示名资源统一回退到保留名（DeskBox Widgets），完成 1.5.6 打包收尾。
+- 商店包：显示名资源统一回退到保留名（DeskCue Widgets），完成 1.5.6 打包收尾。
 
 ## 1.5.6 - 2026-10-12
 
@@ -131,8 +131,8 @@
 - Record your own hotkeys. Press-to-record editors capture any Win / Ctrl / Alt / Shift combination or a lone F1–F24 key — including chords Windows reserves for itself, like Win+V or Alt+Space; conflicts with the other hotkey are rejected with a clear message and risky combinations warn before saving.
 - Dress up your widgets: per-widget emoji or image icons, per-widget background images with fit and dim controls, border styles, three global background modes (follow material, unified image, or a panorama where each widget frames its slice), and a text-shadow toggle in Appearance.
 - Safer storage migration. Moving files into managed storage is copy-verified with a preview, per-phase progress, and resumable retry; every file is hash-checked on both sides before the path switches, and originals are never deleted.
-- Start silently: a new option launches DeskBox hidden alongside Windows, brought back by the first tray click, hotkey, or activation.
-- Weather widgets gain an icon-style picker (Fluent, DeskBox line-art, Meteocons Flat and Line) rendered identically on Windows 10 and 11, independent of the system emoji font.
+- Start silently: a new option launches DeskCue hidden alongside Windows, brought back by the first tray click, hotkey, or activation.
+- Weather widgets gain an icon-style picker (Fluent, DeskCue line-art, Meteocons Flat and Line) rendered identically on Windows 10 and 11, independent of the system emoji font.
 - More reveal animations: three new show/hide effects (Edge scale, Tilt, Wipe), a Spring easing, and staggered timing that slides a group's widgets in one after another.
 - Desktop files wait a configurable dwell — real-time to 12 hours — before auto-organization ingests them; managed-path choices that would misbehave (network, removable, system drive, desktop-overlapping) warn or are rejected up front.
 
@@ -206,7 +206,7 @@
 - 装扮你的格子：表情或图片图标、每格背景图（契合度+明暗）、边框样式、三种全局背景模式（跟随材质/统一图片/按位置取景的全景），以及文字阴影开关。
 - 更安全的收纳迁移：预览、分阶段进度、可恢复重试，双侧哈希校验通过才切换路径，源文件绝不自动删除。
 - 静默启动：随 Windows 在后台启动，托盘点击、热键或激活即全部唤回。
-- 天气格子新增图标风格（Fluent/DeskBox 简笔/Meteocons 扁平/线框），Win10 与 11 观感一致，不再依赖系统 emoji 字体。
+- 天气格子新增图标风格（Fluent/DeskCue 简笔/Meteocons 扁平/线框），Win10 与 11 观感一致，不再依赖系统 emoji 字体。
 - 更多显示动画：边缘缩放、倾斜、擦除三个新效果，弹簧缓动，以及一组格子逐个滑入的错峰时序。
 - 桌面整理可配置停留时间（实时到 12 小时）；收纳根选在网络/可移动/系统盘/桌面重叠路径会提前警告或直接拒绝。
 
@@ -281,7 +281,7 @@
 
 #### Drag and drop
 
-- Drags out of widgets now carry the same native Shell data object Explorer uses. Copy-only drop targets that used to reject DeskBox drags — Chromium/Electron apps such as VS Code and browsers, WM_DROPFILES-era programs, and WinForms — now accept them. Same-volume drops default to move, cross-volume to copy, and Ctrl/Shift/Alt modifiers behave as expected on Windows 11; Windows 10 keeps the single-move behavior without prompting.
+- Drags out of widgets now carry the same native Shell data object Explorer uses. Copy-only drop targets that used to reject DeskCue drags — Chromium/Electron apps such as VS Code and browsers, WM_DROPFILES-era programs, and WinForms — now accept them. Same-volume drops default to move, cross-volume to copy, and Ctrl/Shift/Alt modifiers behave as expected on Windows 11; Windows 10 keeps the single-move behavior without prompting.
 - Cross-volume transfers now go through the system file-operation engine with native progress, cancellation, and conflict dialogs, fixing the cross-volume import that completed with "0 items" on Native AOT builds. Same-volume moves keep the existing fast path.
 - Aborted transfers clean up only the objects the operation itself created, so files that appeared in the destination mid-copy or pre-existing folders are never swept away; transfer errors now distinguish "file in use" from "access denied".
 
@@ -303,11 +303,11 @@
 #### Fixes
 
 - Native AOT builds: the cloud-backup page no longer crashes with "Specified cast is not valid" when reading the password box (real WebDAV user report).
-- Shortcut icons: shortcuts created by alt-dragging keep the target's own icon instead of DeskBox's, and arrow-overlaid shortcut icons render through a high-resolution compositing channel instead of pre-scaled 32/48 px bitmaps — blurry shortcut arrows at large sizes are fixed.
+- Shortcut icons: shortcuts created by alt-dragging keep the target's own icon instead of DeskCue's, and arrow-overlaid shortcut icons render through a high-resolution compositing channel instead of pre-scaled 32/48 px bitmaps — blurry shortcut arrows at large sizes are fixed.
 - Creating or renaming a widget is no longer blocked by a folder left behind by a closed same-named widget: the empty widget adopts the leftover folder and its contents.
 - Migration rollback failures are no longer silent: a dedicated dialog lists the stranded folders with their widget names and offers retry, and partial cleanups keep their remaining list instead of claiming success.
 - The migration dialog no longer loops forever when "apply to all" meets a locked file, and no longer waits forever for a decision after the dialog has been closed.
-- Files without an association open through DeskBox's own picker, which reports honestly — the shell picker reported success even when it was cancelled — and a "recommended" handler is no longer mistaken for the default association.
+- Files without an association open through DeskCue's own picker, which reports honestly — the shell picker reported success even when it was cancelled — and a "recommended" handler is no longer mistaken for the default association.
 - Cloud backups no longer include todo and quick-capture attachments (a single large attachment used to inflate the whole upload), and restores never delete local attachments.
 - Merge restores no longer resurrect entries you deleted on this device: quick capture and todo deletions now leave tombstones that keep cloud snapshots from bringing them back.
 - A backup the server accepted but never listed is no longer mistaken for a plain success or a failure — it is stamped "awaiting server confirmation" in the backup status and notified once, so a laggy WebDAV listing cannot hide a silently-dropped snapshot.
@@ -336,7 +336,7 @@
 
 #### 拖拽
 
-- 从格子拖出文件现在携带与 Explorer 同源的原生 Shell 数据对象。此前拒绝 DeskBox 拖放的仅复制型目标——VS Code、浏览器等 Chromium/Electron 应用、WM_DROPFILES 时代的老程序、WinForms——现在都能接受。同盘默认移动、跨盘默认复制，Win11 上 Ctrl/Shift/Alt 修饰键符合预期；Win10 保持单一移动语义、不再弹选择框。
+- 从格子拖出文件现在携带与 Explorer 同源的原生 Shell 数据对象。此前拒绝 DeskCue 拖放的仅复制型目标——VS Code、浏览器等 Chromium/Electron 应用、WM_DROPFILES 时代的老程序、WinForms——现在都能接受。同盘默认移动、跨盘默认复制，Win11 上 Ctrl/Shift/Alt 修饰键符合预期；Win10 保持单一移动语义、不再弹选择框。
 - 跨盘传输改走系统文件操作引擎，获得原生进度、取消与冲突对话框——修复了 Native AOT 版跨盘导入以"0 items"空完成的问题。同盘移动保留原有快速路径。
 - 中止的传输只清理本次操作自己创建的对象——复制中途外部丢进目标树的文件、操作前就存在的文件夹不会被误删；传输报错区分"文件被占用"与"拒绝访问"。
 
@@ -358,11 +358,11 @@
 #### 修复
 
 - Native AOT 版：云备份页读取密码框不再崩溃（"Specified cast is not valid"，来自真实 WebDAV 用户反馈）。
-- 快捷方式图标：Alt 拖拽创建的快捷方式保留目标自身的图标而不再错误使用 DeskBox 图标；带箭头的快捷方式图标改走高分辨率合成通道，不再是预缩放的 32/48px 位图——大尺寸下快捷方式箭头模糊的问题已修复。
+- 快捷方式图标：Alt 拖拽创建的快捷方式保留目标自身的图标而不再错误使用 DeskCue 图标；带箭头的快捷方式图标改走高分辨率合成通道，不再是预缩放的 32/48px 位图——大尺寸下快捷方式箭头模糊的问题已修复。
 - 新建或重命名格子不再被已关闭的同名格子残留的文件夹堵死：空格子会接管残留文件夹及其内容。
 - 迁移回滚失败不再静默：专用对话框列出搁浅文件夹及其所属格子并提供重试；部分清理会保留剩余清单，不再谎报成功。
 - 迁移对话框不再在"应用到全部"遇到被锁文件时无限循环，也不再在对话框关闭后永久等待用户决定。
-- 无关联文件改用 DeskBox 自有的打开方式选择器并如实报告结果（系统选择器被取消也会伪装成成功），且不再把"推荐处理器"误判为默认关联。
+- 无关联文件改用 DeskCue 自有的打开方式选择器并如实报告结果（系统选择器被取消也会伪装成成功），且不再把"推荐处理器"误判为默认关联。
 - 云备份不再包含待办与随记的附件（单个大附件原先会撑大整包上传），还原也不会删除本机附件。
 - 合并还原不再复活本机已删除的条目：随记和待办的删除现在会留下墓碑，云快照不会再把它们带回来。
 - 服务器已接收但迟迟未列入目录的备份不再被误当作普通成功或失败——备份状态会标注"等待服务器确认"并通知一次，列表延迟的 WebDAV 无法掩盖悄悄丢失的快照。
@@ -659,30 +659,30 @@
 
 ### English
 
-- Unified Direct releases on standard-named Full Native AOT installers that bundle the matching Windows App Runtime. In-place upgrades now remove only files owned by an older DeskBox payload, preventing obsolete private runtime DLLs from surviving across installer variants (issue #137).
+- Unified Direct releases on standard-named Full Native AOT installers that bundle the matching Windows App Runtime. In-place upgrades now remove only files owned by an older DeskCue payload, preventing obsolete private runtime DLLs from surviving across installer variants (issue #137).
 - Resolved mapped folder junctions and symbolic links to their physical traversal paths at runtime while preserving the configured logical path, avoiding Windows RedirectionGuard failures and following junction retargets during refresh and watcher reconnects.
-- Interactive file deletions now delegate confirmation to the Windows Shell, following each user's Explorer settings instead of a DeskBox dialog (issue #86). Permanent deletes use the native prompt, and Native AOT moves surface the system name-conflict dialog instead of silently overwriting. Background cleanup and rollback remain silent.
+- Interactive file deletions now delegate confirmation to the Windows Shell, following each user's Explorer settings instead of a DeskCue dialog (issue #86). Permanent deletes use the native prompt, and Native AOT moves surface the system name-conflict dialog instead of silently overwriting. Background cleanup and rollback remain silent.
 - Folder watchers that hit a persistent access-denied subtree (broken ACLs on a nested folder) now back off on a long interval with a single warning in the log, instead of restarting and erroring every few seconds. Recovery after fixing permissions or reconnecting a drive still happens automatically.
 - A failing icon-only desktop.ini watcher no longer marks the whole folder as degraded; the listing and the main watcher keep working.
 - Widgets created while no usable display work area existed (for example with a cloud-gaming virtual adapter as the primary display) are re-placed automatically once a usable display appears, instead of permanently stacking at default coordinates.
-- DeskBox shows a one-time informational toast when the primary monitor is backed by a virtual display adapter; certain virtual GPU drivers are known to break WinUI 3 rendering and layout.
+- DeskCue shows a one-time informational toast when the primary monitor is backed by a virtual display adapter; certain virtual GPU drivers are known to break WinUI 3 rendering and layout.
 - Stack popovers keep their requested column count at fractional DPI scales (125%, 150%, …): the viewport reserve now scales with the grid shape, because per-item physical-pixel rounding adds up to one DIP per column and a fixed one-DIP reserve still wrapped 3-column grids into 2+1 rows.
-- DeskBox maintains an independent `DeskBox Files.lnk` entry for the managed storage folder. Existing users keep the default-on behavior, the path follows a storage migration, and uninstall offers to create a collision-safe shortcut when managed files remain.
+- DeskCue maintains an independent `DeskCue Files.lnk` entry for the managed storage folder. Existing users keep the default-on behavior, the path follows a storage migration, and uninstall offers to create a collision-safe shortcut when managed files remain.
 - Windows 10 now forces square widget and capsule-media corners at render time while preserving the user's saved preference for a later Windows 11 upgrade. Windows 11 continues to apply the selected corner mode to the outer window and embedded media surfaces.
 - New installations and restored defaults now use the Standard weather skin, while the Rich skin remains available as an explicit choice.
 - Search keyboard navigation now keeps the selected row and highlight synchronized after arrow-key movement and Ctrl+Tab tab cycling. Search tabs are text-only, content-sized, and use a taller, better-spaced selection indicator.
 
 ### 中文
 
-- 直发版统一采用标准文件名的 Full Native AOT 安装包，并内置匹配架构的 Windows App Runtime。覆盖升级只清理由旧版 DeskBox 载荷拥有、且新版不再包含的文件，避免不同安装包形态切换后残留旧的专用运行时 DLL（issue #137）。
+- 直发版统一采用标准文件名的 Full Native AOT 安装包，并内置匹配架构的 Windows App Runtime。覆盖升级只清理由旧版 DeskCue 载荷拥有、且新版不再包含的文件，避免不同安装包形态切换后残留旧的专用运行时 DLL（issue #137）。
 - 文件夹映射在运行时会将目录联接和符号链接解析到物理访问路径，同时保留用户配置的逻辑路径，避免 Windows RedirectionGuard 拒绝访问，并在刷新或监视器重连时跟随联接目标变化。
 - 交互文件删除的确认交由 Windows Shell 原生对话框承担（issue #86），并跟随用户的资源管理器设置；永久删除使用系统提示，Native AOT 移动遇到同名冲突时显示系统处理界面而不再静默覆盖。后台清理和回滚仍保持静默。
 - 文件夹监视器命中持久性拒绝访问的子目录（嵌套文件夹 ACL 损坏）时，按较长间隔退避并只记录一次警告，不再每几秒重启报错。修复权限或重新连接磁盘后仍会自动恢复。
 - 仅用于刷新图标的 desktop.ini 监视器失败不再把整个文件夹标记为降级；列表和主监视器照常工作。
 - 在没有可用显示器工作区时创建的格子（例如云游戏虚拟显卡作为主显示器），会在可用显示器出现后自动重新放置，不再永久堆叠在默认坐标。
-- 当主显示器由虚拟显卡提供时，DeskBox 会给出一次性信息提示；已知部分虚拟 GPU 驱动会破坏 WinUI 3 的渲染与布局。
+- 当主显示器由虚拟显卡提供时，DeskCue 会给出一次性信息提示；已知部分虚拟 GPU 驱动会破坏 WinUI 3 的渲染与布局。
 - 分数缩放（125%、150% 等）下叠放弹窗保持请求的列数：视口余量改为随网格形状伸缩——每列的逐项物理像素取整最多累积 1 DIP，固定的 1 DIP 余量仍会把 3 列网格挤成 2+1 换行。
-- DeskBox 会维护一个独立的 `DeskBox Files.lnk` 快捷方式，指向当前收纳目录；老用户默认启用，收纳路径迁移后会跟随更新，卸载时发现仍有收纳文件则询问是否创建不会覆盖其他文件的快捷方式。
+- DeskCue 会维护一个独立的 `DeskCue Files.lnk` 快捷方式，指向当前收纳目录；老用户默认启用，收纳路径迁移后会跟随更新，卸载时发现仍有收纳文件则询问是否创建不会覆盖其他文件的快捷方式。
 - Windows 10 在实际渲染时强制使用直角外框和胶囊媒体内图，同时保留用户保存的圆角偏好，之后升级到 Windows 11 可继续使用；Windows 11 会按所选圆角设置应用到窗口和媒体内图。
 - 新安装和恢复默认设置时，天气默认使用简洁的标准样式，丰富样式仍可手动选择。
 - 搜索上下键移动和 Ctrl+Tab 切换 Tab 后，选中文件与高亮保持同步；搜索 Tab 只保留文字，宽度按内容适配，指示条更高且与文字留有更舒适的间距。
@@ -691,14 +691,14 @@
 
 ### English
 
-- Moved extended Windows Shell context menus into an isolated helper process, so a faulty third-party Shell extension can no longer terminate the DeskBox process.
+- Moved extended Windows Shell context menus into an isolated helper process, so a faulty third-party Shell extension can no longer terminate the DeskCue process.
 - Fixed 3x3 stack popovers wrapping five items as 2+2+1 at fractional DPI scales; the layout now reserves a physical-pixel-safe viewport and pins the requested row/column geometry explicitly.
 - Kept hidden desktop-layer widgets hidden during Explorer drag and activation transitions, while preserving the expected peer order for expanded capsules.
 - Restored Native AOT binding metadata for Glance calendar day decorations.
 
 ### 中文
 
-- 将“更多系统操作”菜单移入独立辅助进程，第三方 Shell 扩展异常时不再连带结束 DeskBox 主进程。
+- 将“更多系统操作”菜单移入独立辅助进程，第三方 Shell 扩展异常时不再连带结束 DeskCue 主进程。
 - 修复 3x3 叠放弹窗在部分 2K、高 DPI 电脑上将五个项目错误排成 2+2+1 的问题；布局会预留覆盖物理像素舍入的视口空间，并明确固定行列尺寸。
 - 修复在资源管理器桌面拖拽与激活状态切换期间，隐藏的桌面层格子偶发重新显示的问题，同时保持展开胶囊之间的正确层级。
 - 补齐时光日历日期装饰数据的 Native AOT 绑定元数据。
@@ -709,14 +709,14 @@
 
 ### English
 
-DeskBox 1.4.6 is a major feature, performance, and runtime update. The notes below cover everything added or changed since 1.4.3.
+DeskCue 1.4.6 is a major feature, performance, and runtime update. The notes below cover everything added or changed since 1.4.3.
 
 #### Important before updating
 
-- DeskBox now uses Windows App SDK and Windows App Runtime 2.4 instead of 2.2. A PC that only has the 2.2 runtime will download and install 2.4 once during a Direct-installer update; this is expected and does not remove the older shared runtime used by other applications.
+- DeskCue now uses Windows App SDK and Windows App Runtime 2.4 instead of 2.2. A PC that only has the 2.2 runtime will download and install 2.4 once during a Direct-installer update; this is expected and does not remove the older shared runtime used by other applications.
 - The installer downloads Windows App Runtime 2.4 only when it is missing. A restart may be requested after runtime installation. For a fully offline update, install the matching x64 or ARM64 Windows App Runtime 2.4 first.
 - GitHub Direct builds now use Native AOT and no longer download or require a separate .NET 10 runtime.
-- Normal in-place updates keep the existing DeskBox settings, widget layouts, Todo, Quick Capture, and managed files. The updater also pins the current-user or all-users install scope so a silent update cannot switch scope unexpectedly.
+- Normal in-place updates keep the existing DeskCue settings, widget layouts, Todo, Quick Capture, and managed files. The updater also pins the current-user or all-users install scope so a silent update cannot switch scope unexpectedly.
 - The minimum supported system remains Windows 10 21H2 (build 19044), and the Direct installer now enforces that requirement.
 
 #### Performance and resource use
@@ -730,7 +730,7 @@ DeskBox 1.4.6 is a major feature, performance, and runtime update. The notes bel
 
 #### Multi-display layouts, movement, and reveal
 
-- DeskBox now stores a separate widget layout for each known monitor topology. Reconnecting a previous display arrangement restores the positions, sizes, group surfaces, and capsule placement saved for that arrangement.
+- DeskCue now stores a separate widget layout for each known monitor topology. Reconnecting a previous display arrangement restores the positions, sizes, group surfaces, and capsule placement saved for that arrangement.
 - Display hot-plug, work-area, and DPI changes are stabilized before restore, and layout writes are paused during the transition so temporary coordinates do not overwrite a known layout.
 - A replacement or differently scaled monitor receives a proportional in-bounds layout instead of leaving widgets off-screen.
 - Hold Ctrl while dragging a widget title to move all eligible widgets on the current display as one bounded group.
@@ -740,7 +740,7 @@ DeskBox 1.4.6 is a major feature, performance, and runtime update. The notes bel
 #### Hotkeys and desktop activation
 
 - Global activation now provides ready-made choices for F7 (default), double Ctrl, Alt+Space, Win+Space, and a standalone Win-key tap, while retaining custom shortcut recording.
-- Reserved Windows combinations show their system-side effects before they are enabled; modifier chords and incomplete taps are rejected so they do not trigger DeskBox accidentally.
+- Reserved Windows combinations show their system-side effects before they are enabled; modifier chords and incomplete taps are rejected so they do not trigger DeskCue accidentally.
 - Added an optional double-click on a blank desktop area to show or hide all widgets. Icon clicks and distant or slow clicks are excluded.
 - Quick Reveal preserves the first activating click and dismisses only for the matching desktop action, reducing lost clicks and unexpected hides.
 
@@ -762,16 +762,16 @@ DeskBox 1.4.6 is a major feature, performance, and runtime update. The notes bel
 - File names can now be hidden in icon view in addition to the existing one-line and two-line choices. Each file widget can also override the global icon size, and widgets can be resized down to 50×50.
 - Dragging files can follow the Windows default copy/move decision, including cross-volume behavior and modifier-key shortcut creation. Native drop images and target descriptions are used for Explorer, folders, stacks, and file widgets.
 - Shell copy and move operations show per-item progress badges while keeping source, destination, and receiving folders protected from conflicting mutations.
-- Added Create shortcut, Permanently delete with confirmation and partial-result reporting, and Run as administrator for supported executable targets. DeskBox itself remains at normal user privilege.
+- Added Create shortcut, Permanently delete with confirmation and partial-result reporting, and Run as administrator for supported executable targets. DeskCue itself remains at normal user privilege.
 - The More menu opens near the originating mouse pointer, with a stable button fallback for keyboard or touch. More system operations uses a Windows 10-compatible native Shell path and reports invocation failures instead of silently succeeding.
 - Folder and case-only renames are committed atomically, shortcut icons resolve through Shell PIDLs, and the duplicate full-path tooltip line was removed.
 
 #### Search powered by Everything
 
-- File search now reads Everything's existing index over local IPC and merges file and folder results with DeskBox notes, todos, and settings in the same search window.
+- File search now reads Everything's existing index over local IPC and merges file and folder results with DeskCue notes, todos, and settings in the same search window.
 - Settings can detect or launch Everything, choose its executable, show connection and permission status, opt into advanced Everything syntax, and filter low-value system/cache paths.
-- DeskBox includes the IPC integration component but does not bundle or install the Everything application. File search requires Everything to be installed, running, and explicitly allowed in DeskBox.
-- The legacy DeskBox-maintained file index, USN tracking, Windows Index integration, and native search core were removed. DeskBox-owned leftover index data is cleaned automatically, eliminating a duplicate background index.
+- DeskCue includes the IPC integration component but does not bundle or install the Everything application. File search requires Everything to be installed, running, and explicitly allowed in DeskCue.
+- The legacy DeskCue-maintained file index, USN tracking, Windows Index integration, and native search core were removed. DeskCue-owned leftover index data is cleaned automatically, eliminating a duplicate background index.
 
 #### Appearance, media, and everyday details
 
@@ -785,21 +785,21 @@ DeskBox 1.4.6 is a major feature, performance, and runtime update. The notes bel
 #### Startup, persistence, and packaging reliability
 
 - Startup no longer forces Explorer to create a desktop host while Windows is restoring desktop icon positions. Widget restoration proceeds immediately, while desktop-layer attachment waits for Explorer's existing icon host to stabilize.
-- Auto-start now uses the per-user Run entry and appears in Windows Startup apps. Legacy task registrations are migrated when safe, and disabling DeskBox from Windows is reflected by the in-app switch.
-- Fixed a Microsoft Store persistence failure that could restore settings and widget data from an older state after reopening DeskBox. Atomic replacement now retries and uses a verified backup/write-through fallback when Windows temporarily blocks destination removal.
+- Auto-start now uses the per-user Run entry and appears in Windows Startup apps. Legacy task registrations are migrated when safe, and disabling DeskCue from Windows is reflected by the in-app switch.
+- Fixed a Microsoft Store persistence failure that could restore settings and widget data from an older state after reopening DeskCue. Atomic replacement now retries and uses a verified backup/write-through fallback when Windows temporarily blocks destination removal.
 - Native AOT compatibility fixes restore settings dropdowns, file stacks, Glance, Music, Todo, Quick Capture, image attachments, support QR images, and multiple-widget switching in Direct builds.
-- Installer filenames remain `DeskBox_Setup_<version>_<arch>.exe`, preserving the update contract used by 1.4.3. Direct installers continue to be produced for x64 and ARM64.
+- Installer filenames remain `DeskCue_Setup_<version>_<arch>.exe`, preserving the update contract used by 1.4.3. Direct installers continue to be produced for x64 and ARM64.
 
 ### 中文
 
-DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容为相对 1.4.3 的全部主要变化。
+DeskCue 1.4.6 是一次大型功能、性能与运行环境更新。以下内容为相对 1.4.3 的全部主要变化。
 
 #### 更新前必读
 
-- DeskBox 使用的 Windows App SDK 与 Windows App Runtime 已从 2.2 升级到 2.4。如果电脑只有 2.2，使用官网下载的直发安装包更新时会额外下载并安装一次 2.4；这是正常升级流程，也不会删除其他应用仍在使用的旧版共享运行时。
+- DeskCue 使用的 Windows App SDK 与 Windows App Runtime 已从 2.2 升级到 2.4。如果电脑只有 2.2，使用官网下载的直发安装包更新时会额外下载并安装一次 2.4；这是正常升级流程，也不会删除其他应用仍在使用的旧版共享运行时。
 - 安装器只在缺少 2.4 时下载。安装运行时后，少数电脑可能需要重启。完全离线更新时，请先手动安装与电脑架构一致的 x64 或 ARM64 Windows App Runtime 2.4。
 - GitHub 直发版改为 Native AOT 构建，不再需要也不再下载单独的 .NET 10 运行时。
-- 正常覆盖更新会沿用现有 DeskBox 设置、格子布局、待办、随记和收纳文件。更新器会固定当前用户或所有用户安装范围，避免静默更新时意外切换安装位置。
+- 正常覆盖更新会沿用现有 DeskCue 设置、格子布局、待办、随记和收纳文件。更新器会固定当前用户或所有用户安装范围，避免静默更新时意外切换安装位置。
 - 最低支持系统仍为 Windows 10 21H2（build 19044），直发安装器现在会明确执行这项检查。
 
 #### 性能与资源占用
@@ -813,7 +813,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 
 #### 多显示器、布局移动与快捷唤起
 
-- DeskBox 会为不同的显示器拓扑分别保存格子布局。重新接入使用过的屏幕组合后，会恢复该组合对应的位置、尺寸、格子组表面和胶囊位置。
+- DeskCue 会为不同的显示器拓扑分别保存格子布局。重新接入使用过的屏幕组合后，会恢复该组合对应的位置、尺寸、格子组表面和胶囊位置。
 - 显示器热插拔、工作区变化和 DPI 变化会先等待状态稳定再恢复；切换期间暂停写入布局，避免临时坐标覆盖已经保存的布局。
 - 更换显示器或缩放比例变化时，会按可用工作区比例映射布局，并把格子限制在屏幕范围内，减少格子跑到屏幕外。
 - 按住 Ctrl 拖动格子标题，可以把当前显示器上的可移动格子作为一个整体移动，并确保整体不越出工作区。
@@ -845,16 +845,16 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 - 图标视图的文件名除了单行、双行外，还可选择隐藏。每个文件格子可以单独覆盖全局图标大小，格子最小可调整到 50×50。
 - 拖入文件可选择“跟随 Windows 默认”，正确处理跨磁盘复制以及修饰键创建快捷方式；资源管理器、文件夹、叠放和文件格子使用原生拖放图像与目标说明。
 - Windows Shell 复制和移动会显示逐项进度标记，并在传输期间保护来源、目标和接收文件夹，减少互相冲突的操作。
-- 新增“创建快捷方式”“永久删除”和“使用管理员身份打开”。永久删除带二次确认和部分失败结果；管理员权限只用于所选目标，DeskBox 本身继续以普通用户权限运行。
+- 新增“创建快捷方式”“永久删除”和“使用管理员身份打开”。永久删除带二次确认和部分失败结果；管理员权限只用于所选目标，DeskCue 本身继续以普通用户权限运行。
 - “更多”菜单会优先出现在本次点击位置附近，键盘或触控操作则回退到按钮锚点。“更多系统操作”改用兼容 Windows 10 的原生 Shell 路径，并在调用失败时报告错误。
 - 文件夹重命名和仅修改大小写的重命名改为原子提交，快捷方式图标通过 Shell PIDL 解析，完整路径悬浮提示的重复行也已移除。
 
 #### 搜索改用 Everything
 
-- 文件搜索通过本机 IPC 读取 Everything 已有索引，并把文件、文件夹结果与 DeskBox 的随记、待办和设置合并在同一搜索窗口。
+- 文件搜索通过本机 IPC 读取 Everything 已有索引，并把文件、文件夹结果与 DeskCue 的随记、待办和设置合并在同一搜索窗口。
 - 设置页可以检测或启动 Everything、手动选择程序、查看连接与权限状态、选择是否允许高级 Everything 语法，并过滤低价值系统与缓存路径。
-- DeskBox 随包提供 IPC 集成组件，但不会捆绑或安装 Everything 应用。使用文件搜索需要自行安装并运行 Everything，并在 DeskBox 中明确授权。
-- 旧的 DeskBox 自建文件索引、USN 跟踪、Windows 索引集成和原生搜索核心已移除；DeskBox 自己留下的旧索引数据会自动清理，不再维护第二份后台索引。
+- DeskCue 随包提供 IPC 集成组件，但不会捆绑或安装 Everything 应用。使用文件搜索需要自行安装并运行 Everything，并在 DeskCue 中明确授权。
+- 旧的 DeskCue 自建文件索引、USN 跟踪、Windows 索引集成和原生搜索核心已移除；DeskCue 自己留下的旧索引数据会自动清理，不再维护第二份后台索引。
 
 #### 外观、媒体与日常细节
 
@@ -868,10 +868,10 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 #### 启动、数据保存与安装可靠性
 
 - 开机启动时不再强制 Explorer 创建桌面宿主，避免与 Windows 恢复桌面图标位置发生竞争。格子本身会正常恢复，桌面层挂接则等待 Explorer 已有的图标宿主稳定后再完成。
-- 开机自启改用用户级 Run 项，并显示在 Windows“启动应用”中；旧计划任务会在安全时迁移，在系统中关闭 DeskBox 后应用内开关也会同步。
+- 开机自启改用用户级 Run 项，并显示在 Windows“启动应用”中；旧计划任务会在安全时迁移，在系统中关闭 DeskCue 后应用内开关也会同步。
 - 修复 Microsoft Store 版本可能在重启后恢复旧设置和旧格子数据的问题。原子替换遇到 Windows 暂时阻止删除目标文件时，会重试并使用经过校验的备份与原位写入兜底。
 - Native AOT 兼容修复覆盖设置下拉框、文件叠放、时光、音乐、待办、随记、图片附件、支持二维码和多个功能格子切换。
-- 安装包继续使用 `DeskBox_Setup_<版本>_<架构>.exe` 命名，保持 1.4.3 使用的更新契约；直发安装器继续提供 x64 与 ARM64 架构。
+- 安装包继续使用 `DeskCue_Setup_<版本>_<架构>.exe` 命名，保持 1.4.3 使用的更新契约；直发安装器继续提供 x64 与 ARM64 架构。
 
 ## 1.4.3 - 2026-08-19
 
@@ -1076,7 +1076,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 #### Memory and reliability
 
 - Hidden widgets now perform a soft cleanup after 30 seconds: dead localization targets, file metadata, icon and thumbnail caches, an unused search shell, eligible managed objects, and a high working set are released without waiting for the deep-cleanup timer.
-- When widgets remain visible but DeskBox has had no foreground, pointer, settings, search, onboarding, or widget interaction for 30 seconds, visible-idle maintenance releases caches and performs allocation-aware managed collection. Any new activity restarts the idle window.
+- When widgets remain visible but DeskCue has had no foreground, pointer, settings, search, onboarding, or widget interaction for 30 seconds, visible-idle maintenance releases caches and performs allocation-aware managed collection. Any new activity restarts the idle window.
 - The heavy-cleanup marker is always consumed, preventing a stale flag from permanently disabling visible-idle maintenance and compact-expansion warmup.
 - Version metadata is aligned across the application, package manifest, x64 installer, and ARM64 installer at 1.4.0 / 1.4.0.0.
 
@@ -1107,7 +1107,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 #### 内存与可靠性
 
 - 全部格子隐藏 30 秒后执行轻量回收，释放无效本地化订阅、文件元数据、图标与缩略图缓存、闲置搜索壳、符合条件的托管对象和过高工作集，无需等待深度回收定时器。
-- 格子仍显示时，若 DeskBox 连续 30 秒没有前台、鼠标、设置、搜索、新手引导或格子交互，也会释放缓存并按新增分配量执行托管回收；任何新操作都会重新计算空闲时间。
+- 格子仍显示时，若 DeskCue 连续 30 秒没有前台、鼠标、设置、搜索、新手引导或格子交互，也会释放缓存并按新增分配量执行托管回收；任何新操作都会重新计算空闲时间。
 - 修复重度清理标记未被消费后长期阻止可见空闲回收和胶囊预热的问题。
 - 应用、应用包、x64 安装器和 ARM64 安装器版本统一为 1.4.0 / 1.4.0.0。
 
@@ -1118,7 +1118,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 #### Capsule mode and startup
 
 - Smart auto-hide now synchronizes from the physical pointer when the mode is entered, retries collapses deferred by menus or interaction, and limits concurrent bounds animations during bulk state changes.
-- The currently expanded capsule holds an explicit peer-layer lease so another DeskBox widget cannot cover it. Stale collapse callbacks cannot release the newer expanded widget.
+- The currently expanded capsule holds an explicit peer-layer lease so another DeskCue widget cannot cover it. Stale collapse callbacks cannot release the newer expanded widget.
 - A new application session restores every enabled standalone widget and the active member of each widget group. Shutdown no longer persists process teardown as a user-requested hidden state.
 - Group-title wheel navigation wraps and retains its pending member until preparation, persistence, and content switching finish.
 
@@ -1138,7 +1138,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 
 - The onboarding flow is reduced to one introduction, two optional real exercises, and a final choice. Forced path confirmation and repeated explanation panels are removed.
 - Managed file drops are explained as Move by default. File and visibility exercises complete only after their actual operation succeeds.
-- The 2.5-second DeskBox logo sequence remains, while each step now pairs concise text with native icons, state diagrams, and icon-backed progress feedback.
+- The 2.5-second DeskCue logo sequence remains, while each step now pairs concise text with native icons, state diagrams, and icon-backed progress feedback.
 - Application, package, x64 installer, and ARM64 installer versions are aligned on 1.3.9 / 1.3.9.0.
 
 ### 中文
@@ -1146,7 +1146,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 #### 胶囊模式与启动恢复
 
 - 进入悬停自动展开时会按真实鼠标位置同步状态。菜单或交互暂时阻止收起后会继续重试，批量切换时也会限制同时执行的尺寸动画。
-- 当前展开的胶囊会持有独立的同级窗口层级。旧的收起回调无法清除后来展开的格子，其他 DeskBox 格子也不会盖住当前内容。
+- 当前展开的胶囊会持有独立的同级窗口层级。旧的收起回调无法清除后来展开的格子，其他 DeskCue 格子也不会盖住当前内容。
 - 新的应用会话会恢复所有已启用的独立格子，以及每个格子组当前使用的成员。退出进程不再把窗口关闭误记为用户主动隐藏。
 - 格子组标题滚轮支持循环切换，并会保留待切换目标，直到准备、保存和内容切换全部结束。
 
@@ -1166,7 +1166,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 
 - 引导调整为一屏介绍、两次可跳过的真实练习和结束选择，去掉强制路径确认与重复说明。
 - 收纳格子的默认拖入行为明确为移动。文件练习和显隐练习只有在真实操作成功后才完成。
-- DeskBox Logo 动画保留为 2.5 秒，每一步加入原生图标、状态示意和带图标的进度反馈。
+- DeskCue Logo 动画保留为 2.5 秒，每一步加入原生图标、状态示意和带图标的进度反馈。
 - 应用、应用包、x64 安装器和 ARM64 安装器版本统一为 1.3.9 / 1.3.9.0。
 
 ## 1.3.8 - 2026-08-08
@@ -1186,14 +1186,14 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 - The initial file widget is created only for a genuinely new profile. Removing every file widget is respected, and settings recovery does not recreate one unexpectedly.
 - Dynamic widgets remain on the desktop when using Win+D, while still raising above other applications when explicitly invoked.
 - Uninstall now offers a safe choice between keeping application data for a later reinstall and permanently removing settings, widget layouts, notes, tasks, caches, logs, update files, and recovery snapshots. Files in the configured managed-storage location are always preserved.
-- Localized installer, dependency, upgrade, and uninstall messages now substitute paths and item counts correctly; all six new installer languages also pass the matching locale to DeskBox on first launch.
+- Localized installer, dependency, upgrade, and uninstall messages now substitute paths and item counts correctly; all six new installer languages also pass the matching locale to DeskCue on first launch.
 - ARM64 updates now use their own installer URL, SHA-256, and size from the stable manifest.
 - Application, package, x64 installer, and ARM64 installer versions are aligned on 1.3.8 / 1.3.8.0.
 
 #### Localization scope
 
 - The new language packs prioritize the main file-widget, onboarding, weather, and update experiences. Less-used detailed settings temporarily fall back to English rather than mixing in unrelated Chinese text.
-- The x64 and ARM64 installers now offer the same eleven selectable interface languages as DeskBox, including localized dependency download and uninstall messages.
+- The x64 and ARM64 installers now offer the same eleven selectable interface languages as DeskCue, including localized dependency download and uninstall messages.
 
 ### 中文
 
@@ -1210,14 +1210,14 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 - 默认文件格子只会为真正的新用户创建一次；用户主动删除全部文件格子后不会被再次补回，设置恢复也不会意外创建新格子。
 - 使用 Win+D 时动态格子仍保留在桌面；用户主动唤起时依然可以临时显示在其他应用上方。
 - 卸载时可选择保留应用数据以便日后重新安装，或彻底删除设置、格子布局、随记、待办、缓存、日志、更新文件和恢复快照；配置的收纳路径内的真实文件始终保留。
-- 修复安装、依赖下载、升级和卸载提示中的路径与数量占位符；新增的 6 种安装器语言也会在首次启动时向 DeskBox 传递对应语言。
+- 修复安装、依赖下载、升级和卸载提示中的路径与数量占位符；新增的 6 种安装器语言也会在首次启动时向 DeskCue 传递对应语言。
 - ARM64 更新会读取独立的安装包地址、SHA-256 和大小。
 - 应用、应用包、x64 安装器和 ARM64 安装器版本统一为 1.3.8 / 1.3.8.0。
 
 #### 多语言范围
 
 - 新增语言优先覆盖文件格子、新手流程、天气和更新等主要体验；少量不常用的详细设置暂时回退英文，避免出现中文混杂。
-- x64 和 ARM64 安装器现已提供与 DeskBox 相同的 11 种可选界面语言，依赖下载和卸载提示也会随语言切换。
+- x64 和 ARM64 安装器现已提供与 DeskCue 相同的 11 种可选界面语言，依赖下载和卸载提示也会随语言切换。
 
 ## 1.3.7 - 2026-08-05
 
@@ -1246,8 +1246,8 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 
 #### Installation and Updates
 
-- **Upgrades keep one DeskBox installation:** stable installer identity and existing-path detection reuse and lock the current install directory, preventing a normal upgrade from creating a second copy.
-- **The update handoff is visible:** after DeskBox closes, the downloaded installer opens normally so the user can see progress without choosing the installation path again.
+- **Upgrades keep one DeskCue installation:** stable installer identity and existing-path detection reuse and lock the current install directory, preventing a normal upgrade from creating a second copy.
+- **The update handoff is visible:** after DeskCue closes, the downloaded installer opens normally so the user can see progress without choosing the installation path again.
 - **Download failures are actionable:** the updater offers retry and official-site fallback, while long release notes open in a dedicated view instead of being clipped above the progress bar.
 - **Dual-architecture distribution:** framework-dependent x64 and ARM64 installers reuse compatible .NET 10 and Windows App Runtime 2.2 installations and download only a missing architecture-matched dependency.
 
@@ -1276,8 +1276,8 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 
 #### 安装与更新
 
-- **升级只保留一个 DeskBox**：稳定的安装器标识与已有路径检测会复用并锁定当前安装目录，普通升级不会再生成第二份应用。
-- **更新交接过程可见**：DeskBox 关闭后正常打开已下载的安装器，用户可以看到安装进度，同时无需重新选择路径。
+- **升级只保留一个 DeskCue**：稳定的安装器标识与已有路径检测会复用并锁定当前安装目录，普通升级不会再生成第二份应用。
+- **更新交接过程可见**：DeskCue 关闭后正常打开已下载的安装器，用户可以看到安装进度，同时无需重新选择路径。
 - **下载失败可处理**：更新器提供重试与官网回退；较长的版本日志改在独立界面打开，不再挤在进度条上方被截断。
 - **双架构发布**：x64 和 ARM64 均为框架依赖安装包，复用兼容的 .NET 10 与 Windows App Runtime 2.2，只在缺少时下载对应架构依赖。
 
@@ -1368,13 +1368,13 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 - **Feature widgets now release their UI**: Disabling Todo, Quick Capture, Music, Weather, or Search closes the corresponding window and releases its content, view model, subscriptions, timers, and feature-owned services while preserving saved data.
 - **Settings closes instead of hiding**: Closing Settings now destroys the window and releases its WinUI visual tree. Reopening Settings creates a fresh window.
 - **Transient timer ownership fixed**: One-shot capsule timers now detach their handlers when they fire or are cancelled, and music timers, storyboards, and event subscriptions stop with their owning view instead of remaining rooted for the process lifetime.
-- **Guarded idle maintenance**: DeskBox can compact managed/native heaps and trim resident pages after full background inactivity. A separate threshold-based maintenance pass can also run while widgets remain visible but DeskBox is not being used; foreground, pointer, resize, search, indexing, and other active work suppress collection.
+- **Guarded idle maintenance**: DeskCue can compact managed/native heaps and trim resident pages after full background inactivity. A separate threshold-based maintenance pass can also run while widgets remain visible but DeskCue is not being used; foreground, pointer, resize, search, indexing, and other active work suppress collection.
 - **Bounded caches**: File icons, decoded bitmaps, and metadata caches now have count and estimated-memory limits, with diagnostics for verifying their size.
 
 #### Search Responsiveness and Index Residency
 
 - **Search follows its feature switch**: Heavy search services are not initialized at startup when Search is disabled. Turning Search off releases its popup, hotkey registration, custom/USN indexes, history/action services, file metadata service, and icon cache.
-- **Popup shell warm-up**: When Search is enabled, DeskBox prepares the empty popup shell during a low-priority idle slice so a desktop-widget click does not have to construct the full WinUI window first.
+- **Popup shell warm-up**: When Search is enabled, DeskCue prepares the empty popup shell during a low-priority idle slice so a desktop-widget click does not have to construct the full WinUI window first.
 - **Open-only widget action**: Repeated search-widget clicks now open or refocus the popup and can no longer toggle it closed while queued pointer events are still arriving.
 - **Window-first loading**: The native popup is shown and focused before recommendations, result icons, or an idle-unloaded index do work. Index restoration starts when the popup is invoked, not after the user types.
 - **Idle index unload**: After five minutes without Search, the large resident custom index is saved and released while lightweight file-system watchers remain active. Changes are collected in a small delta map and reconciled when the popup restores the index.
@@ -1386,7 +1386,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 - **Idle expansion warm-up**: Collapsed widgets pre-measure their expanded layout during an idle UI slice, reducing the first hover expansion hitch without visibly opening every capsule.
 - **First-hover recovery**: Smart hover expansion reads the native cursor position after startup, tray restore, and wake, so a capsule no longer needs an activating click before hover works.
 - **No hover-through between capsules**: Smart expansion verifies the native pointer root window before opening. Moving inside an expanded widget can no longer trigger an overlapping collapsed capsule underneath it or let that capsule steal the foreground layer.
-- **Foreground-safe hover expansion**: If a capsule is still physically above the desktop after a temporary tray/F7 raise has ended, hover expansion reorders it only among DeskBox windows and keeps the current external application in front.
+- **Foreground-safe hover expansion**: If a capsule is still physically above the desktop after a temporary tray/F7 raise has ended, hover expansion reorders it only among DeskCue windows and keeps the current external application in front.
 - **Immediate title-bar collapse**: In click-to-toggle mode, clicking the expanded title bar collapses the widget on the next UI turn without the previous fixed 420 ms delay. Other expansion modes are unchanged.
 
 #### Weather Redesign
@@ -1448,13 +1448,13 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 - **功能格子关闭后释放界面**：关闭待办、随记、音乐、天气或搜索功能时，会关闭对应窗口并释放内容、ViewModel、订阅、定时器和功能专属服务，同时保留已保存数据。
 - **设置窗口真正关闭**：关闭设置页时不再只隐藏窗口，而是销毁窗口并释放 WinUI 视觉树；下次打开时重新创建。
 - **临时定时器正确释放**：胶囊一次性定时器在触发或取消时会解绑事件；音乐定时器、Storyboard 与订阅跟随所属视图停止，不再被意外保留到进程结束。
-- **受保护的空闲整理**：应用完全进入后台后可整理托管堆、原生堆与工作集；即使格子仍显示，只要 DeskBox 未被操作且达到资源阈值，也可执行另一组保守维护。前台、鼠标、缩放、搜索、索引等活动会阻止回收。
+- **受保护的空闲整理**：应用完全进入后台后可整理托管堆、原生堆与工作集；即使格子仍显示，只要 DeskCue 未被操作且达到资源阈值，也可执行另一组保守维护。前台、鼠标、缩放、搜索、索引等活动会阻止回收。
 - **缓存增加上限**：文件图标、解码位图和元数据缓存同时受条目数与估算内存限制，并增加可观测诊断数据。
 
 #### 搜索响应与索引常驻
 
 - **搜索资源与功能开关联动**：搜索未开启时，启动阶段不初始化重型搜索服务；关闭搜索会释放弹窗、快捷键注册、自定义/USN 索引、历史与操作服务、文件元数据服务和图标缓存。
-- **空闲预热弹窗外壳**：搜索开启后，DeskBox 会在低优先级空闲切片中准备空弹窗，点击桌面搜索格子时无需先构造完整 WinUI 窗口。
+- **空闲预热弹窗外壳**：搜索开启后，DeskCue 会在低优先级空闲切片中准备空弹窗，点击桌面搜索格子时无需先构造完整 WinUI 窗口。
 - **搜索格子只负责打开**：连续点击搜索格子只会打开或重新聚焦弹窗，不会因为排队到达的指针事件把刚打开的窗口再次关闭。
 - **窗口优先显示**：先显示并聚焦原生弹窗，再加载推荐内容、结果图标和已卸载索引；索引恢复在弹窗唤起时开始，不再等到用户输入文字。
 - **索引空闲卸载**：搜索连续五分钟未使用时，保存并释放常驻的大型自定义索引，但保留轻量文件监听；期间变化进入小型增量表，下次弹窗恢复索引时再合并。
@@ -1466,7 +1466,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 - **空闲预热展开布局**：收起的格子会在 UI 空闲切片中预先测量展开布局，改善第一次悬停展开的卡顿，不会在桌面上逐个可见展开。
 - **首次悬停恢复**：应用启动、托盘恢复或唤醒后通过原生光标位置同步悬停状态，胶囊无需先点击即可自动展开。
 - **相邻胶囊不再穿透误触**：智能展开前会核对原生指针所属窗口；在已展开格子内操作时，不会触发其下方重叠的收起胶囊，也不会让下方胶囊抢占前台层级。
-- **悬停展开不越过前台应用**：托盘/F7 临时唤起结束后，如果胶囊仍在桌面上方，悬停展开只调整 DeskBox 格子之间的顺序，不会盖住当前外部前台应用。
+- **悬停展开不越过前台应用**：托盘/F7 临时唤起结束后，如果胶囊仍在桌面上方，悬停展开只调整 DeskCue 格子之间的顺序，不会盖住当前外部前台应用。
 - **标题栏立即收起**：点击切换模式下，点击展开格子的标题栏会在下一个 UI 调度立即收起，移除原来的固定 420 ms 延迟；其他展开模式不变。
 
 #### 天气视觉重构
@@ -1655,14 +1655,14 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 
 #### Installer and Updater
 
-- **ARM64 installer**: Added `DeskBox.arm64.iss` and `DeskBox.Dependencies.arm64.iss` for native ARM64 Windows builds.
+- **ARM64 installer**: Added `DeskCue.arm64.iss` and `DeskCue.Dependencies.arm64.iss` for native ARM64 Windows builds.
 - **Reliable process kill**: Installer now uses a robust process-termination sequence before overwrite, avoiding file-lock failures.
 - **Force-update enforcement**: `AppUpdateService` now enforces mandatory updates when the server flags a version as critical.
-- **Helper cleanup**: Stale update-helper directories under `%LocalAppData%\DeskBox\update-helper` are cleaned up automatically.
+- **Helper cleanup**: Stale update-helper directories under `%LocalAppData%\DeskCue\update-helper` are cleaned up automatically.
 - **Official download URLs**: Switched all download links to the official GitHub Releases channel.
-- **Migration support**: Added `DeskBox.Migration.iss` for handling data migration during major version upgrades.
+- **Migration support**: Added `DeskCue.Migration.iss` for handling data migration during major version upgrades.
 - **English installer language**: Added `Languages/English.isl` for proper English installer UI on non-Chinese systems.
-- **Installer language selection**: The installer now shows a language-selection dialog (Chinese, English, Japanese, German, Brazilian Portuguese) pre-selected to the system locale. The chosen language is written to `HKCU\Software\DeskBox\InstallLanguage`, and DeskBox uses it as the default app language on first run (a manual in-app change still wins).
+- **Installer language selection**: The installer now shows a language-selection dialog (Chinese, English, Japanese, German, Brazilian Portuguese) pre-selected to the system locale. The chosen language is written to `HKCU\Software\DeskCue\InstallLanguage`, and DeskCue uses it as the default app language on first run (a manual in-app change still wins).
 - **Search popup polish**: The result-list header now aligns with the data rows; the sort header carries a subtle background and shares the menu-bar margins.
 - **Weather capsule fix**: Removed a duplicate title icon so capsule mode shows only the weather emoji.
 - **Capsule hover mask**: Hidden the semi-transparent right-edge hover mask in capsule mode (interaction unchanged).
@@ -1678,7 +1678,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 
 #### Fixes
 
-- **QuickLook compatibility (critical)**: Fixed a critical issue where DeskBox could crash QuickLook's single-threaded named-pipe server by connecting without sending data (pipe probe in `CanPreview` and raw `CreateFile` fallback). Availability checks now use process enumeration only; the pipe is touched exclusively when sending a Toggle message.
+- **QuickLook compatibility (critical)**: Fixed a critical issue where DeskCue could crash QuickLook's single-threaded named-pipe server by connecting without sending data (pipe probe in `CanPreview` and raw `CreateFile` fallback). Availability checks now use process enumeration only; the pipe is touched exclusively when sending a Toggle message.
 - **Wallpaper loss**: Prevented desktop wallpaper loss caused by repeated `WorkerW` window spawns during widget layer operations in `WidgetLayerService`.
 - **Capsule mode defaults**: Aligned `AppSettings` initial values with `ApplyDefaultPreferences` so new installs and global reset produce identical capsule behavior.
 - **Tray menu height**: Fixed tray right-click menu height display issue.
@@ -1725,14 +1725,14 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 
 #### 安装器与更新器
 
-- **ARM64 安装器**：新增 `DeskBox.arm64.iss` 和 `DeskBox.Dependencies.arm64.iss`，支持原生 ARM64 Windows 构建。
+- **ARM64 安装器**：新增 `DeskCue.arm64.iss` 和 `DeskCue.Dependencies.arm64.iss`，支持原生 ARM64 Windows 构建。
 - **可靠进程关闭**：安装器现在使用健壮的进程终止序列，避免覆盖安装时的文件锁定失败。
 - **强制更新机制**：`AppUpdateService` 现在在服务器标记版本为关键时强制执行更新。
-- **缓存清理**：自动清理 `%LocalAppData%\DeskBox\update-helper` 下的残留更新缓存目录。
+- **缓存清理**：自动清理 `%LocalAppData%\DeskCue\update-helper` 下的残留更新缓存目录。
 - **正式下载地址**：所有下载链接切换到正式 GitHub Releases 渠道。
-- **迁移支持**：新增 `DeskBox.Migration.iss` 处理大版本升级时的数据迁移。
+- **迁移支持**：新增 `DeskCue.Migration.iss` 处理大版本升级时的数据迁移。
 - **英文安装器语言**：新增 `Languages/English.isl`，非中文系统显示英文安装界面。
-- **安装器语言选择**：安装器现在提供语言选择对话框（中文、英文、日语、德语、巴西葡萄牙语），默认按系统区域预选。所选语言写入 `HKCU\Software\DeskBox\InstallLanguage`，DeskBox 首次启动会默认使用该语言（手动在应用内切换仍优先）。
+- **安装器语言选择**：安装器现在提供语言选择对话框（中文、英文、日语、德语、巴西葡萄牙语），默认按系统区域预选。所选语言写入 `HKCU\Software\DeskCue\InstallLanguage`，DeskCue 首次启动会默认使用该语言（手动在应用内切换仍优先）。
 - **搜索弹窗打磨**：结果列表表头与数据行现已左对齐；排序表头增加半透明底，并与上方菜单栏左右对齐。
 - **天气胶囊修复**：移除了重复的标题图标，胶囊模式下只显示天气 emoji。
 - **胶囊悬停遮罩**：隐藏胶囊右侧边缘的半透明悬停遮罩（交互行为不变）。
@@ -1748,7 +1748,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 
 #### 修复
 
-- **QuickLook 兼容性（严重）**：修复 DeskBox 可能因空连接（连接后不发送数据）导致 QuickLook 单线程命名管道服务器崩溃的严重问题（`CanPreview` 中的管道探测和 raw `CreateFile` 回退）。可用性检查现在仅使用进程枚举；管道仅在发送 Toggle 消息时才连接。
+- **QuickLook 兼容性（严重）**：修复 DeskCue 可能因空连接（连接后不发送数据）导致 QuickLook 单线程命名管道服务器崩溃的严重问题（`CanPreview` 中的管道探测和 raw `CreateFile` 回退）。可用性检查现在仅使用进程枚举；管道仅在发送 Toggle 消息时才连接。
 - **壁纸丢失**：防止 `WidgetLayerService` 格子层级操作期间反复生成 `WorkerW` 窗口导致桌面壁纸丢失。
 - **胶囊模式默认值**：将 `AppSettings` 初始值与 `ApplyDefaultPreferences` 对齐，确保新安装和全局重置产生一致的胶囊行为。
 - **托盘菜单高度**：修复托盘右键菜单高度显示问题。
@@ -1795,7 +1795,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 - **Windows-style Settings redesign**: Reorganized crowded pages into focused detail pages, moved global search into the title area, improved search matching and result navigation, surfaced important choices directly on entry cards, and made per-page hierarchy and reset behavior more consistent.
 - **Backup, restore and attachment health**: Added integrity-checked ZIP export/restore, automatic and pre-restore snapshots, staged restart-safe restore, resilient JSON recovery, and attachment health scans for missing linked files, missing managed files and orphaned managed attachments.
 - **Window and animation reliability**: Refined show/hide transitions, detail-page transitions, title-bar collapse actions, hover hit regions, Z-order, multi-monitor bounds restoration, resize alignment and tray menu sizing. Rapid capsule and stack interactions now use guarded state transitions to reduce flicker and stuck intermediate states.
-- **Installer upgrades**: The installer now closes a running DeskBox process reliably before replacing application files, avoiding the intermittent Retry / Ignore / Cancel prompt during overwrite installs.
+- **Installer upgrades**: The installer now closes a running DeskCue process reliably before replacing application files, avoiding the intermittent Retry / Ignore / Cancel prompt during overwrite installs.
 - **Maintainability and tests**: Split the largest window, widget, settings, Todo, Quick Capture, Music and Weather classes into focused modules. Expanded regression coverage across attachments, backup safety, settings migration/search, compact bounds and privacy, stacks, animation and positioning.
 
 ### 中文
@@ -1805,12 +1805,12 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 - **胶囊组合排列**：胶囊可独立摆放，也可组成能够整体移动的组合栏。组合栏支持自定义顺序、悬浮或贴边位置、自动排列方向、间距调整，并能稳定恢复原来的自由布局位置。
 - **文件自动叠放**：文件格子可按文件类型或日期自动分组，不移动真实文件。自定义格式规则支持叠放名称、优先级、实时命中预览、形成数量、内部排序，以及未匹配文件保持散开或收入“其他”。
 - **叠放交互与 QuickLook 兼容**：叠放在格子内部散开展开和收回，并支持全选内容与复制路径。若 QuickLook 已经运行，在文件上按空格即可转交预览请求，不增加设置项、启动扫描或强制依赖。
-- **待办与随记工作流**：支持一条内容关联多个文件，可选择关联原路径或复制到 DeskBox；复制文本时会按中英文格式附带附件路径。新增标签页显示配置、拖到标签页直接改变状态、待办“进行中/本周/本月”视图、列表预览行数，以及 Enter 与 Ctrl+Enter 保存行为互换。
+- **待办与随记工作流**：支持一条内容关联多个文件，可选择关联原路径或复制到 DeskCue；复制文本时会按中英文格式附带附件路径。新增标签页显示配置、拖到标签页直接改变状态、待办“进行中/本周/本月”视图、列表预览行数，以及 Enter 与 Ctrl+Enter 保存行为互换。
 - **外观与自适应内容**：新增云母 Alt、标准亚克力、材质浓度、中性/主题色/无边框颜色，显示密度支持紧凑、标准、宽松和自定义。音乐可强制使用封面或控制布局，纯色材质固定保持完全不透明。
 - **Windows 风格设置重构**：将拥挤页面拆为聚焦的三级页面，把全局搜索移入标题栏并改进匹配与结果跳转；三级入口卡片直接提供最重要的选项，页面层级、前置控制和重置语义更加一致。
 - **备份、恢复与附件健康检查**：新增带完整性校验的 ZIP 导出/恢复、自动快照、恢复前快照、重启后安全应用恢复、JSON 损坏回退，以及缺失关联文件、缺失托管附件和孤立附件扫描。
 - **窗口与动画稳定性**：优化全局显示/隐藏、详情页进出、标题栏收起操作、悬停命中区域、窗口层级、多显示器位置恢复、调整大小参考线和托盘菜单高度。快速操作胶囊与叠放时使用受控状态切换，减少闪烁和卡在中间状态的问题。
-- **覆盖安装体验**：安装器现在会在替换应用文件前可靠关闭正在运行的 DeskBox，避免覆盖安装时偶发弹出“重试 / 忽略 / 取消”提示。
+- **覆盖安装体验**：安装器现在会在替换应用文件前可靠关闭正在运行的 DeskCue，避免覆盖安装时偶发弹出“重试 / 忽略 / 取消”提示。
 - **可维护性与测试**：拆分体积过大的窗口、格子、设置、待办、随记、音乐和天气类，并扩展附件、备份安全、设置迁移与搜索、胶囊边界与隐私、叠放、动画和窗口定位的回归测试。
 
 ## 1.2.9 - 2026-07-13
@@ -1966,14 +1966,14 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 ### English
 
 - Fixed the in-app update installation handoff after an update has been downloaded.
-- Runs `DeskBox.Updater.exe` from a detached local update-helper directory before starting the installer, so the installer can safely overwrite the DeskBox install directory.
-- Updated installer packaging so old versions can update without the running updater locking `DeskBox.Updater.*`.
+- Runs `DeskCue.Updater.exe` from a detached local update-helper directory before starting the installer, so the installer can safely overwrite the DeskCue install directory.
+- Updated installer packaging so old versions can update without the running updater locking `DeskCue.Updater.*`.
 
 ### 中文
 
-- 修复应用内更新下载完成后，点击安装、确认弹窗后 DeskBox 退出但安装器没有继续执行的问题。
-- 安装更新前会先把 `DeskBox.Updater.exe` 复制到本地更新缓存目录，再从缓存目录启动，避免更新助手锁住 DeskBox 安装目录。
-- 调整安装包规则，旧版本通过应用内更新安装新版时，不再覆盖正在运行的 `DeskBox.Updater.*` 文件。
+- 修复应用内更新下载完成后，点击安装、确认弹窗后 DeskCue 退出但安装器没有继续执行的问题。
+- 安装更新前会先把 `DeskCue.Updater.exe` 复制到本地更新缓存目录，再从缓存目录启动，避免更新助手锁住 DeskCue 安装目录。
+- 调整安装包规则，旧版本通过应用内更新安装新版时，不再覆盖正在运行的 `DeskCue.Updater.*` 文件。
 
 ## 1.2.3 - 2026-07-06
 
@@ -2031,7 +2031,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 
 ### English
 
-- Changed the project license from MIT to GPL-3.0-only for future source code and releases. Previously published MIT-licensed DeskBox versions remain under the MIT License.
+- Changed the project license from MIT to GPL-3.0-only for future source code and releases. Previously published MIT-licensed DeskCue versions remain under the MIT License.
 - Completed the first large widget architecture refactor after 1.1.10: widgets now share a `WidgetShell`, content host, content factory, registry, session manager, window factory, and diagnostic path instead of keeping each widget type as a separate window implementation.
 - Introduced the feature-widget foundation used by Todo, Quick Capture, Music, and future content widgets, including content providers, persisted widget kinds, lifecycle handling, positioning, z-order/session behavior, and settings integration.
 - Added the Todo widget as a first-class desktop widget with local storage, task completion, filtering, inline editing, full-screen editing, custom due times, and coverage for store/view-model/content-adapter behavior.
@@ -2045,7 +2045,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 
 ### 中文
 
-- 项目授权协议从 MIT 调整为 GPL-3.0-only，适用于后续源码和版本；此前已经按 MIT 发布的 DeskBox 旧版本仍保持 MIT 授权。
+- 项目授权协议从 MIT 调整为 GPL-3.0-only，适用于后续源码和版本；此前已经按 MIT 发布的 DeskCue 旧版本仍保持 MIT 授权。
 - 完成 1.1.10 之后第一轮大规模格子架构重构：文件格子和功能格子开始共享 `WidgetShell`、内容宿主、内容工厂、注册表、会话管理、窗口工厂和诊断路径，不再让每类格子都维护一套孤立窗口实现。
 - 建立功能格子基础设施，用于承载待办、随记、音乐以及后续内容格子：包括内容 Provider、格子类型持久化、生命周期处理、位置管理、层级/会话行为和设置页集成。
 - 新增待办格子作为一等桌面格子：支持本地存储、完成状态、筛选、行内编辑、全屏编辑、自定义结束时间，并补充存储、ViewModel 和内容适配层测试。
@@ -2205,33 +2205,33 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 
 ### English
 
-- Fixed internal dragging for shortcut files (`.lnk`) in managed widgets. DeskBox now keeps its own path-based drag metadata even when Windows cannot convert a shortcut into a `StorageItem`.
+- Fixed internal dragging for shortcut files (`.lnk`) in managed widgets. DeskCue now keeps its own path-based drag metadata even when Windows cannot convert a shortcut into a `StorageItem`.
 
 ### 中文
 
-- 修复收纳格子内快捷方式（`.lnk`）无法长按拖动的问题。即使 Windows 无法把快捷方式转换为 `StorageItem`，DeskBox 也会使用自身的路径数据继续完成格子内拖拽。
+- 修复收纳格子内快捷方式（`.lnk`）无法长按拖动的问题。即使 Windows 无法把快捷方式转换为 `StorageItem`，DeskCue 也会使用自身的路径数据继续完成格子内拖拽。
 
 ## 1.1.0 - 2026-06-26
 
 ### English
 
-- Added drag-and-drop diagnostics in Settings with one-click repair for DeskBox compatibility flags, startup entries, and shortcuts. If Windows 10/11 cannot drag files into widgets, run this repair first.
+- Added drag-and-drop diagnostics in Settings with one-click repair for DeskCue compatibility flags, startup entries, and shortcuts. If Windows 10/11 cannot drag files into widgets, run this repair first.
 - Improved Explorer drag/drop compatibility for managed and mapped widgets, including native shell message allowance, legacy shell format fallback, and more useful drop diagnostics.
 - Fixed widget sorting stability with natural name ordering, deterministic tie-breakers, and correct insertion when new files are added while a sort mode is active.
 - Improved Quick Capture text editing: saved text now opens the inline editor on double-click, while the context menu can edit text in Notepad and sync changes back.
 - Changed the default tray icon style to colorful for new installs and restored defaults.
 - Improved first-run onboarding so it is marked complete after the first install launch and no longer reappears just because widgets are empty.
-- Improved installer and uninstall behavior: current-user install remains the default, the install folder can be changed, startup can be selected during setup, and uninstall can optionally keep or remove local DeskBox app data.
+- Improved installer and uninstall behavior: current-user install remains the default, the install folder can be changed, startup can be selected during setup, and uninstall can optionally keep or remove local DeskCue app data.
 
 ### 中文
 
-- 新增设置内的拖拽异常诊断和一键修复，可清理 DeskBox 的兼容性标记、启动项和快捷方式。如果 Win10/Win11 遇到文件拖不进格子的问题，请先运行此修复。
+- 新增设置内的拖拽异常诊断和一键修复，可清理 DeskCue 的兼容性标记、启动项和快捷方式。如果 Win10/Win11 遇到文件拖不进格子的问题，请先运行此修复。
 - 优化资源管理器拖拽兼容，收纳格子和映射格子支持更多原生 shell 拖拽消息和旧格式兜底，并输出更完整的拖拽诊断日志。
 - 修复格子内排序稳定性，使用更接近 Windows 的自然名称排序，补充稳定兜底，并确保新加入文件按当前排序方式插入。
 - 优化随记文本编辑：已保存文本双击进入随记内编辑；右键可选择“在记事本中编辑”，保存关闭后会同步回随记。
 - 新安装和恢复默认设置时，托盘图标默认改为彩色。
 - 优化新用户引导，首次安装启动后即标记为已完成，不会因为格子为空而每次启动重复弹出；仍可在设置中手动打开。
-- 优化安装和卸载体验：继续默认按当前用户安装，支持选择安装目录，安装时可选择开机自启，卸载时可选择保留或删除本地 DeskBox 应用数据。
+- 优化安装和卸载体验：继续默认按当前用户安装，支持选择安装目录，安装时可选择开机自启，卸载时可选择保留或删除本地 DeskCue 应用数据。
 
 ## 1.0.9 - 2026-06-25
 
@@ -2243,7 +2243,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 - Improved Quick Capture tabs, title buttons, hover actions, copy feedback, and shared show/restore behavior with regular widgets.
 - Improved drag/drop compatibility, empty-widget drop handling, managed-vs-mapped drag captions, z-order restoration, icon hydration retries, and Chinese IME support during file/folder rename.
 - Changed the installer to current-user installation by default and added automatic migration from older Program Files administrator installs to reduce Explorer drag/drop permission conflicts.
-- Added clearer guidance for Explorer drag/drop failures: DeskBox should not be run as administrator, because Windows can block file drops from non-elevated Explorer windows into elevated DeskBox windows.
+- Added clearer guidance for Explorer drag/drop failures: DeskCue should not be run as administrator, because Windows can block file drops from non-elevated Explorer windows into elevated DeskCue windows.
 - Refined first-run onboarding with shorter Windows-style copy and simpler setup choices.
 
 ### 中文
@@ -2253,14 +2253,14 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 - 优化格子菜单，将标题栏的格子管理操作和内容区的文件操作拆分得更清晰，包括视图切换、排序、粘贴、刷新和映射文件夹操作。
 - 优化随记 Tab、标题栏按钮、悬浮按钮、复制反馈，以及与普通格子一致的显示 / 恢复层级行为。
 - 增强拖拽兼容、空格子拖放、收纳 / 映射拖拽提示、层级恢复、图标加载重试和文件 / 文件夹重命名时的中文输入法支持。
-- 补充拖拽异常排查说明：DeskBox 日常使用不应以管理员权限运行，否则 Windows 可能会阻止普通权限资源管理器向 DeskBox 拖入文件。
+- 补充拖拽异常排查说明：DeskCue 日常使用不应以管理员权限运行，否则 Windows 可能会阻止普通权限资源管理器向 DeskCue 拖入文件。
 - 精简新用户引导文案和设置选项，更贴近 Windows 风格。
 
 ## 1.0.8 - 2026-06-24
 
 ### English
 
-- Improved Windows 11 23H2 drag/drop compatibility by launching DeskBox after install as the original user instead of inheriting the installer elevation level.
+- Improved Windows 11 23H2 drag/drop compatibility by launching DeskCue after install as the original user instead of inheriting the installer elevation level.
 - Improved Explorer drag/drop handling for file widgets by accepting link-style requested operations when the widget can safely resolve them into the configured managed action.
 - Improved drag hover captions so managed storage widgets show "managed widget" and mapped-folder widgets show "mapped folder" as distinct targets.
 - Improved Quick Capture copy feedback by replacing per-row copy bubbles with a stable bottom-centered toast.
@@ -2270,7 +2270,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 
 ### 中文
 
-- 优化 Windows 11 23H2 拖拽兼容性，安装完成后启动 DeskBox 时不再继承安装器管理员层级，而是回到原始用户权限。
+- 优化 Windows 11 23H2 拖拽兼容性，安装完成后启动 DeskCue 时不再继承安装器管理员层级，而是回到原始用户权限。
 - 优化资源管理器拖拽处理，文件格子可兼容部分 link-style 拖拽操作，并按设置中的收纳动作安全处理。
 - 优化拖拽悬浮提示，收纳格子显示“收纳组件”，映射文件夹显示“映射文件夹”，目标更清楚。
 - 优化随记复制反馈，移除每行内部气泡，统一改为底部居中的稳定 toast。
@@ -2283,7 +2283,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 ### English
 
 - Improved tray and global-hotkey behavior so file widgets and Quick Capture are raised, hidden, and restored as one group.
-- Added a light WidgetManager restore path that keeps DeskBox widgets together after menu interactions and restores the group only after the user moves back to another app.
+- Added a light WidgetManager restore path that keeps DeskCue widgets together after menu interactions and restores the group only after the user moves back to another app.
 - Improved full-screen app behavior: F7 can raise widgets again when they are visible but covered, and a keyboard-hook fallback prevents apps such as Axure from consuming the configured hotkey first.
 - Improved widget show/hide animation with linear timing, shorter default duration, and group-aware off-screen slide distances so adjacent widgets move out consistently.
 - Improved Quick Capture layout, hover actions, tab switching, copy/open behavior, image previews, and inline editing for long text.
@@ -2311,7 +2311,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 - Added Quick Capture as an optional feature widget for local text, link, screenshot, and recent clipboard capture workflows.
 - Added Quick Capture Records, Pinned, and Recent views with hover actions, compact search, drag-out support, image thumbnails, and save-to-file-widget actions.
 - Added upload-friendly storage access: managed storage can be pinned to Quick Access, opened from the tray, and mirrored with folder shortcuts for file pickers.
-- Improved drag/drop and clipboard behavior so file drags stay file-first, path copying is explicit, and DeskBox's own clipboard writes are ignored by Recent capture.
+- Improved drag/drop and clipboard behavior so file drags stay file-first, path copying is explicit, and DeskCue's own clipboard writes are ignored by Recent capture.
 - Improved file widgets with custom Explorer icon refresh, filename extension display controls, shortcut-arrow settings placement, and clearer migration progress/result feedback.
 - Improved tray/global-hotkey layering so widgets stay temporarily raised until the user clicks another app, and Settings can join the temporary topmost layer when opened during that state.
 - Improved Quick Capture polish with scoped-search messaging, target-widget refresh/highlight after saving, compact edit dialogs, tighter tab/action layout, and theme-aligned styling.
@@ -2322,17 +2322,17 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 - 新增随记功能格子，用于本地保存文本、链接、截图和最近复制内容，功能可在设置中关闭。
 - 随记支持记录、固定、最近三个视图，并加入悬停操作、紧凑搜索、拖出内容、图片缩略图和保存到文件格子。
 - 增强上传友好入口：收纳路径可固定到快速访问，可从托盘打开，并为文件选择器保留格子文件夹快捷方式。
-- 优化拖拽和剪贴板行为：文件拖拽优先保持文件格式，复制路径改为显式操作，并忽略 DeskBox 自己写入剪贴板造成的最近记录污染。
+- 优化拖拽和剪贴板行为：文件拖拽优先保持文件格式，复制路径改为显式操作，并忽略 DeskCue 自己写入剪贴板造成的最近记录污染。
 - 优化文件格子：支持资源管理器自定义图标刷新、文件后缀显示控制、快捷方式箭头设置归位，并补充迁移进度和结果反馈。
 - 优化托盘和全局快捷键层级：格子临时置顶后，只有点击其他应用才恢复；此状态下打开设置页也会临时置顶。
-- 优化随记细节：增加当前视图搜索提示，保存到文件格子后刷新并高亮目标文件，编辑弹窗适配小窗口，tab 和操作按钮布局更紧凑，并跟随 DeskBox 主题色。
+- 优化随记细节：增加当前视图搜索提示，保存到文件格子后刷新并高亮目标文件，编辑弹窗适配小窗口，tab 和操作按钮布局更紧凑，并跟随 DeskCue 主题色。
 - 优化新手引导在高 DPI 缩放下的布局，并修复若干毛玻璃、刷新和界面边界问题。
 
 ## 1.0.5 - 2026-06-18
 
 ### English
 
-- Rebuilt first-run onboarding with a DeskBox logo intro, a five-step guide, looping right-side feature scenes, and Chinese, English, light-mode, and dark-mode support.
+- Rebuilt first-run onboarding with a DeskCue logo intro, a five-step guide, looping right-side feature scenes, and Chinese, English, light-mode, and dark-mode support.
 - Added an optional global hotkey that triggers the same show, hide, and temporary-raise flow as the tray left-click action.
 - Improved Settings and tray access with managed-storage opening, Quick Access pinning, download-link actions, and maintenance controls.
 - Improved storage and mapping workflows, including default storage migration, mapped shortcut sync, orphan managed-folder cleanup, and steadier drag/drop behavior.
@@ -2340,7 +2340,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 
 ### 中文
 
-- 重构新用户引导：加入前置 DeskBox logo 动效、五步引导、右侧循环演示场景，并适配中文、英文、浅色和深色模式。
+- 重构新用户引导：加入前置 DeskCue logo 动效、五步引导、右侧循环演示场景，并适配中文、英文、浅色和深色模式。
 - 新增全局快捷键，可在设置中启用，用键盘触发与托盘左键一致的显示、隐藏和临时置顶流程。
 - 优化设置和托盘入口，补充打开默认收纳目录、固定到快速访问、下载链接和维护操作。
 - 优化文件收纳与映射流程，包括默认收纳路径迁移、映射快捷方式同步、孤立收纳目录清理和拖拽稳定性。
@@ -2350,7 +2350,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 
 ### English
 
-- Improved tray left-click behavior so raised widgets stay on top while the pointer moves, then return to desktop level only after the user clicks another non-DeskBox window.
+- Improved tray left-click behavior so raised widgets stay on top while the pointer moves, then return to desktop level only after the user clicks another non-DeskCue window.
 - Added follow-up topmost confirmation when raising multiple widgets from the tray so every visible widget is brought forward consistently.
 - Improved tray right-click menu positioning by anchoring the WinUI menu from the actual tray icon rectangle and keeping it out of the tray icon hit area.
 - Added automatic backdrop refresh retries after widget show, tray reveal, theme, and appearance changes to recover acrylic surfaces that occasionally render as flat gray.
@@ -2358,7 +2358,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 
 ### 中文
 
-- 优化托盘左键逻辑：格子临时置顶后，移动鼠标不会触发层级恢复，只有点击其他非 DeskBox 窗口才会回到桌面层级。
+- 优化托盘左键逻辑：格子临时置顶后，移动鼠标不会触发层级恢复，只有点击其他非 DeskCue 窗口才会回到桌面层级。
 - 增加多格子托盘置顶后的二次确认，确保可见格子能更稳定地被一起唤起。
 - 优化托盘右键菜单定位，菜单会基于真实托盘图标位置弹出，并避开托盘图标点击区域。
 - 增加毛玻璃背景自动刷新重试，在显示格子、托盘唤起、主题和外观变化后恢复偶发的灰底问题。
@@ -2394,7 +2394,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 - Added a language selector in Settings and refreshed localized text dynamically when the user changes languages.
 - Reworked onboarding to expose important setup choices directly in the flow, including managed-drop behavior, the default storage path, folder mapping, and startup launch.
 - Improved onboarding visuals, right-side step animations, and repeated scene playback so each step better matches the feature being introduced.
-- Fixed startup-launch behavior so DeskBox starts silently to the tray after reboot instead of opening Settings.
+- Fixed startup-launch behavior so DeskCue starts silently to the tray after reboot instead of opening Settings.
 - Improved tray behavior so right-click "Show all widgets" temporarily raises widgets just like left-clicking the tray icon.
 - Improved widget show/hide animation with a unified right-to-left motion, removed per-widget cascade timing, and reduced mapped-widget flicker.
 - Improved mapped-folder reveal behavior by suppressing duplicate item transitions during window animation.
@@ -2411,7 +2411,7 @@ DeskBox 1.4.6 是一次大型功能、性能与运行环境更新。以下内容
 - 在设置中增加语言选择器，切换语言后动态刷新本地化文本。
 - 重构新用户引导，在流程中直接暴露拖入处理方式、默认收纳路径、文件夹映射和开机自启等关键设置。
 - 优化新用户引导视觉、右侧步骤动效和重复播放，让每一步更贴合对应功能。
-- 修复开机自启行为，重启后 DeskBox 会静默启动到托盘，而不是打开设置窗口。
+- 修复开机自启行为，重启后 DeskCue 会静默启动到托盘，而不是打开设置窗口。
 - 优化托盘行为，右键“显示全部格子”会像左键点击托盘图标一样临时置顶格子。
 - 优化格子显示、隐藏动画，统一为从右向左的动作，移除每个格子的级联延迟，并减少映射格子闪烁。
 - 优化映射文件夹唤起行为，在窗口动画期间抑制重复的项目过渡。

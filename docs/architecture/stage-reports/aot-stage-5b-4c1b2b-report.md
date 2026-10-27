@@ -1,4 +1,4 @@
-# DeskBox AOT 阶段 5B-4C1B2B 完成报告
+# DeskCue AOT 阶段 5B-4C1B2B 完成报告
 
 - 日期：2026-08-22
 - 状态：5B-4C1B2B 已完成到定义的 x64 Native AOT 实际运行边界
@@ -11,13 +11,13 @@
 
 产品修复只调整 owner 来源。旧实现从当前前台窗口推测 owner，窗口焦点变化时可能绑定到无关窗口；当前实现直接传入所属 File Widget 的 `_hostWindowHandle`。AOT fixture 在真实 P/Invoke 前后记录实际 owner、路径、返回值和时间，要求精确场景、32 位小写 run ID、隔离 preview root、唯一 owned 文件、非零 owner 以及一次调用。
 
-本阶段没有扩展 Rust。该路径只有一个稳定的 Shell P/Invoke，没有传统 COM/AOT 硬阻断，也没有大型托管常驻或复制内存热点。改成 Rust 会增加 ABI 和行为差分，不能证明可降低 DeskBox 内存；生产模块因此继续保持 ABI 2、能力 511 和十个必需导出。
+本阶段没有扩展 Rust。该路径只有一个稳定的 Shell P/Invoke，没有传统 COM/AOT 硬阻断，也没有大型托管常驻或复制内存热点。改成 Rust 会增加 ABI 和行为差分，不能证明可降低 DeskCue 内存；生产模块因此继续保持 ABI 2、能力 511 和十个必需导出。
 
 ## 2. owner 语义与实测修正
 
 微软文档把 `SHObjectProperties` 的 `hwnd` 定义为属性页的父窗口参数，并要求 `SHOP_FILEPATH` 使用完整文件路径。产品运行证据确认传入 API 的 HWND 始终等于真实 File Widget HWND，路径始终等于唯一 owned 目标。参考：[SHObjectProperties](https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shobjectproperties)。
 
-首次真实运行还证明，Windows 11 当前实现不会把系统属性页的 `GW_OWNER` 直接设置为传入的 WinUI 窗口。系统会在同一 DeskBox 进程内创建一个不可见的 `StubWindow32` 代理窗口，属性页的 direct owner 和 root owner 指向该代理。初版把 direct/root owner 必须等于 File Widget HWND 作为硬断言，因此正确打开并关闭属性页后仍判失败。
+首次真实运行还证明，Windows 11 当前实现不会把系统属性页的 `GW_OWNER` 直接设置为传入的 WinUI 窗口。系统会在同一 DeskCue 进程内创建一个不可见的 `StubWindow32` 代理窗口，属性页的 direct owner 和 root owner 指向该代理。初版把 direct/root owner 必须等于 File Widget HWND 作为硬断言，因此正确打开并关闭属性页后仍判失败。
 
 最终契约把两层事实分开：
 
@@ -34,7 +34,7 @@
 
 观察到目标属性页后，runner 记录完整窗口事实，向该唯一 HWND 发送 `WM_CLOSE`，等待窗口销毁，并再次枚举确认同名属性页残留为 0。操作前后独立计算目标文件长度和 SHA-256，要求文件存在、长度和哈希完全不变。
 
-每轮使用全新的 preview root 和同级 `-Recovery` root。两个根都必须位于仓库专属 evidence 目录、不得与正式 `%LOCALAPPDATA%\DeskBox` 重叠、不得预先存在，并分别写入含仓库根、场景、run ID 和精确根路径的 ownership marker。证据归档后，runner 逐根重新核对 marker 和边界才允许删除；会话文件只有在两根均确认不存在后才写入成功状态。
+每轮使用全新的 preview root 和同级 `-Recovery` root。两个根都必须位于仓库专属 evidence 目录、不得与正式 `%LOCALAPPDATA%\DeskCue` 重叠、不得预先存在，并分别写入含仓库根、场景、run ID 和精确根路径的 ownership marker。证据归档后，runner 逐根重新核对 marker 和边界才允许删除；会话文件只有在两根均确认不存在后才写入成功状态。
 
 ## 4. 实际运行结果
 
@@ -87,9 +87,9 @@ profile 49 / schema 46 的完整 x64 发布审计通过：
 - Rust workspace 57/57；
 - `cargo fmt --check`、`cargo clippy --all-targets -- -D warnings`、五个 PowerShell 脚本解析和本阶段文件 `git diff --check` 均通过。
 
-代码复盘确认：普通 JIT 继续使用同一 `SHObjectProperties` 产品实现；AOT instrumentation 只在 `DESKBOX_NATIVE_AOT` 且精确场景成立时记录；系统属性页仍由真实 Shell API 创建；产品 JSON 格式和 Rust ABI 均未改变。
+代码复盘确认：普通 JIT 继续使用同一 `SHObjectProperties` 产品实现；AOT instrumentation 只在 `DESKCUE_NATIVE_AOT` 且精确场景成立时记录；系统属性页仍由真实 Shell API 创建；产品 JSON 格式和 Rust ABI 均未改变。
 
-首次 profile 49 审计发现禁用模式把编译符号 `DESKBOX_NATIVE_AOT` 误认成 Rust 导出名，修正为大小写精确匹配。首次真实运行发现系统 `StubWindow32` 代理 owner，以及自动备份产生同级 `-Recovery` 根；最终实现分别通过完整 owner 事实和双根 ownership 清理闭环这两个遗漏。
+首次 profile 49 审计发现禁用模式把编译符号 `DESKCUE_NATIVE_AOT` 误认成 Rust 导出名，修正为大小写精确匹配。首次真实运行发现系统 `StubWindow32` 代理 owner，以及自动备份产生同级 `-Recovery` 根；最终实现分别通过完整 owner 事实和双根 ownership 清理闭环这两个遗漏。
 
 ## 8. 下一阶段建议
 

@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 4E-1 完成报告
+# DeskCue Native AOT 阶段 4E-1 完成报告
 
 - 日期：2026-08-21
 - 范围：四个低风险叶子 XAML 中的 7 条 WMC1510
@@ -64,7 +64,7 @@ AOT 审计升级为 profile 24 / schema 21，并增加以下硬门禁：
 | 4E-1 契约 | 8/8 |
 | 4E-0 + 4E-1 + AOT 发布契约 | 34/34 |
 | 受影响既有契约 + 4E-1 | 11/11 |
-| DeskBox x64 全量测试 | 2081/2081 |
+| DeskCue x64 全量测试 | 2081/2081 |
 | PowerShell 语法解析 | 0 错误 |
 | x64 AOT 审计 | profile 24 / schema 21，通过 |
 

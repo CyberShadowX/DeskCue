@@ -27,4 +27,4 @@ screenshots/zh-cn/… (one file per settings section)
 screenshots/en-us/… (one file per settings section)
 ```
 
-The `readme-hero-1-3-7-dark-*` banners are AI-generated brand illustrations and are not presented as literal UI screenshots. Files under `screenshots/` are captures from the running DeskBox build in both supported README languages. The five 1.3.4 hero candidates were removed on 2026-09-06 after the 1.3.7 banners were adopted; check git history if an old candidate is ever needed.
+The `readme-hero-1-3-7-dark-*` banners are AI-generated brand illustrations and are not presented as literal UI screenshots. Files under `screenshots/` are captures from the running DeskCue build in both supported README languages. The five 1.3.4 hero candidates were removed on 2026-09-06 after the 1.3.7 banners were adopted; check git history if an old candidate is ever needed.

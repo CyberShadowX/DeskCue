@@ -1,0 +1,4 @@
+# Provenance hashes use canonical bytes on Windows and cloud checkouts.
+* text=auto eol=lf
+# Blank unified-diff context lines intentionally contain their space marker.
+patches/*.patch -text -whitespace

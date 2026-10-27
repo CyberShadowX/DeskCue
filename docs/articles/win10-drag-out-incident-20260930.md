@@ -2,7 +2,7 @@
 
 > 状态：**§1 根因一结论已于 2026-10-01 被真机实测证伪，最终修复形态见 §7**；§2 根因二修复不变。修复已落地，未经构建/真机复验（会话内 exec 通道故障）。
 > **勘误**：本文 §1 引用的 23:41–23:45 日志行（`requested=None allowed=Copy, Move`、`CompletionReceiptIgnored`、`SourcePresence`、25 秒的 `8f88b01f` 会话）在诊断包中不存在，属伪证；§1 的"无偏好→弹菜单"机制结论错误。
-> 诊断包：`C:\Users\simon\Downloads\DeskBox-Diagnostics-20260930-234554`（Win10 19045 / 直装 / 1.5.5 / zh-CN / X64）。
+> 诊断包：`C:\Users\simon\Downloads\DeskCue-Diagnostics-20260930-234554`（Win10 19045 / 直装 / 1.5.5 / zh-CN / X64）。
 > 报障现象（用户截图）：①Win10 从格子拖文件到桌面后弹出系统三态菜单"复制到当前位置(C) / 移动到当前位置(M) / 取消"；②设置页"文件格子 → 收纳与路径"里"拖出格子时"下拉框空白，展开后无任何选项（同卡片"拖入格子时"正常显示"移动"）。
 
 ---
@@ -11,8 +11,8 @@
 
 | 证据 | 时间 / 值 |
 |---|---|
-| anim2 安装包 | `.artifacts/test-installer-x64/anim-20260930/DeskBox_Setup_1.5.5_anim2_x64.exe`，mtime **2026-09-30 23:39:01** |
-| 其 publish 源 | `.artifacts/aot-retail/win-x64/publish/DeskBox.exe`，mtime **23:38:18**（Native AOT 零售管线） |
+| anim2 安装包 | `.artifacts/test-installer-x64/anim-20260930/DeskCue_Setup_1.5.5_anim2_x64.exe`，mtime **2026-09-30 23:39:01** |
+| 其 publish 源 | `.artifacts/aot-retail/win-x64/publish/DeskCue.exe`，mtime **23:38:18**（Native AOT 零售管线） |
 | P1 修复最晚落地 | `FileDragSourceGuardDataObject.cs` mtime 17:23、双审查报告 17:58、VM/Coordinator 11:14 —— **全部早于 23:38** |
 | 23:38 之后源码改动 | `find src -newermt "2026-09-30 23:38" -name "*.cs"`（排除 obj）**为空** |
 | VM 会话启动 | 日志 23:40:37（Backdrop/DropTarget 注册行），拖拽测试 23:41–23:45，诊断包导出 23:45:54 |
@@ -25,16 +25,16 @@
 
 ### 机制链
 
-1. "拖出格子时"当前值为默认 `FollowWindows` → `FileItemDragPackage.ResolveDragOutPreferredOperation`（`src/DeskBox/Controls/FileItemDragPackage.cs:33-39`）落入 `_ => DataPackageOperation.None` 分支。
+1. "拖出格子时"当前值为默认 `FollowWindows` → `FileItemDragPackage.ResolveDragOutPreferredOperation`（`src/DeskCue/Controls/FileItemDragPackage.cs:33-39`）落入 `_ => DataPackageOperation.None` 分支。
 2. 宿主写回 `e.Data.RequestedOperation = None`（`FileSurfaceContent.xaml.cs:1251-1253` 唯一调用点）。
-3. P1-6 修复后的 guard（`src/DeskBox/Controls/FileDragSourceGuardDataObject.cs`）：`IsServiceablePreferredDropEffect` 只认单值 1/2/4（`:133-134`），None/0/多位掩码一律**不设** `Preferred DropEffect` 格式（`SetData` 分支 `:243-262`）。→ 线上形状 = "**非 Shell 进程源 + OK 效果 Copy|Move + 无偏好格式**"。
+3. P1-6 修复后的 guard（`src/DeskCue/Controls/FileDragSourceGuardDataObject.cs`）：`IsServiceablePreferredDropEffect` 只认单值 1/2/4（`:133-134`），None/0/多位掩码一律**不设** `Preferred DropEffect` 格式（`SetData` 分支 `:243-262`）。→ 线上形状 = "**非 Shell 进程源 + OK 效果 Copy|Move + 无偏好格式**"。
 4. **Win10**（19045 实测）的桌面/Explorer 落放目标对这种形状的左键拖放弹经典三态菜单；**Win11** 静默走卷规则。菜单里没有"创建快捷方式"项，与 `SupportedOperations = Copy|Move`（`FileItemDragPackage.cs:26-27`，不含 Link）吻合。
 
 ### 为什么说"P1-6 假设被证伪"
 
 双审查报告 `docs/articles/file-drag-batch-dual-review-20260930.md` P1-6 条目原话：*"Win10 Explorer/微信对'格式存在但值为 0'的解释是'Win10/11 同一路径'论证的唯一未验证变量"*，真机清单第一条就是 *"Win10 + FollowWindows + 拖出→桌面/Explorer/微信，确认不弹菜单"*。本次真机结论：**弹**。即使格式完全缺席（P1-6 修复后的正确形态），Win10 仍弹——分歧点不在"格式存在但值为 0"，而在 Win10 对**无偏好的非 Shell 源**本来就要问。旧止血线（09-20，"Win10 单值 Move"）不弹，正是因为它恒给单值 preferred。
 
-### 日志证据（诊断包 `DeskBox-sanitized.log`，关键行摘录）
+### 日志证据（诊断包 `DeskCue-sanitized.log`，关键行摘录）
 
 三次拖出会话全部 `requested=None allowed=Copy, Move`：
 
@@ -58,7 +58,7 @@
 
 ### 修复建议（修 B，**语义决策，待 Simon 拍板**）
 
-- **推荐**：`ResolveDragOutPreferredOperation` 内，`FollowWindows` 且 `!WindowsCompatibilityService.IsWindows11OrLater`（`src/DeskBox/Services/WindowsCompatibilityService.cs:55`，build ≥ 22000 为 Win11）→ 返回**单值 `Move`**；Win11 保持 `None`。等于恢复 09-20 已双机验证的止血口径，只是按 OS 分档。guard 语义不变：单值 Move 可被存储回答，完成回执仍被防火墙吞掉，源删除仍由 `SourcePresence` 文件对账裁决，不新增风险面。
+- **推荐**：`ResolveDragOutPreferredOperation` 内，`FollowWindows` 且 `!WindowsCompatibilityService.IsWindows11OrLater`（`src/DeskCue/Services/WindowsCompatibilityService.cs:55`，build ≥ 22000 为 Win11）→ 返回**单值 `Move`**；Win11 保持 `None`。等于恢复 09-20 已双机验证的止血口径，只是按 OS 分档。guard 语义不变：单值 Move 可被存储回答，完成回执仍被防火墙吞掉，源删除仍由 `SourcePresence` 文件对账裁决，不新增风险面。
 - **已知代价**：Win10 上跨卷拖出的默认语义从"复制"变"移动"（copy+删源），与旧止血一致；用户可显式选"复制"规避（前提是修 A 落地，否则 AOT 下根本没得选）。
 - **备选**（不推荐）：不分 OS 恒定单值 Move——更简单，但 Win11 也丢掉卷规则默认与第三方的自选权。
 - 文档同步：`docs/architecture/file-drag-source-safety-20260929.md` 验收节回填真机结论；双审查报告 P1-6 条目标记"真机已闭环=失败 → 修复"。
@@ -69,11 +69,11 @@
 
 ### 机制
 
-`src/DeskBox/Features/ManagedStorage/ManagedStorageSettingsViewModel.AotBindableProperties.cs:8-16` 的 `[WinRT.GeneratedBindableCustomProperty([...])]` 白名单**只有旧 7 个属性**，本批新增的 4 个绑定属性全部漏加：
+`src/DeskCue/Features/ManagedStorage/ManagedStorageSettingsViewModel.AotBindableProperties.cs:8-16` 的 `[WinRT.GeneratedBindableCustomProperty([...])]` 白名单**只有旧 7 个属性**，本批新增的 4 个绑定属性全部漏加：
 
-| 漏加属性 | XAML 绑定位置（`src/DeskBox/Views/SettingsWindow.xaml`） | AOT 下的表现 |
+| 漏加属性 | XAML 绑定位置（`src/DeskCue/Views/SettingsWindow.xaml`） | AOT 下的表现 |
 |---|---|---|
-| `DragOutAction` | `:1172` `controls:SettingsComboBox.Value="{Binding DragOutAction, …}"` | Value=null → `SettingsComboBox.ApplyValueToSelection` 在 `if (value is null) return;`（`src/DeskBox/Controls/SettingsComboBox.cs:99`）早退 → **框空白** |
+| `DragOutAction` | `:1172` `controls:SettingsComboBox.Value="{Binding DragOutAction, …}"` | Value=null → `SettingsComboBox.ApplyValueToSelection` 在 `if (value is null) return;`（`src/DeskCue/Controls/SettingsComboBox.cs:99`）早退 → **框空白** |
 | `AvailableDragOutActionOptions` | `:1172` `ItemsSource="{Binding AvailableDragOutActionOptions}"` | ItemsSource=null → **展开后无任何选项** |
 | `DragOutModifierTipEnabled` | `:1176` 附近 修饰键提示 ToggleSwitch `IsOn` | 开关绑定死（恒显示关、改不动） |
 | `DragOutResultHintEnabled` | `:1180` 附近 结果提示 ToggleSwitch `IsOn` | 同上 |
@@ -84,8 +84,8 @@ Native AOT 构建里原生绑定引擎只能看到该 attribute 列出的属性�
 
 ### 为什么测试没拦住（双重漏网）
 
-1. Debug/测试宿主不定义 `DESKBOX_NATIVE_AOT`，桥 attribute 不生效，绑定走运行时反射全部正常——本机测试与 4590 绿全看不见。
-2. 本该拦住的契约测试 `tests/DeskBox.Tests/FileSettingsEditorTests.cs` 的 `FileSections_BindToTheEditorsThroughSectionLevelDataContext`（`:358` 起，逐行读桥文件做断言的那种）**没有随批次扩展**：storageBridge 断言仍只钉旧 7 名（`:451-465`），XAML 断言里有 `AvailableDropActionOptions` 却没有四个新绑定。这属于"加设置必须同步 AOT 冻结清单+契约测试"接线纪律的违例。
+1. Debug/测试宿主不定义 `DESKCUE_NATIVE_AOT`，桥 attribute 不生效，绑定走运行时反射全部正常——本机测试与 4590 绿全看不见。
+2. 本该拦住的契约测试 `tests/DeskCue.Tests/FileSettingsEditorTests.cs` 的 `FileSections_BindToTheEditorsThroughSectionLevelDataContext`（`:358` 起，逐行读桥文件做断言的那种）**没有随批次扩展**：storageBridge 断言仍只钉旧 7 名（`:451-465`），XAML 断言里有 `AvailableDropActionOptions` 却没有四个新绑定。这属于"加设置必须同步 AOT 冻结清单+契约测试"接线纪律的违例。
 
 ### 修复建议（修 A，机械修复，无设计争议）
 
@@ -132,16 +132,16 @@ Native AOT 构建里原生绑定引擎只能看到该 attribute 列出的属性�
 
 Simon 在 Win10 19045 VM 上用三档设置逐一实拖：**"跟随 Windows 默认 / 移动 / 复制"全部弹三态菜单**。三档只改 `RequestedOperation`，对外允许集恒为 `Copy | Move`——故**决定菜单的不是偏好值，而是允许集是否多效果**。截图菜单缺"创建快捷方式"，与 `Copy|Move` 吻合。
 
-更正后的机制判断：Win10 下 WinUI 拖拽经系统代理抵达 Explorer 时**不带按键状态**（旁证：DeskBox 自身原生活动目标日志 `keyState=0`），Explorer 视同非左键拖放，只要 `pdwEffect` 提供多于一种可选操作就弹菜单；唯一静默形状是"单值效果且等于默认效果"——正是 1.5.5 正式版 Win10 单值 Move 的形态。机理侧写（grfKeyState）为推断，经验规则（多效果必弹/单值静默）已被今日三档实测与 1.5.5 历史行为双边钉死。
+更正后的机制判断：Win10 下 WinUI 拖拽经系统代理抵达 Explorer 时**不带按键状态**（旁证：DeskCue 自身原生活动目标日志 `keyState=0`），Explorer 视同非左键拖放，只要 `pdwEffect` 提供多于一种可选操作就弹菜单；唯一静默形状是"单值效果且等于默认效果"——正是 1.5.5 正式版 Win10 单值 Move 的形态。机理侧写（grfKeyState）为推断，经验规则（多效果必弹/单值静默）已被今日三档实测与 1.5.5 历史行为双边钉死。
 
 ### 最终修复（已落地，未经构建/真机复验）
 
 - **`FileItemDragPackage.ResolveDragOutAllowedOperations(action, isWindows11OrLater)`**（新增，OS 可注入）：Win11 → `SupportedOperations`（`Copy|Move`）；Win10 → 移动档 `Move`、复制档 `Copy`、跟随/未知 → `Move`。`FileSurfaceContent.Items_DragStarting` 用它写 `e.AllowedOperations`，并存入 `_activeDragAllowedOperations`。
 - **`ResolveDragOutPreferredOperation` 恢复纯映射**（跟随→None / 移动→Move / 复制→Copy）：偏好值在 Win10 无效，在 Win11 照旧。
-- **内部路由的 Move-only 兜底**（配套成本）：`ResolveInternalArrangementFeedbackOperation` 在允许集不含 Copy 但含 Move 时反馈 `Move`（DragOver 临时态，Drop 完成仍由 `ResolveInternalArrangementCompletionOperation` 返回 `None`，§8.2 安全规则不破）；`DeskBoxDragData.ResolveFileDragFeedbackOperation` 增 `allowedOperations` 参数，内部拖拽在 Copy 缺席时回退 `Move`；完成路径调用点维持默认参数（不回退 Move），防止"实际执行了复制却回报 Move"授权 shell 清源。
+- **内部路由的 Move-only 兜底**（配套成本）：`ResolveInternalArrangementFeedbackOperation` 在允许集不含 Copy 但含 Move 时反馈 `Move`（DragOver 临时态，Drop 完成仍由 `ResolveInternalArrangementCompletionOperation` 返回 `None`，§8.2 安全规则不破）；`DeskCueDragData.ResolveFileDragFeedbackOperation` 增 `allowedOperations` 参数，内部拖拽在 Copy 缺席时回退 `Move`；完成路径调用点维持默认参数（不回退 Move），防止"实际执行了复制却回报 Move"授权 shell 清源。
 - **提示与设置**：`MaybeShowDragOutModifierTip` 改为按允许集含 Copy&Move 才显示（Win10 自动不再提示）；`MaybeShowDragOutResultHint` 在单效果拖拽后用无修饰键版文案（新键 `*.NoModifiers`）；设置页"拖出格子时"下新增 Win10 说明行（`Settings.DragOutAction.Win10Note`，仅 Win10 显示）并将修饰键提示开关在 Win10 置灰（`RefreshDragOutWin10State`，DataContext 外的命名元素路径，不占 AOT 桥）。
 - **测试**：`FileItemMultiDragTests` 新增 `ResolveDragOutAllowedOperations` 双 OS 注入断言、`InternalArrangementFeedback` 增 Move-only 用例、新 `FileDragFeedbackOperation` 单效果回退用例；`FileSettingsEditorTests` 增 Win10 注释元素断言。
-- **已知代价**：Win10 移动/跟随档下，只收 Copy 的应用（VS Code、浏览器、老 WinForms）拖入被拒（禁止光标）——与 1.5.5 正式版 Win10 行为一致，需要者选"复制"档。DeskBox 内部目标的修饰键语义不受影响（意图经真实按键直读，不走 OLE 效果集）。
+- **已知代价**：Win10 移动/跟随档下，只收 Copy 的应用（VS Code、浏览器、老 WinForms）拖入被拒（禁止光标）——与 1.5.5 正式版 Win10 行为一致，需要者选"复制"档。DeskCue 内部目标的修饰键语义不受影响（意图经真实按键直读，不走 OLE 效果集）。
 
 ### 同日复审追加修复（P1/P2/P3）
 
@@ -152,7 +152,7 @@ Simon 在 Win10 19045 VM 上用三档设置逐一实拖：**"跟随 Windows 默�
 ### 复验清单（重打 AOT 测试包后）
 
 - [ ] Win10 三档各自拖出到桌面/Explorer/跨卷：均不弹菜单，执行与档位一致的操作；
-- [ ] Win10 拖入 DeskBox 格子：排序/跨格子移动/入叠放/拖到快捷方式格打开 全部正常（Move-only 兜底生效）；
+- [ ] Win10 拖入 DeskCue 格子：排序/跨格子移动/入叠放/拖到快捷方式格打开 全部正常（Move-only 兜底生效）；
 - [ ] Win10 拖入 VS Code/浏览器：移动档被拒（预期代价），复制档可收；
 - [ ] Win10 设置页：Win10Note 可见、修饰键开关置灰；
 - [ ] Win11 全量回归：Copy|Move + 偏好、修饰键提示、三档语义不变；

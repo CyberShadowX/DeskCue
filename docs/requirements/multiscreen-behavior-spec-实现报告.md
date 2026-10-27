@@ -1,6 +1,6 @@
 # 多屏行为规格 v2 — 实现报告（阶段 1-3 完成，2026-10-08）
 
-> 本报告记录已完成阶段、与规格文档的全部偏差、跳过的问题（另见开发问题清单.md）。DeskBox 已从规范 Debug 路径重启验证，测试 **4865/4865 全绿**，未提交。阶段 4 已于同日完成（4.1 CCD 友好名 / 4.3 设置页重构+MoveAll 确认撤销 / 4.4 断开收起 / 4.5 十二语言）。
+> 本报告记录已完成阶段、与规格文档的全部偏差、跳过的问题（另见开发问题清单.md）。DeskCue 已从规范 Debug 路径重启验证，测试 **4865/4865 全绿**，未提交。阶段 4 已于同日完成（4.1 CCD 友好名 / 4.3 设置页重构+MoveAll 确认撤销 / 4.4 断开收起 / 4.5 十二语言）。
 
 ## 一、完成状态总览
 
@@ -56,7 +56,7 @@ B1 ✅（统一解析器+删智能跟随）｜B2 ✅（v4 key）｜B3 ✅（逐�
 
 - 全套 `dotnet test -p:Platform=x64`：**4865/4865 通过**（新增 16 个：Resolver 9 + Gate 7；改写 9 个既有测试按 v2 语义）。
 - 契约冻结同步：Schema pin ×2（13）、迁移链测试 → Thirteen、门面 235/236、slice 13、SettingsWireKeys +widgetNewPlacementTarget、顺序基线同、FacadeAccessManifest（MigrationService 55 / SettingsService 611 / WTLS 23 / DisplayIdentityTokens 2 / NewWidgetPlacement 4 / ScreenHome 2）、BusinessGlobalAccess 无增长（注入委托替代 App.Current）。
-- DeskBox 已从 `D:\project\wingezi\src\DeskBox\bin\Debug\net10.0-windows10.0.22621.0\DeskBox.exe` 重启，启动日志干净（0 异常）。
+- DeskCue 已从 `D:\project\wingezi\src\DeskCue\bin\Debug\net10.0-windows10.0.22621.0\DeskCue.exe` 重启，启动日志干净（0 异常）。
 
 
 ## 八、审查修复批次（2026-10-08 晚，3-Agent 并行）

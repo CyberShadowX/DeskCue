@@ -43,8 +43,8 @@ if ($Platform -eq "ARM64") {
     . $arm64EnvironmentScript
 }
 
-$outputExe = Join-Path $outputRoot "DeskBox.ThumbnailProxy.exe"
-$outputPdb = Join-Path $outputRoot "DeskBox.ThumbnailProxy.pdb"
+$outputExe = Join-Path $outputRoot "DeskCue.ThumbnailProxy.exe"
+$outputPdb = Join-Path $outputRoot "DeskCue.ThumbnailProxy.pdb"
 
 function Get-PeMachine {
     param([Parameter(Mandatory)][string]$Path)
@@ -91,7 +91,7 @@ if (-not $ValidateOnly.IsPresent) {
     $cargoArguments = @(
         "build",
         "--manifest-path", $manifestPath,
-        "--package", "deskbox-thumbnail-proxy",
+        "--package", "deskcue-thumbnail-proxy",
         "--locked",
         "--target", $targetTriple,
         "--target-dir", $cargoTargetRoot
@@ -102,9 +102,9 @@ if (-not $ValidateOnly.IsPresent) {
 
     $arm64EnvironmentState = $null
     if ($Platform -eq "ARM64") {
-        $arm64Toolchain = Get-DeskBoxArm64MsvcEnvironment
+        $arm64Toolchain = Get-DeskCueArm64MsvcEnvironment
         $arm64EnvironmentState =
-            Enter-DeskBoxArm64MsvcEnvironment -Toolchain $arm64Toolchain
+            Enter-DeskCueArm64MsvcEnvironment -Toolchain $arm64Toolchain
     }
 
     $previousCargoColor = [Environment]::GetEnvironmentVariable("CARGO_TERM_COLOR", "Process")
@@ -144,13 +144,13 @@ if (-not $ValidateOnly.IsPresent) {
             "Process")
         [Environment]::SetEnvironmentVariable("RUSTFLAGS", $previousRustFlags, "Process")
         if ($null -ne $arm64EnvironmentState) {
-            Exit-DeskBoxArm64MsvcEnvironment -State $arm64EnvironmentState
+            Exit-DeskCueArm64MsvcEnvironment -State $arm64EnvironmentState
         }
     }
 
     $cargoOutput = Join-Path $cargoTargetRoot "$targetTriple\$cargoProfile"
-    $builtExe = Join-Path $cargoOutput "deskbox-thumbnail-proxy.exe"
-    $builtPdb = Join-Path $cargoOutput "deskbox_thumbnail_proxy.pdb"
+    $builtExe = Join-Path $cargoOutput "deskcue-thumbnail-proxy.exe"
+    $builtPdb = Join-Path $cargoOutput "deskcue_thumbnail_proxy.pdb"
     if (-not (Test-Path -LiteralPath $builtExe -PathType Leaf)) {
         throw "Rust thumbnail proxy build did not produce '$builtExe'."
     }

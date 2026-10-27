@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 4D-4B 完成报告
+# DeskCue Native AOT 阶段 4D-4B 完成报告
 
 - 日期：2026-08-21
 - 范围：`ExplorerQuickAccessHelper` 查询、固定和取消固定
@@ -32,15 +32,15 @@ Quick Access 写操作加入自动化。AOT 主程序尚未启动。
 
 ## 3. 实现与 ABI
 
-- 新 Rust 模块：`native/deskbox-native/src/quick_access.rs`；
-- 新托管后端：`src/DeskBox/Helpers/QuickAccessNativeBackend.cs`；
-- 新导出：`deskbox_quick_access_v1`；
+- 新 Rust 模块：`native/deskcue-native/src/quick_access.rs`；
+- 新托管后端：`src/DeskCue/Helpers/QuickAccessNativeBackend.cs`；
+- 新导出：`deskcue_quick_access_v1`；
 - 模块 ABI：2；结构版本：1；
 - 新能力位：`1 << 7`；完整能力掩码：255；
 - 当前发布必需导出：9 个；
 - x64 请求/结果尺寸：96/112 字节；
-- AOT 使用 `DESKBOX_NATIVE_AOT` 完整排除 C# ProgID/dynamic oracle；
-- JIT 可用 `DESKBOX_QUICK_ACCESS_BACKEND=rust` 显式选择 Rust，失败不回退。
+- AOT 使用 `DESKCUE_NATIVE_AOT` 完整排除 C# ProgID/dynamic oracle；
+- JIT 可用 `DESKCUE_QUICK_ACCESS_BACKEND=rust` 显式选择 Rust，失败不回退。
 
 Rust 使用 `IShellDispatch`、`Folder`、`FolderItems`、`FolderItem`、`FolderItem2` 的强类型投影，
 没有手写通用 Automation 分派器，也没有和 4D-4A 共用操作导出来暗中扩大旧 ABI。
@@ -55,7 +55,7 @@ Rust 使用 `IShellDispatch`、`Folder`、`FolderItems`、`FolderItem`、`Folder
 | Rust 单元测试 | 52/52 |
 | 4D-4B 契约测试 | 12/12 |
 | AOT/Explorer/shortcut/music 扩大定向测试 | 89/89 |
-| DeskBox x64 全量测试 | 2061/2061 |
+| DeskCue x64 全量测试 | 2061/2061 |
 | x64 AOT 审计 | 配置 21 / schema 18，通过 |
 
 首轮完整 AOT 审计用时约 147.4 秒，产生 39 个发布文件和 3 个分离 PDB；发布文件约

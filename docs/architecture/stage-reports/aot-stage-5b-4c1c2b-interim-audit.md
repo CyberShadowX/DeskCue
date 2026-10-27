@@ -1,4 +1,4 @@
-# DeskBox AOT 阶段 5B-4C1C2B 中间审计
+# DeskCue AOT 阶段 5B-4C1C2B 中间审计
 
 - 日期：2026-08-23
 - 状态：部分自动补充证据已完成，真人 Explorer 物理鼠标与视觉验收未完成

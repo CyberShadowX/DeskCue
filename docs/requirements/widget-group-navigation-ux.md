@@ -1,4 +1,4 @@
-# DeskBox 格子组标题栏导航规范（2026-07-29）
+# DeskCue 格子组标题栏导航规范（2026-07-29）
 
 > **替代声明**  
 > 本节是当前唯一有效规范，替代下方历史正文中的“外部附着导航条”“Auto / Tabs / Stack”“叠放拖拽/跟手”“Overlay/Hidden/System 标题栏兼容”等方案。实现、测试和验收发生冲突时，以本节为准；旧正文只保留决策背景，不得作为新增实现依据。
@@ -226,7 +226,7 @@ WheelSwitchEnabled: bool
 
 > 以下内容只用于追溯早期“外部导航与叠放手势”方案。不得据此新增外部导航、Auto/Tabs/Stack、跟手拖拽或 Overlay/Hidden/System 兼容实现；旧验收编号不覆盖上方新规范。
 
-# DeskBox 多格子组合导航与叠放交互设计
+# DeskCue 多格子组合导航与叠放交互设计
 
 > 状态：实施中；已完成需求复核和过渡架构，最终统一组宿主尚未完成  
 > 最后更新：2026-07-29  
@@ -367,7 +367,7 @@ Apple Smart Stack、动画时长、阈值和缓存算法是设计参考或初始
 
 ## 1. 背景
 
-DeskBox 已支持将不同类型的格子合并为一个组合，并在成员之间切换。当前实现把成员切换入口放在格子标题栏或内容区域顶部，存在以下体验问题：
+DeskCue 已支持将不同类型的格子合并为一个组合，并在成员之间切换。当前实现把成员切换入口放在格子标题栏或内容区域顶部，存在以下体验问题：
 
 - 标准标题栏被成员导航占用，当前格子自身的标题身份不够清晰。
 - 悬浮标题和隐藏标题下，内容区域顶部出现额外按钮，容易破坏不同功能格子的原有布局。
@@ -428,7 +428,7 @@ Apple Smart Stack 的核心交互包括：
 - [Apple Human Interface Guidelines：Motion](https://developer.apple.com/design/human-interface-guidelines/motion)
 - [WWDC23：Animate with springs](https://developer.apple.com/videos/play/wwdc2023/10158/)
 
-Apple 没有公开 Smart Stack 的准确动画时长、速度阈值和弹簧参数。本文中的数值是针对 DeskBox 桌面场景的初始设计值，需要通过实际原型调校。
+Apple 没有公开 Smart Stack 的准确动画时长、速度阈值和弹簧参数。本文中的数值是针对 DeskCue 桌面场景的初始设计值，需要通过实际原型调校。
 
 ## 6. 产品心智模型
 
@@ -776,7 +776,7 @@ stateDiagram-v2
 - 当前正在播放的音乐。
 - 用户在固定时间经常查看的格子。
 
-不采用 iOS Widget Suggestions 式的自动插入成员，以免破坏 DeskBox 组合由用户明确创建的心智模型。
+不采用 iOS Widget Suggestions 式的自动插入成员，以免破坏 DeskCue 组合由用户明确创建的心智模型。
 
 ## 16. 边界场景
 
@@ -904,7 +904,7 @@ stateDiagram-v2
 
 ## 19. 最终推荐
 
-DeskBox 的默认策略采用“自动”，同时允许用户为每个组合选择“平铺标签”或“叠放切换”。
+DeskCue 的默认策略采用“自动”，同时允许用户为每个组合选择“平铺标签”或“叠放切换”。
 
 - 少量成员、宽格子：平铺标签更直接。
 - 多成员、隐藏标题、窄格子和胶囊场景：叠放切换更简洁。

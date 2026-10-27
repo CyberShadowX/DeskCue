@@ -18,14 +18,14 @@ $auditStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 $auditProfileVersion = 59
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$project = Join-Path $repoRoot "src\DeskBox\DeskBox.csproj"
-$updaterProject = Join-Path $repoRoot "src\DeskBox.Updater\DeskBox.Updater.csproj"
+$project = Join-Path $repoRoot "src\DeskCue\DeskCue.csproj"
+$updaterProject = Join-Path $repoRoot "src\DeskCue.Updater\DeskCue.Updater.csproj"
 $msvcEnvironmentScript = Join-Path $PSScriptRoot "rust-arm64-msvc-environment.ps1"
 if (-not (Test-Path -LiteralPath $msvcEnvironmentScript -PathType Leaf)) {
     throw "The explicit MSVC environment helper is missing: '$msvcEnvironmentScript'."
 }
 . $msvcEnvironmentScript
-$msvcToolchain = Get-DeskBoxMsvcEnvironment -Platform x64
+$msvcToolchain = Get-DeskCueMsvcEnvironment -Platform x64
 $dotnet = if (-not [string]::IsNullOrWhiteSpace($DotNetPath)) {
     $resolvedDotNet = [System.IO.Path]::GetFullPath($DotNetPath)
     if (-not (Test-Path -LiteralPath $resolvedDotNet -PathType Leaf)) {
@@ -259,13 +259,13 @@ $publishArguments = @(
     "--no-restore",
     "-p:Platform=$Platform",
     "-p:RuntimeIdentifier=$runtimeIdentifier",
-    "-p:DeskBoxDistribution=Direct",
-    "-p:DeskBoxAotAudit=true",
-    "-p:DeskBoxAotSmokeHarness=true",
+    "-p:DeskCueDistribution=Direct",
+    "-p:DeskCueAotAudit=true",
+    "-p:DeskCueAotSmokeHarness=true",
     "-p:JsonSerializerIsReflectionEnabledByDefault=$($jsonSerializerIsReflectionEnabledByDefault.ToString().ToLowerInvariant())",
-    "-p:DeskBoxRustNative=$($rustNativeEnabled.ToString().ToLowerInvariant())",
-    "-p:DeskBoxRustNativeIntermediateDir=$rustIntermediateDir",
-    "-p:DeskBoxRustNativeCargoTargetDir=$rustCargoTargetDir",
+    "-p:DeskCueRustNative=$($rustNativeEnabled.ToString().ToLowerInvariant())",
+    "-p:DeskCueRustNativeIntermediateDir=$rustIntermediateDir",
+    "-p:DeskCueRustNativeCargoTargetDir=$rustCargoTargetDir",
     "-p:IlcUseEnvironmentalTools=true",
     "-p:SelfContained=true",
     "-p:WindowsAppSDKSelfContained=false",
@@ -275,7 +275,7 @@ $publishArguments = @(
 
 $previousCliLanguage = [Environment]::GetEnvironmentVariable("DOTNET_CLI_UI_LANGUAGE", "Process")
 $previousNoLogo = [Environment]::GetEnvironmentVariable("DOTNET_NOLOGO", "Process")
-$msvcEnvironmentState = Enter-DeskBoxMsvcEnvironment -Toolchain $msvcToolchain
+$msvcEnvironmentState = Enter-DeskCueMsvcEnvironment -Toolchain $msvcToolchain
 try {
     [Environment]::SetEnvironmentVariable("DOTNET_CLI_UI_LANGUAGE", "en-US", "Process")
     [Environment]::SetEnvironmentVariable("DOTNET_NOLOGO", "1", "Process")
@@ -287,8 +287,8 @@ try {
             "--artifacts-path", $buildArtifactsDir,
             "-p:Platform=$Platform",
             "-p:RuntimeIdentifier=$runtimeIdentifier",
-            "-p:DeskBoxAotAudit=true",
-            "-p:DeskBoxAotSmokeHarness=true",
+            "-p:DeskCueAotAudit=true",
+            "-p:DeskCueAotSmokeHarness=true",
             "-p:JsonSerializerIsReflectionEnabledByDefault=$($jsonSerializerIsReflectionEnabledByDefault.ToString().ToLowerInvariant())",
             "-p:PublishAot=true",
             "-p:IlcUseEnvironmentalTools=true",
@@ -309,7 +309,7 @@ try {
 finally {
     [Environment]::SetEnvironmentVariable("DOTNET_CLI_UI_LANGUAGE", $previousCliLanguage, "Process")
     [Environment]::SetEnvironmentVariable("DOTNET_NOLOGO", $previousNoLogo, "Process")
-    Exit-DeskBoxMsvcEnvironment -State $msvcEnvironmentState
+    Exit-DeskCueMsvcEnvironment -State $msvcEnvironmentState
 }
 
 if ($publishExitCode -ne 0) {
@@ -333,8 +333,8 @@ if ($rustNativeEnabled) {
     $rustCapabilities = $rustValidation.Capabilities
     $rustRequiredExports = @($rustValidation.RequiredExports)
 
-    $stagedRustDll = Join-Path $rustIntermediateDir "deskbox_native.dll"
-    $publishedRustDll = Join-Path $publishDir "deskbox_native.dll"
+    $stagedRustDll = Join-Path $rustIntermediateDir "deskcue_native.dll"
+    $publishedRustDll = Join-Path $publishDir "deskcue_native.dll"
     if (-not (Test-Path -LiteralPath $stagedRustDll -PathType Leaf) -or
         -not (Test-Path -LiteralPath $publishedRustDll -PathType Leaf)) {
         throw "The isolated staging or published Rust native module is missing."
@@ -366,13 +366,13 @@ foreach ($pdb in $pdbFiles) {
 }
 
 $requiredFiles = @(
-    "DeskBox.exe",
-    "DeskBox.Updater.exe",
-    "DeskBox.ThumbnailProxy.exe",
-    "DeskBox.pri"
+    "DeskCue.exe",
+    "DeskCue.Updater.exe",
+    "DeskCue.ThumbnailProxy.exe",
+    "DeskCue.pri"
 )
 if ($rustNativeEnabled) {
-    $requiredFiles += "deskbox_native.dll"
+    $requiredFiles += "deskcue_native.dll"
 }
 
 foreach ($requiredFile in $requiredFiles) {
@@ -383,34 +383,34 @@ foreach ($requiredFile in $requiredFiles) {
 }
 
 $publishedNativeModules = @(
-    Get-ChildItem -LiteralPath $publishDir -Filter "deskbox_native.dll" -File -Recurse
+    Get-ChildItem -LiteralPath $publishDir -Filter "deskcue_native.dll" -File -Recurse
 )
 if ($rustNativeEnabled) {
     $expectedRustDllPath = [System.IO.Path]::GetFullPath(
-        (Join-Path $publishDir "deskbox_native.dll"))
+        (Join-Path $publishDir "deskcue_native.dll"))
     if ($publishedNativeModules.Count -ne 1 -or
         -not [string]::Equals(
             $publishedNativeModules[0].FullName,
             $expectedRustDllPath,
             [System.StringComparison]::OrdinalIgnoreCase)) {
-        throw "The x64 AOT publish must contain exactly one root-level deskbox_native.dll."
+        throw "The x64 AOT publish must contain exactly one root-level deskcue_native.dll."
     }
 }
 elseif ($publishedNativeModules.Count -ne 0) {
-    throw "A non-x64 AOT publish must not contain the x64 deskbox_native.dll."
+    throw "A non-x64 AOT publish must not contain the x64 deskcue_native.dll."
 }
 
 $publishedThumbnailProxies = @(
-    Get-ChildItem -LiteralPath $publishDir -Filter "DeskBox.ThumbnailProxy.exe" -File -Recurse
+    Get-ChildItem -LiteralPath $publishDir -Filter "DeskCue.ThumbnailProxy.exe" -File -Recurse
 )
 $expectedThumbnailProxyPath = [System.IO.Path]::GetFullPath(
-    (Join-Path $publishDir "DeskBox.ThumbnailProxy.exe"))
+    (Join-Path $publishDir "DeskCue.ThumbnailProxy.exe"))
 if ($publishedThumbnailProxies.Count -ne 1 -or
     -not [string]::Equals(
         $publishedThumbnailProxies[0].FullName,
         $expectedThumbnailProxyPath,
         [System.StringComparison]::OrdinalIgnoreCase)) {
-    throw "The AOT publish must contain exactly one root-level DeskBox.ThumbnailProxy.exe."
+    throw "The AOT publish must contain exactly one root-level DeskCue.ThumbnailProxy.exe."
 }
 
 $forbiddenFiles = @(
@@ -419,12 +419,12 @@ $forbiddenFiles = @(
     "hostfxr.dll",
     "hostpolicy.dll",
     "System.Private.CoreLib.dll",
-    "DeskBox.dll",
-    "DeskBox.deps.json",
-    "DeskBox.runtimeconfig.json",
-    "DeskBox.Updater.dll",
-    "DeskBox.Updater.deps.json",
-    "DeskBox.Updater.runtimeconfig.json"
+    "DeskCue.dll",
+    "DeskCue.deps.json",
+    "DeskCue.runtimeconfig.json",
+    "DeskCue.Updater.dll",
+    "DeskCue.Updater.deps.json",
+    "DeskCue.Updater.runtimeconfig.json"
 )
 
 $publishedFiles = @(Get-ChildItem -LiteralPath $publishDir -File -Recurse)
@@ -441,12 +441,12 @@ if ($publishedPdbFiles.Count -gt 0) {
 
 $symbolFiles = @(Get-ChildItem -LiteralPath $symbolsDir -Filter "*.pdb" -File -Recurse)
 $requiredSymbolFiles = @(
-    "DeskBox.pdb",
-    "DeskBox.Updater.pdb",
-    "DeskBox.ThumbnailProxy.pdb"
+    "DeskCue.pdb",
+    "DeskCue.Updater.pdb",
+    "DeskCue.ThumbnailProxy.pdb"
 )
 if ($rustNativeEnabled) {
-    $requiredSymbolFiles += "deskbox_native.pdb"
+    $requiredSymbolFiles += "deskcue_native.pdb"
 }
 
 foreach ($requiredSymbolFile in $requiredSymbolFiles) {
@@ -456,12 +456,12 @@ foreach ($requiredSymbolFile in $requiredSymbolFiles) {
 }
 
 $peFiles = @(
-    (Join-Path $publishDir "DeskBox.exe"),
-    (Join-Path $publishDir "DeskBox.Updater.exe"),
-    (Join-Path $publishDir "DeskBox.ThumbnailProxy.exe")
+    (Join-Path $publishDir "DeskCue.exe"),
+    (Join-Path $publishDir "DeskCue.Updater.exe"),
+    (Join-Path $publishDir "DeskCue.ThumbnailProxy.exe")
 )
 if ($rustNativeEnabled) {
-    $peFiles += (Join-Path $publishDir "deskbox_native.dll")
+    $peFiles += (Join-Path $publishDir "deskcue_native.dll")
 }
 
 $peResults = foreach ($peFile in $peFiles) {
@@ -546,7 +546,7 @@ $stage4D1BWarningMessages = @(
         Sort-Object -Unique
 )
 $stage4D2RemovedSourceFiles = @(
-    "src\DeskBox\Helpers\FileOperationHelper.cs"
+    "src\DeskCue\Helpers\FileOperationHelper.cs"
 )
 $stage4D2UnexpectedExistingSourceFiles = @(
     $stage4D2RemovedSourceFiles |
@@ -563,8 +563,8 @@ $stage4D2FileOperationWarningMessages = @(
         Sort-Object -Unique
 )
 $stage4D3ASourceFiles = @(
-    "src\DeskBox\Helpers\NativeDropTarget.cs",
-    "src\DeskBox\Helpers\NativeDropComDataReader.cs"
+    "src\DeskCue\Helpers\NativeDropTarget.cs",
+    "src\DeskCue\Helpers\NativeDropComDataReader.cs"
 )
 $stage4D3ALegacyRcwPatterns = @(
     "COMIDataObject",
@@ -618,9 +618,9 @@ $stage4D3AUnexpectedDropTargetWarningMessages = @(
         }
 )
 $stage4D3BSourceFiles = @(
-    "src\DeskBox\Helpers\NativeDropTarget.cs",
-    "src\DeskBox\Helpers\NativeDropTargetComInterop.cs",
-    "src\DeskBox\Platform\Ole32NativeMethods.cs"
+    "src\DeskCue\Helpers\NativeDropTarget.cs",
+    "src\DeskCue\Helpers\NativeDropTargetComInterop.cs",
+    "src\DeskCue\Platform\Ole32NativeMethods.cs"
 )
 $stage4D3BLegacyRegistrationPatterns = @(
     "[ComImport",
@@ -661,11 +661,11 @@ $stage4D3BRequiredGeneratedComPatterns = @(
     "ComInterfaceMarshaller<INativeDropTarget>.Free"
 )
 $stage4D3BInteropSourcePaths = @(
-    "src\DeskBox\Helpers\NativeDropTargetComInterop.cs",
+    "src\DeskCue\Helpers\NativeDropTargetComInterop.cs",
     # The ole32 RegisterDragDrop/RevokeDragDrop LibraryImport pair moved to the
     # Platform surface during the P/Invoke consolidation; the contract is about
     # the generated-COM surface as a whole, not a single file.
-    "src\DeskBox\Platform\Ole32NativeMethods.cs"
+    "src\DeskCue\Platform\Ole32NativeMethods.cs"
 )
 $stage4D3BInteropSource = (
     $stage4D3BInteropSourcePaths | ForEach-Object {
@@ -702,8 +702,8 @@ $stage4D3BIl2050WarningMessages = @(
         Sort-Object -Unique
 )
 $stage4D4ASourceFiles = @(
-    "src\DeskBox\Helpers\ExplorerShellLaunchService.cs",
-    "src\DeskBox\Helpers\ExplorerShellLaunchNativeBackend.cs"
+    "src\DeskCue\Helpers\ExplorerShellLaunchService.cs",
+    "src\DeskCue\Helpers\ExplorerShellLaunchNativeBackend.cs"
 )
 $stage4D4AWarningMessages = @(
     $logLines |
@@ -719,8 +719,8 @@ $stage4D4AWarningMessages = @(
         Sort-Object -Unique
 )
 $stage4D4BSourceFiles = @(
-    "src\DeskBox\Helpers\ExplorerQuickAccessHelper.cs",
-    "src\DeskBox\Helpers\QuickAccessNativeBackend.cs"
+    "src\DeskCue\Helpers\ExplorerQuickAccessHelper.cs",
+    "src\DeskCue\Helpers\QuickAccessNativeBackend.cs"
 )
 $stage4D4BWarningMessages = @(
     $logLines |
@@ -736,7 +736,7 @@ $stage4D4BWarningMessages = @(
         Sort-Object -Unique
 )
 $stage4D5SourceFiles = @(
-    "src\DeskBox\App.Tray.cs"
+    "src\DeskCue\App.Tray.cs"
 )
 $stage4D5LegacyReflectionPatterns = @(
     "System.Reflection.BindingFlags",
@@ -775,16 +775,16 @@ $stage4D5WarningMessages = @(
             $warningCodeRegex.IsMatch($line) -and
                 (
                     $line -match "App\.Tray\.cs\(" -or
-                    $line -match "DeskBox\.App\.(?:TryGetTrayIconIdentity|ApplySecondWindowTrayPresenterSettings|ConfigureOwningPopup)"
+                    $line -match "DeskCue\.App\.(?:TryGetTrayIconIdentity|ApplySecondWindowTrayPresenterSettings|ConfigureOwningPopup)"
                 )
         } |
         ForEach-Object { $_.Trim() } |
         Sort-Object -Unique
 )
 $stage4E0SourceFiles = @(
-    "src\DeskBox\Controls\WidgetContents\SearchWidgetContent.xaml",
-    "src\DeskBox\Controls\WidgetContents\SearchWidgetContent.xaml.cs",
-    "src\DeskBox\Models\SearchModels.cs"
+    "src\DeskCue\Controls\WidgetContents\SearchWidgetContent.xaml",
+    "src\DeskCue\Controls\WidgetContents\SearchWidgetContent.xaml.cs",
+    "src\DeskCue\Models\SearchModels.cs"
 )
 $stage4E0XamlPath = Join-Path $repoRoot $stage4E0SourceFiles[0]
 $stage4E0CodeBehindPath = Join-Path $repoRoot $stage4E0SourceFiles[1]
@@ -869,14 +869,14 @@ $stage4E0SourceWarningMessages = @(
         Sort-Object -Unique
 )
 $stage4E1SourceFiles = @(
-    "src\DeskBox\Controls\PinStateIcon.xaml",
-    "src\DeskBox\Controls\PinStateIcon.xaml.cs",
-    "src\DeskBox\Controls\MarkdownSourceEditor.xaml",
-    "src\DeskBox\Controls\MarkdownSourceEditor.xaml.cs",
-    "src\DeskBox\Controls\DesktopOrganizationTaskView.xaml",
-    "src\DeskBox\Controls\DesktopOrganizationTaskView.xaml.cs",
-    "src\DeskBox\Views\SettingsSections\DesktopOrganizationSettingsSection.xaml",
-    "src\DeskBox\Views\SettingsSections\DesktopOrganizationSettingsSection.xaml.cs"
+    "src\DeskCue\Controls\PinStateIcon.xaml",
+    "src\DeskCue\Controls\PinStateIcon.xaml.cs",
+    "src\DeskCue\Controls\MarkdownSourceEditor.xaml",
+    "src\DeskCue\Controls\MarkdownSourceEditor.xaml.cs",
+    "src\DeskCue\Controls\DesktopOrganizationTaskView.xaml",
+    "src\DeskCue\Controls\DesktopOrganizationTaskView.xaml.cs",
+    "src\DeskCue\Views\SettingsSections\DesktopOrganizationSettingsSection.xaml",
+    "src\DeskCue\Views\SettingsSections\DesktopOrganizationSettingsSection.xaml.cs"
 )
 $stage4E1Sources = [ordered]@{}
 foreach ($sourceFile in $stage4E1SourceFiles) {
@@ -996,7 +996,7 @@ $stage4E1MissingBehaviorPatterns = @(
 )
 $stage4E1DeferredBindingContracts = @(
     [PSCustomObject]@{
-        sourceFile = "src\DeskBox\Views\ContentWidgetWindow.xaml"
+        sourceFile = "src\DeskCue\Views\ContentWidgetWindow.xaml"
         pattern = 'OverlayTitle="{Binding DisplayName}"'
     }
 )
@@ -1023,10 +1023,10 @@ $stage4E1ActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage4E2SourceFiles = @(
-    "src\DeskBox\Controls\WidgetContents\MusicTransportIcon.xaml",
-    "src\DeskBox\Controls\WidgetContents\MusicTransportIcon.xaml.cs",
-    "src\DeskBox\Controls\WidgetInlineEditor.xaml",
-    "src\DeskBox\Controls\WidgetInlineEditor.xaml.cs"
+    "src\DeskCue\Controls\WidgetContents\MusicTransportIcon.xaml",
+    "src\DeskCue\Controls\WidgetContents\MusicTransportIcon.xaml.cs",
+    "src\DeskCue\Controls\WidgetInlineEditor.xaml",
+    "src\DeskCue\Controls\WidgetInlineEditor.xaml.cs"
 )
 $stage4E2Sources = [ordered]@{}
 foreach ($sourceFile in $stage4E2SourceFiles) {
@@ -1194,12 +1194,12 @@ $stage4E2ActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage4E3SourceFiles = @(
-    "src\DeskBox\Controls\AttachmentTileStrip.xaml",
-    "src\DeskBox\Controls\AttachmentTileStrip.xaml.cs",
-    "src\DeskBox\ViewModels\TodoAttachmentViewModel.cs",
-    "src\DeskBox\Views\SearchPopupWindow.xaml",
-    "src\DeskBox\Views\SearchPopupWindow.xaml.cs",
-    "src\DeskBox\Models\SearchModels.cs"
+    "src\DeskCue\Controls\AttachmentTileStrip.xaml",
+    "src\DeskCue\Controls\AttachmentTileStrip.xaml.cs",
+    "src\DeskCue\ViewModels\TodoAttachmentViewModel.cs",
+    "src\DeskCue\Views\SearchPopupWindow.xaml",
+    "src\DeskCue\Views\SearchPopupWindow.xaml.cs",
+    "src\DeskCue\Models\SearchModels.cs"
 )
 $stage4E3Sources = [ordered]@{}
 foreach ($sourceFile in $stage4E3SourceFiles) {
@@ -1440,16 +1440,16 @@ $stage4E3ActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage4E4SourceFiles = @(
-    "src\DeskBox\Views\SettingsSections\FileWidgetSettingsSection.xaml",
-    "src\DeskBox\Views\SettingsSections\FileWidgetSettingsSection.xaml.cs",
-    "src\DeskBox\Views\SettingsWindow.xaml.cs",
-    "src\DeskBox\ViewModels\SettingsViewModel.FileStackOptions.cs",
-    "src\DeskBox\ViewModels\SettingsViewModel.FeatureOptions.cs",
-    "src\DeskBox\ViewModels\SettingsViewModel.SelectionOptions.cs",
-    "src\DeskBox\Controls\SettingsComboBox.cs",
+    "src\DeskCue\Views\SettingsSections\FileWidgetSettingsSection.xaml",
+    "src\DeskCue\Views\SettingsSections\FileWidgetSettingsSection.xaml.cs",
+    "src\DeskCue\Views\SettingsWindow.xaml.cs",
+    "src\DeskCue\ViewModels\SettingsViewModel.FileStackOptions.cs",
+    "src\DeskCue\ViewModels\SettingsViewModel.FeatureOptions.cs",
+    "src\DeskCue\ViewModels\SettingsViewModel.SelectionOptions.cs",
+    "src\DeskCue\Controls\SettingsComboBox.cs",
     # Deferred-section host: AppearanceDetail is materialized lazily, so its
     # typed ViewModel bridge lives here instead of SettingsWindow.xaml.cs.
-    "src\DeskBox\Views\SettingsWindow.DeferredSections.cs"
+    "src\DeskCue\Views\SettingsWindow.DeferredSections.cs"
 )
 $stage4E4Sources = [ordered]@{}
 foreach ($sourceFile in $stage4E4SourceFiles) {
@@ -1629,34 +1629,34 @@ $stage4E4UnexpectedManualBridgePatterns = @(
 # editor files directly.
 $stage4E4EditorSources = @{}
 foreach ($editorFile in @(
-        "src\DeskBox\Features\FileStack\FileStackSettingsViewModel.cs",
-        "src\DeskBox\Features\FeatureWidgets\FeatureWidgetsSettingsViewModel.cs",
-        "src\DeskBox\Features\Interaction\InteractionSettingsViewModel.cs")) {
+        "src\DeskCue\Features\FileStack\FileStackSettingsViewModel.cs",
+        "src\DeskCue\Features\FeatureWidgets\FeatureWidgetsSettingsViewModel.cs",
+        "src\DeskCue\Features\Interaction\InteractionSettingsViewModel.cs")) {
     $stage4E4EditorSources[$editorFile] = Get-Content -LiteralPath (Join-Path $repoRoot $editorFile) -Raw
 }
 $stage4E4RequiredBehaviorPatterns = @(
     [PSCustomObject]@{
-        sourceFile = "src\DeskBox\Features\FileStack\FileStackSettingsViewModel.cs"
+        sourceFile = "src\DeskCue\Features\FileStack\FileStackSettingsViewModel.cs"
         pattern = "OnPropertyChanged(nameof(SettingsSummaryText));"
     },
     [PSCustomObject]@{
-        sourceFile = "src\DeskBox\Features\FileStack\FileStackSettingsViewModel.cs"
+        sourceFile = "src\DeskCue\Features\FileStack\FileStackSettingsViewModel.cs"
         pattern = "_settings.SetFileStackAutoStacking(value);"
     },
     [PSCustomObject]@{
-        sourceFile = "src\DeskBox\Features\FeatureWidgets\FeatureWidgetsSettingsViewModel.cs"
+        sourceFile = "src\DeskCue\Features\FeatureWidgets\FeatureWidgetsSettingsViewModel.cs"
         pattern = "public string FolderOpenBehavior"
     },
     [PSCustomObject]@{
-        sourceFile = "src\DeskBox\Features\FeatureWidgets\FeatureWidgetsSettingsViewModel.cs"
+        sourceFile = "src\DeskCue\Features\FeatureWidgets\FeatureWidgetsSettingsViewModel.cs"
         pattern = "_settings.SetFileWidgetFolderOpenBehavior(normalized);"
     },
     [PSCustomObject]@{
-        sourceFile = "src\DeskBox\Features\FeatureWidgets\FeatureWidgetsSettingsViewModel.cs"
+        sourceFile = "src\DeskCue\Features\FeatureWidgets\FeatureWidgetsSettingsViewModel.cs"
         pattern = "OnPropertyChanged(nameof(AvailableFolderOpenBehaviorOptionItems));"
     },
     [PSCustomObject]@{
-        sourceFile = "src\DeskBox\Features\Interaction\InteractionSettingsViewModel.cs"
+        sourceFile = "src\DeskCue\Features\Interaction\InteractionSettingsViewModel.cs"
         pattern = "SetProperty(ref _fileItemContextMenuEnabled, value)"
     },
     [PSCustomObject]@{
@@ -1715,13 +1715,13 @@ $stage4E4ActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage4E5SourceFiles = @(
-    "src\DeskBox\Controls\SearchResultRowControl.xaml",
-    "src\DeskBox\Controls\SearchResultRowControl.xaml.cs",
-    "src\DeskBox\Views\SearchPopupWindow.xaml",
-    "src\DeskBox\Views\SearchPopupWindow.xaml.cs",
-    "src\DeskBox\Models\SearchModels.cs",
-    "src\DeskBox\ViewModels\SearchPopupViewModel.cs",
-    "src\DeskBox\Services\FileMetaService.cs"
+    "src\DeskCue\Controls\SearchResultRowControl.xaml",
+    "src\DeskCue\Controls\SearchResultRowControl.xaml.cs",
+    "src\DeskCue\Views\SearchPopupWindow.xaml",
+    "src\DeskCue\Views\SearchPopupWindow.xaml.cs",
+    "src\DeskCue\Models\SearchModels.cs",
+    "src\DeskCue\ViewModels\SearchPopupViewModel.cs",
+    "src\DeskCue\Services\FileMetaService.cs"
 )
 $stage4E5Sources = [ordered]@{}
 foreach ($sourceFile in $stage4E5SourceFiles) {
@@ -2053,7 +2053,7 @@ $stage4E5ActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5ASourceFiles = @(
-    "src/DeskBox/Services/DeskBoxDataPathService.cs",
+    "src/DeskCue/Services/DeskCueDataPathService.cs",
     "scripts/start-aot-preview.ps1"
 )
 $stage5ASources = [ordered]@{}
@@ -2061,11 +2061,11 @@ foreach ($sourceFile in $stage5ASourceFiles) {
     $stage5ASources[$sourceFile] = Get-Content -LiteralPath (Join-Path $repoRoot $sourceFile) -Raw
 }
 $stage5ARequiredDataPathPatterns = @(
-    'AotPreviewRootEnvironmentVariable = "DESKBOX_AOT_PREVIEW_DATA_ROOT"',
+    'AotPreviewRootEnvironmentVariable = "DESKCUE_AOT_PREVIEW_DATA_ROOT"',
     'Current { get; } = new(ResolveConfiguredRoot())',
     '#if DEBUG',
     'Environment.GetEnvironmentVariable(DevelopmentRootEnvironmentVariable)',
-    '#elif DESKBOX_NATIVE_AOT',
+    '#elif DESKCUE_NATIVE_AOT',
     'Environment.GetEnvironmentVariable(AotPreviewRootEnvironmentVariable)',
     '#else',
     'return null;'
@@ -2086,8 +2086,8 @@ $stage5ARequiredLauncherPatterns = @(
     'Get-DirectoryStateFingerprint',
     'Get-AotPreviewProcesses',
     'Refusing to start Native AOT preview with the production data root',
-    'DESKBOX_AOT_PREVIEW_DATA_ROOT',
-    'DESKBOX_DEV_DATA_ROOT',
+    'DESKCUE_AOT_PREVIEW_DATA_ROOT',
+    'DESKCUE_DEV_DATA_ROOT',
     'sourceStableDuringAudit',
     'rustNative.publishSha256',
     'rustNative.publishMatchesStaging',
@@ -2123,7 +2123,7 @@ $stage5ASourceWarningMessages = @(
         Where-Object {
             $line = $_
             $warningCodeRegex.IsMatch($line) -and
-                $line -match "DeskBoxDataPathService\.cs\("
+                $line -match "DeskCueDataPathService\.cs\("
         } |
         ForEach-Object { $_.Trim() } |
         Sort-Object -Unique
@@ -2133,8 +2133,8 @@ $stage5AActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B1SourceFiles = @(
-    "src/DeskBox/App.AotShortcutSmoke.cs",
-    "src/DeskBox/App.xaml.cs",
+    "src/DeskCue/App.AotShortcutSmoke.cs",
+    "src/DeskCue/App.xaml.cs",
     "scripts/run-aot-shortcut-smoke.ps1"
 )
 $stage5B1Sources = [ordered]@{}
@@ -2142,9 +2142,9 @@ foreach ($sourceFile in $stage5B1SourceFiles) {
     $stage5B1Sources[$sourceFile] = Get-Content -LiteralPath (Join-Path $repoRoot $sourceFile) -Raw
 }
 $stage5B1RequiredRunnerPatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
-    'DESKBOX_AOT_SHORTCUT_SMOKE',
-    'DeskBoxDataPathService.AotPreviewRootEnvironmentVariable',
+    '#if DESKCUE_NATIVE_AOT',
+    'DESKCUE_AOT_SHORTCUT_SMOKE',
+    'DeskCueDataPathService.AotPreviewRootEnvironmentVariable',
     'IsDevelopmentRoot',
     'RefusedNonPreviewRoot',
     'aot-shortcut-smoke',
@@ -2194,10 +2194,10 @@ $stage5B1LaunchOrderValid =
     $stage5B1LaunchCompletedIndex -ge 0 -and
     $stage5B1LaunchSmokeIndex -gt $stage5B1LaunchCompletedIndex
 $stage5B1RequiredSmokeScriptPatterns = @(
-    'DESKBOX_AOT_SHORTCUT_SMOKE',
-    'DESKBOX_AOT_SHELL_SMOKE',
-    'DESKBOX_AOT_QUICK_ACCESS_MUTATION_SMOKE',
-    'DESKBOX_AOT_MUSIC_VOLUME_READ_SMOKE',
+    'DESKCUE_AOT_SHORTCUT_SMOKE',
+    'DESKCUE_AOT_SHELL_SMOKE',
+    'DESKCUE_AOT_QUICK_ACCESS_MUTATION_SMOKE',
+    'DESKCUE_AOT_MUSIC_VOLUME_READ_SMOKE',
     'previousShortcutSmoke',
     'previousShellSmoke',
     'previousMutationSmoke',
@@ -2252,10 +2252,10 @@ $stage5B1ActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B2ASourceFiles = @(
-    "src/DeskBox/App.AotShellSmoke.cs",
-    "src/DeskBox/App.xaml.cs",
-    "src/DeskBox/Helpers/ExplorerShellLaunchService.cs",
-    "src/DeskBox/Helpers/ExplorerQuickAccessHelper.cs",
+    "src/DeskCue/App.AotShellSmoke.cs",
+    "src/DeskCue/App.xaml.cs",
+    "src/DeskCue/Helpers/ExplorerShellLaunchService.cs",
+    "src/DeskCue/Helpers/ExplorerQuickAccessHelper.cs",
     "scripts/run-aot-shell-smoke.ps1"
 )
 $stage5B2ASources = [ordered]@{}
@@ -2263,10 +2263,10 @@ foreach ($sourceFile in $stage5B2ASourceFiles) {
     $stage5B2ASources[$sourceFile] = Get-Content -LiteralPath (Join-Path $repoRoot $sourceFile) -Raw
 }
 $stage5B2ARequiredRunnerPatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
-    'DESKBOX_AOT_SHELL_SMOKE',
+    '#if DESKCUE_NATIVE_AOT',
+    'DESKCUE_AOT_SHELL_SMOKE',
     'ExplorerQuickAccessReadOnly',
-    'DeskBoxDataPathService.AotPreviewRootEnvironmentVariable',
+    'DeskCueDataPathService.AotPreviewRootEnvironmentVariable',
     'IsDevelopmentRoot',
     'RefusedNonPreviewRoot',
     'aot-shell-smoke',
@@ -2339,10 +2339,10 @@ $stage5B2AMissingQuickAccessPatterns = @(
     }
 )
 $stage5B2ARequiredSmokeScriptPatterns = @(
-    'DESKBOX_AOT_SHELL_SMOKE',
-    'DESKBOX_AOT_SHORTCUT_SMOKE',
-    'DESKBOX_AOT_QUICK_ACCESS_MUTATION_SMOKE',
-    'DESKBOX_AOT_MUSIC_VOLUME_READ_SMOKE',
+    'DESKCUE_AOT_SHELL_SMOKE',
+    'DESKCUE_AOT_SHORTCUT_SMOKE',
+    'DESKCUE_AOT_QUICK_ACCESS_MUTATION_SMOKE',
+    'DESKCUE_AOT_MUSIC_VOLUME_READ_SMOKE',
     'previousShellSmoke',
     'previousShortcutSmoke',
     'previousMutationSmoke',
@@ -2412,9 +2412,9 @@ $stage5B2AActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B2BSourceFiles = @(
-    "src/DeskBox/App.AotQuickAccessMutationSmoke.cs",
-    "src/DeskBox/App.xaml.cs",
-    "src/DeskBox/Helpers/ExplorerQuickAccessHelper.cs",
+    "src/DeskCue/App.AotQuickAccessMutationSmoke.cs",
+    "src/DeskCue/App.xaml.cs",
+    "src/DeskCue/Helpers/ExplorerQuickAccessHelper.cs",
     "scripts/run-aot-quick-access-mutation-smoke.ps1"
 )
 $stage5B2BSources = [ordered]@{}
@@ -2422,13 +2422,13 @@ foreach ($sourceFile in $stage5B2BSourceFiles) {
     $stage5B2BSources[$sourceFile] = Get-Content -LiteralPath (Join-Path $repoRoot $sourceFile) -Raw
 }
 $stage5B2BRequiredRunnerPatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
-    'DESKBOX_AOT_QUICK_ACCESS_MUTATION_SMOKE',
+    '#if DESKCUE_NATIVE_AOT',
+    'DESKCUE_AOT_QUICK_ACCESS_MUTATION_SMOKE',
     'AotQuickAccessMutationScenario.PinUnpin',
     'AotQuickAccessMutationScenario.PinThenFail',
     'AotQuickAccessMutationScenario.PinThenAwaitExternalCompensation',
     'AotQuickAccessMutationScenario.CompensateUnpin',
-    'DeskBoxDataPathService.AotPreviewRootEnvironmentVariable',
+    'DeskCueDataPathService.AotPreviewRootEnvironmentVariable',
     'IsDevelopmentRoot',
     'RefusedNonPreviewRoot',
     'aot-quick-access-mutation-smoke',
@@ -2501,10 +2501,10 @@ $stage5B2BMissingQuickAccessPatterns = @(
     }
 )
 $stage5B2BRequiredSmokeScriptPatterns = @(
-    'DESKBOX_AOT_QUICK_ACCESS_MUTATION_SMOKE',
-    'DESKBOX_AOT_SHORTCUT_SMOKE',
-    'DESKBOX_AOT_SHELL_SMOKE',
-    'DESKBOX_AOT_MUSIC_VOLUME_READ_SMOKE',
+    'DESKCUE_AOT_QUICK_ACCESS_MUTATION_SMOKE',
+    'DESKCUE_AOT_SHORTCUT_SMOKE',
+    'DESKCUE_AOT_SHELL_SMOKE',
+    'DESKCUE_AOT_MUSIC_VOLUME_READ_SMOKE',
     'previousMutationSmoke',
     'previousShortcutSmoke',
     'previousShellSmoke',
@@ -2575,10 +2575,10 @@ $stage5B2BActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B3ASourceFiles = @(
-    "src/DeskBox/App.AotMusicVolumeReadSmoke.cs",
-    "src/DeskBox/App.xaml.cs",
-    "src/DeskBox/Services/MusicVolumeService.cs",
-    "src/DeskBox/Helpers/MusicVolumeNativeBackend.cs",
+    "src/DeskCue/App.AotMusicVolumeReadSmoke.cs",
+    "src/DeskCue/App.xaml.cs",
+    "src/DeskCue/Services/MusicVolumeService.cs",
+    "src/DeskCue/Helpers/MusicVolumeNativeBackend.cs",
     "scripts/run-aot-music-volume-read-smoke.ps1"
 )
 $stage5B3ASources = [ordered]@{}
@@ -2586,10 +2586,10 @@ foreach ($sourceFile in $stage5B3ASourceFiles) {
     $stage5B3ASources[$sourceFile] = Get-Content -LiteralPath (Join-Path $repoRoot $sourceFile) -Raw
 }
 $stage5B3ARequiredRunnerPatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
-    'DESKBOX_AOT_MUSIC_VOLUME_READ_SMOKE',
+    '#if DESKCUE_NATIVE_AOT',
+    'DESKCUE_AOT_MUSIC_VOLUME_READ_SMOKE',
     'AotMusicVolumeReadSmokeScenario.SystemAndSnapshotReadOnly',
-    'DeskBoxDataPathService.AotPreviewRootEnvironmentVariable',
+    'DeskCueDataPathService.AotPreviewRootEnvironmentVariable',
     'IsDevelopmentRoot',
     'RefusedNonPreviewRoot',
     'aot-music-volume-read-smoke',
@@ -2662,11 +2662,11 @@ $stage5B3AMissingProductPatterns = @(
     }
 )
 $stage5B3ARequiredSmokeScriptPatterns = @(
-    'DESKBOX_AOT_MUSIC_VOLUME_READ_SMOKE',
-    'DESKBOX_AOT_SHORTCUT_SMOKE',
-    'DESKBOX_AOT_SHELL_SMOKE',
-    'DESKBOX_AOT_QUICK_ACCESS_MUTATION_SMOKE',
-    'DESKBOX_MUSIC_VOLUME_BACKEND',
+    'DESKCUE_AOT_MUSIC_VOLUME_READ_SMOKE',
+    'DESKCUE_AOT_SHORTCUT_SMOKE',
+    'DESKCUE_AOT_SHELL_SMOKE',
+    'DESKCUE_AOT_QUICK_ACCESS_MUTATION_SMOKE',
+    'DESKCUE_MUSIC_VOLUME_BACKEND',
     'previousMusicReadSmoke',
     'previousShortcutSmoke',
     'previousShellSmoke',
@@ -2733,10 +2733,10 @@ $stage5B3AActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B3BSourceFiles = @(
-    "src/DeskBox/App.AotMusicVolumeMutationSmoke.cs",
-    "src/DeskBox/App.xaml.cs",
-    "src/DeskBox/Services/MusicVolumeService.cs",
-    "src/DeskBox/Helpers/MusicVolumeNativeBackend.cs",
+    "src/DeskCue/App.AotMusicVolumeMutationSmoke.cs",
+    "src/DeskCue/App.xaml.cs",
+    "src/DeskCue/Services/MusicVolumeService.cs",
+    "src/DeskCue/Helpers/MusicVolumeNativeBackend.cs",
     "scripts/run-aot-music-volume-mutation-smoke.ps1"
 )
 $stage5B3BSources = [ordered]@{}
@@ -2744,13 +2744,13 @@ foreach ($sourceFile in $stage5B3BSourceFiles) {
     $stage5B3BSources[$sourceFile] = Get-Content -LiteralPath (Join-Path $repoRoot $sourceFile) -Raw
 }
 $stage5B3BRequiredRunnerPatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
-    'DESKBOX_AOT_MUSIC_VOLUME_MUTATION_SMOKE',
+    '#if DESKCUE_NATIVE_AOT',
+    'DESKCUE_AOT_MUSIC_VOLUME_MUTATION_SMOKE',
     'AotMusicVolumeMutationSmokeScenario.ChangeRestore',
     'AotMusicVolumeMutationSmokeScenario.ChangeThenFail',
     'AotMusicVolumeMutationSmokeScenario.ChangeThenAwaitExternalRecovery',
     'AotMusicVolumeMutationSmokeScenario.RecoverOriginal',
-    'DeskBoxDataPathService.AotPreviewRootEnvironmentVariable',
+    'DeskCueDataPathService.AotPreviewRootEnvironmentVariable',
     'IsDevelopmentRoot',
     'RefusedNonPreviewRoot',
     'aot-music-volume-mutation-smoke',
@@ -2821,12 +2821,12 @@ $stage5B3BMissingProductPatterns = @(
     }
 )
 $stage5B3BRequiredSmokeScriptPatterns = @(
-    'DESKBOX_AOT_MUSIC_VOLUME_MUTATION_SMOKE',
-    'DESKBOX_AOT_MUSIC_VOLUME_READ_SMOKE',
-    'DESKBOX_AOT_SHORTCUT_SMOKE',
-    'DESKBOX_AOT_SHELL_SMOKE',
-    'DESKBOX_AOT_QUICK_ACCESS_MUTATION_SMOKE',
-    'DESKBOX_MUSIC_VOLUME_BACKEND',
+    'DESKCUE_AOT_MUSIC_VOLUME_MUTATION_SMOKE',
+    'DESKCUE_AOT_MUSIC_VOLUME_READ_SMOKE',
+    'DESKCUE_AOT_SHORTCUT_SMOKE',
+    'DESKCUE_AOT_SHELL_SMOKE',
+    'DESKCUE_AOT_QUICK_ACCESS_MUTATION_SMOKE',
+    'DESKCUE_MUSIC_VOLUME_BACKEND',
     'previousMusicMutationSmoke',
     'previousMusicReadSmoke',
     'previousShortcutSmoke',
@@ -2918,30 +2918,30 @@ $stage5B3BActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B3CSourceFiles = @(
-    "src/DeskBox/App.AotMusicVolumeSessionMutationSmoke.cs",
-    "src/DeskBox/App.xaml.cs",
-    "src/DeskBox/Services/MusicVolumeService.cs",
-    "src/DeskBox/Helpers/MusicVolumeNativeBackend.cs",
+    "src/DeskCue/App.AotMusicVolumeSessionMutationSmoke.cs",
+    "src/DeskCue/App.xaml.cs",
+    "src/DeskCue/Services/MusicVolumeService.cs",
+    "src/DeskCue/Helpers/MusicVolumeNativeBackend.cs",
     "scripts/run-aot-music-volume-session-mutation-smoke.ps1",
-    "native/deskbox-audio-session-fixture/src/main.rs",
-    "native/deskbox-audio-session-fixture/Cargo.toml"
+    "native/deskcue-audio-session-fixture/src/main.rs",
+    "native/deskcue-audio-session-fixture/Cargo.toml"
 )
 $stage5B3CSources = [ordered]@{}
 foreach ($sourceFile in $stage5B3CSourceFiles) {
     $stage5B3CSources[$sourceFile] = Get-Content -LiteralPath (Join-Path $repoRoot $sourceFile) -Raw
 }
 $stage5B3CRequiredRunnerPatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
-    'DESKBOX_AOT_MUSIC_VOLUME_SESSION_MUTATION_SMOKE',
-    'DESKBOX_AOT_MUSIC_VOLUME_SESSION_FIXTURE_PID',
-    'deskbox-audio-session-fixture',
+    '#if DESKCUE_NATIVE_AOT',
+    'DESKCUE_AOT_MUSIC_VOLUME_SESSION_MUTATION_SMOKE',
+    'DESKCUE_AOT_MUSIC_VOLUME_SESSION_FIXTURE_PID',
+    'deskcue-audio-session-fixture',
     'RefusedUntrustedFixture',
     'AotMusicVolumeSessionMutationSmokeScenario.ReadMatchedSession',
     'AotMusicVolumeSessionMutationSmokeScenario.ChangeRestore',
     'AotMusicVolumeSessionMutationSmokeScenario.ChangeThenFail',
     'AotMusicVolumeSessionMutationSmokeScenario.ChangeThenAwaitExternalRecovery',
     'AotMusicVolumeSessionMutationSmokeScenario.RecoverOriginal',
-    'DeskBoxDataPathService.AotPreviewRootEnvironmentVariable',
+    'DeskCueDataPathService.AotPreviewRootEnvironmentVariable',
     'RefusedNonPreviewRoot',
     'aot-music-volume-session-mutation-smoke',
     'session-recovery-intent.json',
@@ -3017,7 +3017,7 @@ $stage5B3CMissingProductPatterns = @(
     }
 )
 $stage5B3CRequiredFixturePatterns = @(
-    'deskbox-audio-session-fixture',
+    'deskcue-audio-session-fixture',
     'PlaySoundW',
     'SND_ASYNC',
     'SND_LOOP',
@@ -3032,7 +3032,7 @@ $stage5B3CRequiredFixturePatterns = @(
 )
 $stage5B3CMissingFixturePatterns = @(
     foreach ($pattern in $stage5B3CRequiredFixturePatterns) {
-        $fixtureSource = if ($pattern -eq 'deskbox-audio-session-fixture') {
+        $fixtureSource = if ($pattern -eq 'deskcue-audio-session-fixture') {
             $stage5B3CSources[$stage5B3CSourceFiles[6]]
         }
         else {
@@ -3044,20 +3044,20 @@ $stage5B3CMissingFixturePatterns = @(
     }
 )
 $stage5B3CRequiredSmokeScriptPatterns = @(
-    'DESKBOX_AOT_MUSIC_VOLUME_SESSION_MUTATION_SMOKE',
-    'DESKBOX_AOT_MUSIC_VOLUME_MUTATION_SMOKE',
-    'DESKBOX_AOT_MUSIC_VOLUME_READ_SMOKE',
-    'DESKBOX_AOT_SHORTCUT_SMOKE',
-    'DESKBOX_AOT_SHELL_SMOKE',
-    'DESKBOX_AOT_QUICK_ACCESS_MUTATION_SMOKE',
+    'DESKCUE_AOT_MUSIC_VOLUME_SESSION_MUTATION_SMOKE',
+    'DESKCUE_AOT_MUSIC_VOLUME_MUTATION_SMOKE',
+    'DESKCUE_AOT_MUSIC_VOLUME_READ_SMOKE',
+    'DESKCUE_AOT_SHORTCUT_SMOKE',
+    'DESKCUE_AOT_SHELL_SMOKE',
+    'DESKCUE_AOT_QUICK_ACCESS_MUTATION_SMOKE',
     'previousMusicSessionMutationSmoke',
     'previousMusicMutationSmoke',
     'previousMusicReadSmoke',
     'previousShortcutSmoke',
     'previousShellSmoke',
     'previousMutationSmoke',
-    'deskbox-audio-session-fixture.exe',
-    '--package deskbox-audio-session-fixture',
+    'deskcue-audio-session-fixture.exe',
+    '--package deskcue-audio-session-fixture',
     '-WindowStyle Hidden',
     'fixtureProcess.Id',
     'ReadMatchedSession',
@@ -3167,24 +3167,24 @@ $stage5B3CActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4ASourceFiles = @(
-    "src/DeskBox/App.AotManagedUiSmoke.cs",
-    "src/DeskBox/App.xaml.cs",
-    "src/DeskBox/Views/SettingsWindow.AotSmoke.cs",
-    "src/DeskBox/Views/SearchPopupWindow.AotSmoke.cs",
-    "src/DeskBox/Services/LocalizationService.cs",
+    "src/DeskCue/App.AotManagedUiSmoke.cs",
+    "src/DeskCue/App.xaml.cs",
+    "src/DeskCue/Views/SettingsWindow.AotSmoke.cs",
+    "src/DeskCue/Views/SearchPopupWindow.AotSmoke.cs",
+    "src/DeskCue/Services/LocalizationService.cs",
     "scripts/run-aot-managed-ui-smoke.ps1",
     "scripts/start-aot-preview.ps1",
-    "src/DeskBox/Views/SettingsWindow.Navigation.cs"
+    "src/DeskCue/Views/SettingsWindow.Navigation.cs"
 )
 $stage5B4ASources = [ordered]@{}
 foreach ($sourceFile in $stage5B4ASourceFiles) {
     $stage5B4ASources[$sourceFile] = Get-Content -LiteralPath (Join-Path $repoRoot $sourceFile) -Raw
 }
 $stage5B4ARequiredRunnerPatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
-    'DESKBOX_AOT_MANAGED_UI_SMOKE',
+    '#if DESKCUE_NATIVE_AOT',
+    'DESKCUE_AOT_MANAGED_UI_SMOKE',
     'BasicReadOnly',
-    'DeskBoxDataPathService.AotPreviewRootEnvironmentVariable',
+    'DeskCueDataPathService.AotPreviewRootEnvironmentVariable',
     'RefusedNonPreviewRoot',
     'aot-managed-ui-smoke',
     'aot-5b4a-file',
@@ -3236,7 +3236,7 @@ $stage5B4ALaunchOrderValid =
     $stage5B4ANativeBoundarySmokeIndex -ge 0 -and
     $stage5B4AManagedUiSmokeIndex -gt $stage5B4ANativeBoundarySmokeIndex
 $stage5B4ARequiredSettingsPatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
+    '#if DESKCUE_NATIVE_AOT',
     'WindowNative.GetWindowHandle(this)',
     '_appWindow.IsVisible',
     'SettingsRoot.XamlRoot',
@@ -3283,7 +3283,7 @@ $stage5B4ARequiredSearchPatterns = @(
     '"Apps"',
     '"Images"',
     '"Documents"',
-    '"DeskBox"',
+    '"DeskCue"',
     'ResultFilterBar.Visibility',
     'SortHeaderRow.Visibility',
     'ActionId == "open-settings"'
@@ -3339,7 +3339,7 @@ $stage5B4AMissingLocalePatterns = @(
     }
 )
 $stage5B4ARequiredSmokeScriptPatterns = @(
-    'DESKBOX_AOT_MANAGED_UI_SMOKE',
+    'DESKCUE_AOT_MANAGED_UI_SMOKE',
     'BasicReadOnly',
     'aot-5b4a-file',
     'aot-5b4a-search',
@@ -3353,7 +3353,7 @@ $stage5B4ARequiredSmokeScriptPatterns = @(
     'filterTransitions',
     'sortTransitions',
     'session.json',
-    '.deskbox-aot-managed-ui-owned.json'
+    '.deskcue-aot-managed-ui-owned.json'
 )
 $stage5B4AMissingSmokeScriptPatterns = @(
     foreach ($pattern in $stage5B4ARequiredSmokeScriptPatterns) {
@@ -3377,13 +3377,13 @@ $stage5B4AMissingSmokeOptInIsolation = @(
     foreach ($smokeScriptFile in $stage5B4ASmokeScriptFiles) {
         $smokeScriptSource = Get-Content -LiteralPath (Join-Path $repoRoot $smokeScriptFile) -Raw
         foreach ($pattern in @(
-                'DESKBOX_AOT_SHORTCUT_SMOKE',
-                'DESKBOX_AOT_SHELL_SMOKE',
-                'DESKBOX_AOT_QUICK_ACCESS_MUTATION_SMOKE',
-                'DESKBOX_AOT_MUSIC_VOLUME_READ_SMOKE',
-                'DESKBOX_AOT_MUSIC_VOLUME_MUTATION_SMOKE',
-                'DESKBOX_AOT_MUSIC_VOLUME_SESSION_MUTATION_SMOKE',
-                'DESKBOX_AOT_MANAGED_UI_SMOKE',
+                'DESKCUE_AOT_SHORTCUT_SMOKE',
+                'DESKCUE_AOT_SHELL_SMOKE',
+                'DESKCUE_AOT_QUICK_ACCESS_MUTATION_SMOKE',
+                'DESKCUE_AOT_MUSIC_VOLUME_READ_SMOKE',
+                'DESKCUE_AOT_MUSIC_VOLUME_MUTATION_SMOKE',
+                'DESKCUE_AOT_MUSIC_VOLUME_SESSION_MUTATION_SMOKE',
+                'DESKCUE_AOT_MANAGED_UI_SMOKE',
                 'previousManagedUiSmoke')) {
             if ($smokeScriptSource.IndexOf(
                     $pattern,
@@ -3438,46 +3438,46 @@ $stage5B4AActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4B1SourceFiles = @(
-    "src/DeskBox/App.AotManagedUiSmoke.cs",
-    "src/DeskBox/Views/SettingsWindow.AotDeepSmoke.cs",
-    "src/DeskBox/Views/SettingsWindow.Navigation.cs",
+    "src/DeskCue/App.AotManagedUiSmoke.cs",
+    "src/DeskCue/Views/SettingsWindow.AotDeepSmoke.cs",
+    "src/DeskCue/Views/SettingsWindow.Navigation.cs",
     "scripts/run-aot-managed-ui-smoke.ps1",
     "scripts/start-aot-preview.ps1",
-    "src/DeskBox/Views/SettingsWindow.xaml.cs",
-    "src/DeskBox/Views/SettingsWindow.Maintenance.cs",
-    "src/DeskBox/ViewModels/FileStackCustomRuleEditor.cs",
-    "src/DeskBox/Views/SettingsWindow.xaml",
-    "src/DeskBox/ViewModels/SettingsViewModel.AotBindableProperties.cs",
-    "src/DeskBox/Views/SettingsSections/CapsuleModeSettingsSection.xaml",
-    "src/DeskBox/Views/SettingsSections/CapsuleModeSettingsSection.xaml.cs",
-    "src/DeskBox/Models/SettingsOption.cs",
+    "src/DeskCue/Views/SettingsWindow.xaml.cs",
+    "src/DeskCue/Views/SettingsWindow.Maintenance.cs",
+    "src/DeskCue/ViewModels/FileStackCustomRuleEditor.cs",
+    "src/DeskCue/Views/SettingsWindow.xaml",
+    "src/DeskCue/ViewModels/SettingsViewModel.AotBindableProperties.cs",
+    "src/DeskCue/Views/SettingsSections/CapsuleModeSettingsSection.xaml",
+    "src/DeskCue/Views/SettingsSections/CapsuleModeSettingsSection.xaml.cs",
+    "src/DeskCue/Models/SettingsOption.cs",
     # Batch 44 moved the capsule-override and widget-group projection records
     # off the settings shell into the Models namespace.
-    "src/DeskBox/Models/CapsuleOverrideSettingsItem.cs",
-    "src/DeskBox/Models/WidgetGroupSettingsItems.cs",
-    "src/DeskBox/Models/WeatherData.cs",
-    "src/DeskBox/Views/SettingsSections/FileWidgetSettingsSection.xaml",
-    "src/DeskBox/ViewModels/SettingsViewModel.FileStackOptions.cs",
-    "src/DeskBox/ViewModels/SettingsViewModel.FeatureOptions.cs",
-    "src/DeskBox/ViewModels/SettingsViewModel.SelectionOptions.cs",
+    "src/DeskCue/Models/CapsuleOverrideSettingsItem.cs",
+    "src/DeskCue/Models/WidgetGroupSettingsItems.cs",
+    "src/DeskCue/Models/WeatherData.cs",
+    "src/DeskCue/Views/SettingsSections/FileWidgetSettingsSection.xaml",
+    "src/DeskCue/ViewModels/SettingsViewModel.FileStackOptions.cs",
+    "src/DeskCue/ViewModels/SettingsViewModel.FeatureOptions.cs",
+    "src/DeskCue/ViewModels/SettingsViewModel.SelectionOptions.cs",
     # Batch 48 moved the weather section's binding surface (incl. the city
     # search suggestion projection) onto the section editor.
-    "src/DeskBox/Features/Weather/WeatherSettingsViewModel.cs",
+    "src/DeskCue/Features/Weather/WeatherSettingsViewModel.cs",
     # Batch 49 moved the backup family's binding surface (local/cloud
     # backups and the compatibility-diagnostics texts) onto the backup
     # editor; the shell keeps only the operation flows and diagnostics
     # computation.
-    "src/DeskBox/Features/Backup/BackupSettingsViewModel.cs",
-    "src/DeskBox/Features/Backup/BackupSettingsViewModel.SettingsSurface.cs",
+    "src/DeskCue/Features/Backup/BackupSettingsViewModel.cs",
+    "src/DeskCue/Features/Backup/BackupSettingsViewModel.SettingsSurface.cs",
     # Batch 50 moved the performance section's binding surface (and the
     # General section's inline preset combo / attachment-storage combo)
     # onto the performance / feature-widgets editors.
-    "src/DeskBox/Features/Performance/PerformanceSettingsViewModel.cs",
-    "src/DeskBox/Features/FeatureWidgets/FeatureWidgetsSettingsViewModel.cs",
-    "src/DeskBox/Views/SettingsWindow.HotkeyAndAppearance.cs",
+    "src/DeskCue/Features/Performance/PerformanceSettingsViewModel.cs",
+    "src/DeskCue/Features/FeatureWidgets/FeatureWidgetsSettingsViewModel.cs",
+    "src/DeskCue/Views/SettingsWindow.HotkeyAndAppearance.cs",
     # Deferred-section host owns the lazy typed-ViewModel bridges that used to
     # live eagerly in SettingsWindow.xaml.cs.
-    "src/DeskBox/Views/SettingsWindow.DeferredSections.cs"
+    "src/DeskCue/Views/SettingsWindow.DeferredSections.cs"
 )
 $stage5B4B1Sources = [ordered]@{}
 foreach ($sourceFile in $stage5B4B1SourceFiles) {
@@ -3592,7 +3592,7 @@ $stage5B4B1RequiredBindableTypePatterns = @(
     [ordered]@{
         file = $stage5B4B1SourceFiles[9]
         patterns = @(
-            '#if DESKBOX_NATIVE_AOT',
+            '#if DESKCUE_NATIVE_AOT',
             '[WinRT.GeneratedBindableCustomProperty([',
             'public partial class SettingsViewModel')
     },
@@ -3709,19 +3709,19 @@ $stage5B4B1RequiredFileWidgetProjectionPatterns = @(
             'ItemsSource="{x:Bind FeatureWidgets.AvailableFolderOpenBehaviorOptionItems, Mode=OneWay}"')
     },
     [ordered]@{
-        file = 'src/DeskBox/Features/FileStack/FileStackSettingsViewModel.cs'
+        file = 'src/DeskCue/Features/FileStack/FileStackSettingsViewModel.cs'
         patterns = @(
             'public bool AutoStacking',
             '_settings.SetFileStackAutoStacking(value);')
     },
     [ordered]@{
-        file = 'src/DeskBox/Features/FeatureWidgets/FeatureWidgetsSettingsViewModel.cs'
+        file = 'src/DeskCue/Features/FeatureWidgets/FeatureWidgetsSettingsViewModel.cs'
         patterns = @(
             'public object[] AvailableFolderOpenBehaviorOptionItems',
             'AvailableFolderOpenBehaviorOptions.Cast<object>().ToArray()')
     },
     [ordered]@{
-        file = 'src/DeskBox/Features/FeatureWidgets/FeatureWidgetsSettingsViewModel.cs'
+        file = 'src/DeskCue/Features/FeatureWidgets/FeatureWidgetsSettingsViewModel.cs'
         patterns = @(
             'OnPropertyChanged(nameof(AvailableFolderOpenBehaviorOptionItems))')
     }
@@ -3729,8 +3729,8 @@ $stage5B4B1RequiredFileWidgetProjectionPatterns = @(
 $stage5B4B1FileWidgetProjectionSources = @{}
 foreach ($projectionFile in @(
         $stage5B4B1SourceFiles[16],
-        "src/DeskBox/Features/FileStack/FileStackSettingsViewModel.cs",
-        "src/DeskBox/Features/FeatureWidgets/FeatureWidgetsSettingsViewModel.cs")) {
+        "src/DeskCue/Features/FileStack/FileStackSettingsViewModel.cs",
+        "src/DeskCue/Features/FeatureWidgets/FeatureWidgetsSettingsViewModel.cs")) {
     $stage5B4B1FileWidgetProjectionSources[$projectionFile] =
         Get-Content -LiteralPath (Join-Path $repoRoot ($projectionFile -replace '/', '\')) -Raw
 }
@@ -3759,7 +3759,7 @@ $stage5B4B1RequiredWeatherProjectionPatterns = @(
         # the source list after the weather editor and silently shifted this
         # positional reference onto the backup editor (the pattern lives in
         # the hotkey-and-appearance code-behind). Batch 50 pins it by path.
-        file = "src/DeskBox/Views/SettingsWindow.HotkeyAndAppearance.cs"
+        file = "src/DeskCue/Views/SettingsWindow.HotkeyAndAppearance.cs"
         patterns = @(
             '_weatherSettingsViewModel.TrySelectFirstCitySuggestion()')
     },
@@ -3818,7 +3818,7 @@ $stage5B4B1RequiredSmokeScriptPatterns = @(
     'deep-settings-read-only',
     'productionDataFingerprintBefore',
     'Stop-ExactPreviewProcess',
-    '.deskbox-aot-managed-ui-owned.json',
+    '.deskcue-aot-managed-ui-owned.json',
     'deepSettings',
     'pageTransitions',
     'searchSuggestions',
@@ -3875,15 +3875,15 @@ $stage5B4B1ActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4B2ASourceFiles = @(
-    "src/DeskBox/App.AotManagedUiSmoke.cs",
-    "src/DeskBox/Services/WidgetManager.AotPersistenceSmoke.cs",
-    "src/DeskBox/Views/WidgetWindowBase.AotPersistenceSmoke.cs",
+    "src/DeskCue/App.AotManagedUiSmoke.cs",
+    "src/DeskCue/Services/WidgetManager.AotPersistenceSmoke.cs",
+    "src/DeskCue/Views/WidgetWindowBase.AotPersistenceSmoke.cs",
     "scripts/run-aot-managed-ui-smoke.ps1",
     "scripts/start-aot-preview.ps1",
-    "src/DeskBox/ViewModels/SettingsViewModel.AppearanceOptions.cs",
-    "src/DeskBox/ViewModels/SettingsViewModel.PreferenceCallbacks.cs",
-    "src/DeskBox/ViewModels/WidgetViewModel.Operations.cs",
-    "src/DeskBox/Services/SettingsService.cs"
+    "src/DeskCue/ViewModels/SettingsViewModel.AppearanceOptions.cs",
+    "src/DeskCue/ViewModels/SettingsViewModel.PreferenceCallbacks.cs",
+    "src/DeskCue/ViewModels/WidgetViewModel.Operations.cs",
+    "src/DeskCue/Services/SettingsService.cs"
 )
 $stage5B4B2ASources = [ordered]@{}
 foreach ($sourceFile in $stage5B4B2ASourceFiles) {
@@ -3891,7 +3891,7 @@ foreach ($sourceFile in $stage5B4B2ASourceFiles) {
 }
 $stage5B4B2ARequiredRunnerPatterns = @(
     'SettingsWidgetPersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_PERSISTENCE_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_PERSISTENCE_PHASE',
     'AotManagedUiPersistenceMutatePhase',
     'AotManagedUiPersistenceVerifyRestorePhase',
     'AotManagedUiPersistencePostflightPhase',
@@ -3963,7 +3963,7 @@ $stage5B4B2AMissingBoundsPatterns = @(
 )
 $stage5B4B2ARequiredSmokeScriptPatterns = @(
     '"SettingsWidgetPersistenceRestart",',
-    'DESKBOX_AOT_MANAGED_UI_PERSISTENCE_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_PERSISTENCE_PHASE',
     'Invoke-PersistencePhase',
     'Wait-NaturalPreviewExit',
     'Assert-PersistenceStateEqual',
@@ -3979,7 +3979,7 @@ $stage5B4B2ARequiredSmokeScriptPatterns = @(
     'Unhandled exception:',
     'archivedPersistenceSessionPath',
     'sessionPath = $archivedPersistenceSessionPath',
-    '.deskbox-aot-managed-ui-owned.json'
+    '.deskcue-aot-managed-ui-owned.json'
 )
 $stage5B4B2AMissingSmokeScriptPatterns = @(
     foreach ($pattern in $stage5B4B2ARequiredSmokeScriptPatterns) {
@@ -4055,16 +4055,16 @@ $stage5B4B2AActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4B2B1SourceFiles = @(
-    "src/DeskBox/App.AotManagedUiSmoke.cs",
-    "src/DeskBox/App.AotQuickCapturePersistenceSmoke.cs",
-    "src/DeskBox/Controls/WidgetContents/QuickCaptureSurfaceContent.AotPersistenceSmoke.cs",
-    "src/DeskBox/Services/WidgetManager.AotQuickCapturePersistenceSmoke.cs",
+    "src/DeskCue/App.AotManagedUiSmoke.cs",
+    "src/DeskCue/App.AotQuickCapturePersistenceSmoke.cs",
+    "src/DeskCue/Controls/WidgetContents/QuickCaptureSurfaceContent.AotPersistenceSmoke.cs",
+    "src/DeskCue/Services/WidgetManager.AotQuickCapturePersistenceSmoke.cs",
     "scripts/run-aot-managed-ui-smoke.ps1",
-    "src/DeskBox/Controls/WidgetContents/QuickCaptureSurfaceContent.xaml.cs",
-    "src/DeskBox/ViewModels/QuickCaptureWidgetViewModel.Operations.cs",
-    "src/DeskBox/Services/QuickCaptureService.cs",
-    "src/DeskBox/Services/QuickCaptureStore.cs",
-    "src/DeskBox/Services/AttachmentStorageService.cs"
+    "src/DeskCue/Controls/WidgetContents/QuickCaptureSurfaceContent.xaml.cs",
+    "src/DeskCue/ViewModels/QuickCaptureWidgetViewModel.Operations.cs",
+    "src/DeskCue/Services/QuickCaptureService.cs",
+    "src/DeskCue/Services/QuickCaptureStore.cs",
+    "src/DeskCue/Services/AttachmentStorageService.cs"
 )
 $stage5B4B2B1Sources = [ordered]@{}
 foreach ($sourceFile in $stage5B4B2B1SourceFiles) {
@@ -4075,13 +4075,13 @@ $stage5B4B2B1RunnerSource =
     $stage5B4B2B1Sources[$stage5B4B2B1SourceFiles[1]]
 $stage5B4B2B1RequiredRunnerPatterns = @(
     'QuickCapturePersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_QUICK_CAPTURE_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_QUICK_CAPTURE_PHASE',
     'AotManagedUiQuickCaptureMutatePhase',
     'AotManagedUiQuickCaptureVerifyDeletePhase',
     'AotManagedUiQuickCapturePostflightPhase',
     'quick-capture-persistence-restart',
     'CaptureAotManagedUiQuickCapturePersistenceAsync',
-    'DeskBoxDataPathService.Current',
+    'DeskCueDataPathService.Current',
     'AotManagedUiQuickCapturePersistenceEvidence',
     'AotManagedUiQuickCaptureStateEvidence',
     'AotManagedUiQuickCaptureItemEvidence',
@@ -4165,7 +4165,7 @@ $stage5B4B2B1MissingManagerPatterns = @(
 )
 $stage5B4B2B1RequiredSmokeScriptPatterns = @(
     'QuickCapturePersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_QUICK_CAPTURE_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_QUICK_CAPTURE_PHASE',
     'Invoke-QuickCapturePersistencePhase',
     'Mutate',
     'VerifyDelete',
@@ -4189,7 +4189,7 @@ $stage5B4B2B1RequiredSmokeScriptPatterns = @(
     'archivedQuickCaptureSessionPath',
     'sessionPath = $archivedQuickCaptureSessionPath',
     'Stop-ExactPreviewProcess',
-    '.deskbox-aot-managed-ui-owned.json'
+    '.deskcue-aot-managed-ui-owned.json'
 )
 $stage5B4B2B1MissingSmokeScriptPatterns = @(
     foreach ($pattern in $stage5B4B2B1RequiredSmokeScriptPatterns) {
@@ -4246,19 +4246,19 @@ $stage5B4B2B1ActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4B2B2ASourceFiles = @(
-    "src/DeskBox/App.AotManagedUiSmoke.cs",
-    "src/DeskBox/App.AotTodoPersistenceSmoke.cs",
-    "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.AotPersistenceSmoke.cs",
-    "src/DeskBox/Services/WidgetManager.AotTodoPersistenceSmoke.cs",
+    "src/DeskCue/App.AotManagedUiSmoke.cs",
+    "src/DeskCue/App.AotTodoPersistenceSmoke.cs",
+    "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.AotPersistenceSmoke.cs",
+    "src/DeskCue/Services/WidgetManager.AotTodoPersistenceSmoke.cs",
     "scripts/run-aot-managed-ui-smoke.ps1",
-    "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.DetailNotesAndSteps.cs",
-    "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.xaml.cs",
-    "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.EditingAndUndo.cs",
-    "src/DeskBox/ViewModels/TodoWidgetViewModel.ItemOperations.cs",
-    "src/DeskBox/ViewModels/TodoWidgetViewModel.DetailAndAttachments.cs",
-    "src/DeskBox/ViewModels/TodoWidgetViewModel.EditingAndUndo.cs",
-    "src/DeskBox/ViewModels/TodoViewModels.AotBindableProperties.cs",
-    "src/DeskBox/Services/TodoWidgetStore.cs"
+    "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.DetailNotesAndSteps.cs",
+    "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml.cs",
+    "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.EditingAndUndo.cs",
+    "src/DeskCue/ViewModels/TodoWidgetViewModel.ItemOperations.cs",
+    "src/DeskCue/ViewModels/TodoWidgetViewModel.DetailAndAttachments.cs",
+    "src/DeskCue/ViewModels/TodoWidgetViewModel.EditingAndUndo.cs",
+    "src/DeskCue/ViewModels/TodoViewModels.AotBindableProperties.cs",
+    "src/DeskCue/Services/TodoWidgetStore.cs"
 )
 $stage5B4B2B2ASources = [ordered]@{}
 foreach ($sourceFile in $stage5B4B2B2ASourceFiles) {
@@ -4269,13 +4269,13 @@ $stage5B4B2B2ARunnerSource =
     $stage5B4B2B2ASources[$stage5B4B2B2ASourceFiles[1]]
 $stage5B4B2B2ARequiredRunnerPatterns = @(
     'TodoPersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_TODO_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_TODO_PHASE',
     'AotManagedUiTodoMutatePhase',
     'AotManagedUiTodoVerifyDeletePhase',
     'AotManagedUiTodoPostflightPhase',
     'todo-persistence-restart',
     'CaptureAotManagedUiTodoPersistenceAsync',
-    'DeskBoxDataPathService.Current',
+    'DeskCueDataPathService.Current',
     'AotManagedUiTodoPersistenceEvidence',
     'AotManagedUiTodoStateEvidence',
     'AotManagedUiTodoItemEvidence',
@@ -4388,7 +4388,7 @@ $stage5B4B2B2AMissingManagerPatterns = @(
 )
 $stage5B4B2B2ARequiredSmokeScriptPatterns = @(
     'TodoPersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_TODO_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_TODO_PHASE',
     'Invoke-TodoPersistencePhase',
     'Mutate',
     'VerifyDelete',
@@ -4414,7 +4414,7 @@ $stage5B4B2B2ARequiredSmokeScriptPatterns = @(
     'archivedTodoSessionPath',
     'sessionPath = $archivedTodoSessionPath',
     'Stop-ExactPreviewProcess',
-    '.deskbox-aot-managed-ui-owned.json'
+    '.deskcue-aot-managed-ui-owned.json'
 )
 $stage5B4B2B2AMissingSmokeScriptPatterns = @(
     foreach ($pattern in $stage5B4B2B2ARequiredSmokeScriptPatterns) {
@@ -4481,20 +4481,20 @@ $stage5B4B2B2AActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4B2B2B1SourceFiles = @(
-    "src/DeskBox/App.AotManagedUiSmoke.cs",
-    "src/DeskBox/App.AotTodoStepsPersistenceSmoke.cs",
-    "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.AotStepsPersistenceSmoke.cs",
-    "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.DetailNotesAndSteps.cs",
-    "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.xaml",
-    "src/DeskBox/ViewModels/TodoWidgetViewModel.DetailAndAttachments.cs",
-    "src/DeskBox/ViewModels/TodoStepViewModel.cs",
-    "src/DeskBox/ViewModels/TodoViewModels.AotBindableProperties.cs",
-    "src/DeskBox/Services/WidgetManager.AotTodoPersistenceSmoke.cs",
+    "src/DeskCue/App.AotManagedUiSmoke.cs",
+    "src/DeskCue/App.AotTodoStepsPersistenceSmoke.cs",
+    "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.AotStepsPersistenceSmoke.cs",
+    "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.DetailNotesAndSteps.cs",
+    "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml",
+    "src/DeskCue/ViewModels/TodoWidgetViewModel.DetailAndAttachments.cs",
+    "src/DeskCue/ViewModels/TodoStepViewModel.cs",
+    "src/DeskCue/ViewModels/TodoViewModels.AotBindableProperties.cs",
+    "src/DeskCue/Services/WidgetManager.AotTodoPersistenceSmoke.cs",
     "scripts/run-aot-managed-ui-smoke.ps1",
-    "src/DeskBox/App.AotTodoPersistenceSmoke.cs",
-    "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.AotPersistenceSmoke.cs",
-    "src/DeskBox/Services/TodoWidgetStore.cs",
-    "src/DeskBox/ViewModels/TodoItemViewModel.cs"
+    "src/DeskCue/App.AotTodoPersistenceSmoke.cs",
+    "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.AotPersistenceSmoke.cs",
+    "src/DeskCue/Services/TodoWidgetStore.cs",
+    "src/DeskCue/ViewModels/TodoItemViewModel.cs"
 )
 $stage5B4B2B2B1Sources = [ordered]@{}
 foreach ($sourceFile in $stage5B4B2B2B1SourceFiles) {
@@ -4505,7 +4505,7 @@ $stage5B4B2B2B1RunnerSource =
     $stage5B4B2B2B1Sources[$stage5B4B2B2B1SourceFiles[1]]
 $stage5B4B2B2B1RequiredRunnerPatterns = @(
     'TodoStepsPersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_TODO_STEPS_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_TODO_STEPS_PHASE',
     'AotManagedUiTodoStepsMutatePhase',
     'AotManagedUiTodoStepsVerifyDeletePhase',
     'AotManagedUiTodoStepsPostflightPhase',
@@ -4633,7 +4633,7 @@ $stage5B4B2B2B1MissingManagerPatterns = @(
 )
 $stage5B4B2B2B1RequiredSmokeScriptPatterns = @(
     'TodoStepsPersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_TODO_STEPS_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_TODO_STEPS_PHASE',
     'Invoke-TodoStepsPersistencePhase',
     '$mutate.todoStepsPersistence.after',
     '$verifyDelete.todoStepsPersistence.before',
@@ -4655,7 +4655,7 @@ $stage5B4B2B2B1RequiredSmokeScriptPatterns = @(
     'Unhandled exception:',
     'previewRootCleaned',
     'Stop-ExactPreviewProcess',
-    '.deskbox-aot-managed-ui-owned.json'
+    '.deskcue-aot-managed-ui-owned.json'
 )
 $stage5B4B2B2B1MissingSmokeScriptPatterns = @(
     foreach ($pattern in $stage5B4B2B2B1RequiredSmokeScriptPatterns) {
@@ -4713,24 +4713,24 @@ $stage5B4B2B2B1ActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4B2B2B2SourceFiles = @(
-    "src/DeskBox/App.AotManagedUiSmoke.cs",
-    "src/DeskBox/App.AotTodoAttachmentsPersistenceSmoke.cs",
-    "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.AotAttachmentsPersistenceSmoke.cs",
-    "src/DeskBox/Controls/AttachmentTileStrip.AotSmoke.cs",
-    "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.Attachments.cs",
-    "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.xaml",
-    "src/DeskBox/ViewModels/TodoWidgetViewModel.DetailAndAttachments.cs",
-    "src/DeskBox/ViewModels/TodoItemViewModel.cs",
-    "src/DeskBox/Services/AttachmentStorageService.cs",
-    "src/DeskBox/ViewModels/TodoAttachmentViewModel.cs",
-    "src/DeskBox/Controls/AttachmentTileStrip.xaml",
-    "src/DeskBox/ViewModels/TodoViewModels.AotBindableProperties.cs",
-    "src/DeskBox/Services/WidgetManager.AotTodoPersistenceSmoke.cs",
+    "src/DeskCue/App.AotManagedUiSmoke.cs",
+    "src/DeskCue/App.AotTodoAttachmentsPersistenceSmoke.cs",
+    "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.AotAttachmentsPersistenceSmoke.cs",
+    "src/DeskCue/Controls/AttachmentTileStrip.AotSmoke.cs",
+    "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.Attachments.cs",
+    "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml",
+    "src/DeskCue/ViewModels/TodoWidgetViewModel.DetailAndAttachments.cs",
+    "src/DeskCue/ViewModels/TodoItemViewModel.cs",
+    "src/DeskCue/Services/AttachmentStorageService.cs",
+    "src/DeskCue/ViewModels/TodoAttachmentViewModel.cs",
+    "src/DeskCue/Controls/AttachmentTileStrip.xaml",
+    "src/DeskCue/ViewModels/TodoViewModels.AotBindableProperties.cs",
+    "src/DeskCue/Services/WidgetManager.AotTodoPersistenceSmoke.cs",
     "scripts/run-aot-managed-ui-smoke.ps1",
-    "src/DeskBox/App.AotTodoPersistenceSmoke.cs",
-    "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.AotPersistenceSmoke.cs",
-    "src/DeskBox/Services/TodoWidgetStore.cs",
-    "src/DeskBox/Models/TodoAttachment.cs"
+    "src/DeskCue/App.AotTodoPersistenceSmoke.cs",
+    "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.AotPersistenceSmoke.cs",
+    "src/DeskCue/Services/TodoWidgetStore.cs",
+    "src/DeskCue/Models/TodoAttachment.cs"
 )
 $stage5B4B2B2B2Sources = [ordered]@{}
 foreach ($sourceFile in $stage5B4B2B2B2SourceFiles) {
@@ -4741,7 +4741,7 @@ $stage5B4B2B2B2RunnerSource =
     $stage5B4B2B2B2Sources[$stage5B4B2B2B2SourceFiles[1]]
 $stage5B4B2B2B2RequiredRunnerPatterns = @(
     'TodoAttachmentsPersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_TODO_ATTACHMENTS_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_TODO_ATTACHMENTS_PHASE',
     'AotManagedUiTodoAttachmentsMutatePhase',
     'AotManagedUiTodoAttachmentsVerifyDeletePhase',
     'AotManagedUiTodoAttachmentsPostflightPhase',
@@ -4896,7 +4896,7 @@ $stage5B4B2B2B2MissingManagerPatterns = @(
 )
 $stage5B4B2B2B2RequiredSmokeScriptPatterns = @(
     'TodoAttachmentsPersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_TODO_ATTACHMENTS_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_TODO_ATTACHMENTS_PHASE',
     'Invoke-TodoAttachmentsPersistencePhase',
     '$mutate.todoAttachmentsPersistence.after',
     '$verifyDelete.todoAttachmentsPersistence.before',
@@ -4924,7 +4924,7 @@ $stage5B4B2B2B2RequiredSmokeScriptPatterns = @(
     'Unhandled exception:',
     'previewRootCleaned',
     'Stop-ExactPreviewProcess',
-    '.deskbox-aot-managed-ui-owned.json'
+    '.deskcue-aot-managed-ui-owned.json'
 )
 $stage5B4B2B2B2MissingSmokeScriptPatterns = @(
     foreach ($pattern in $stage5B4B2B2B2RequiredSmokeScriptPatterns) {
@@ -4979,21 +4979,21 @@ $stage5B4B2B2B2ActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4B2C1SourceFiles = @(
-    "src/DeskBox/App.AotManagedUiSmoke.cs",
-    "src/DeskBox/App.AotGlancePersistenceSmoke.cs",
-    "src/DeskBox/Controls/WidgetContents/GlanceWidgetContent.AotPersistenceSmoke.cs",
-    "src/DeskBox/Controls/WidgetContents/GlanceWidgetContent.xaml",
-    "src/DeskBox/Controls/WidgetContents/GlanceWidgetContent.xaml.cs",
-    "src/DeskBox/ViewModels/GlanceWidgetViewModel.cs",
-    "src/DeskBox/ViewModels/GlanceWidgetViewModel.AotBindableProperties.cs",
-    "src/DeskBox/ViewModels/GlanceWidgetViewModel.AotPersistenceSmoke.cs",
-    "src/DeskBox/Services/GlanceWidgetSettingsPolicy.cs",
-    "src/DeskBox/Views/SettingsSections/GlanceWidgetSettingsSection.xaml.cs",
-    "src/DeskBox/Services/GlanceWidgetStore.cs",
-    "src/DeskBox/Services/GlanceImageService.cs",
-    "src/DeskBox/Services/WidgetManager.AotGlancePersistenceSmoke.cs",
+    "src/DeskCue/App.AotManagedUiSmoke.cs",
+    "src/DeskCue/App.AotGlancePersistenceSmoke.cs",
+    "src/DeskCue/Controls/WidgetContents/GlanceWidgetContent.AotPersistenceSmoke.cs",
+    "src/DeskCue/Controls/WidgetContents/GlanceWidgetContent.xaml",
+    "src/DeskCue/Controls/WidgetContents/GlanceWidgetContent.xaml.cs",
+    "src/DeskCue/ViewModels/GlanceWidgetViewModel.cs",
+    "src/DeskCue/ViewModels/GlanceWidgetViewModel.AotBindableProperties.cs",
+    "src/DeskCue/ViewModels/GlanceWidgetViewModel.AotPersistenceSmoke.cs",
+    "src/DeskCue/Services/GlanceWidgetSettingsPolicy.cs",
+    "src/DeskCue/Views/SettingsSections/GlanceWidgetSettingsSection.xaml.cs",
+    "src/DeskCue/Services/GlanceWidgetStore.cs",
+    "src/DeskCue/Services/GlanceImageService.cs",
+    "src/DeskCue/Services/WidgetManager.AotGlancePersistenceSmoke.cs",
     "scripts/run-aot-managed-ui-smoke.ps1",
-    "src/DeskBox/Models/GlanceWidgetData.cs"
+    "src/DeskCue/Models/GlanceWidgetData.cs"
 )
 $stage5B4B2C1Sources = [ordered]@{}
 foreach ($sourceFile in $stage5B4B2C1SourceFiles) {
@@ -5005,8 +5005,8 @@ $stage5B4B2C1RunnerSource =
     $stage5B4B2C1Sources[$stage5B4B2C1SourceFiles[1]]
 $stage5B4B2C1RequiredRunnerPatterns = @(
     'GlancePersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_GLANCE_PHASE',
-    'DESKBOX_AOT_MANAGED_UI_GLANCE_FIXTURE',
+    'DESKCUE_AOT_MANAGED_UI_GLANCE_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_GLANCE_FIXTURE',
     'AotManagedUiGlanceMutatePhase',
     'AotManagedUiGlanceVerifyRestorePhase',
     'AotManagedUiGlancePostflightPhase',
@@ -5138,8 +5138,8 @@ $stage5B4B2C1MissingManagerPatterns = @(
 )
 $stage5B4B2C1RequiredSmokeScriptPatterns = @(
     'GlancePersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_GLANCE_PHASE',
-    'DESKBOX_AOT_MANAGED_UI_GLANCE_FIXTURE',
+    'DESKCUE_AOT_MANAGED_UI_GLANCE_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_GLANCE_FIXTURE',
     'Invoke-GlancePersistencePhase',
     'glance-local.png',
     '[System.IO.File]::WriteAllBytes',
@@ -5167,7 +5167,7 @@ $stage5B4B2C1RequiredSmokeScriptPatterns = @(
     'Image decode failed',
     'previewRootCleaned',
     'Stop-ExactPreviewProcess',
-    '.deskbox-aot-managed-ui-owned.json'
+    '.deskcue-aot-managed-ui-owned.json'
 )
 $stage5B4B2C1MissingSmokeScriptPatterns = @(
     foreach ($pattern in $stage5B4B2C1RequiredSmokeScriptPatterns) {
@@ -5224,17 +5224,17 @@ $stage5B4B2C1ActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4B2C2ASourceFiles = @(
-    "src/DeskBox/App.AotManagedUiSmoke.cs",
-    "src/DeskBox/App.AotWeatherSettingsPersistenceSmoke.cs",
-    "src/DeskBox/Services/WeatherSettingsPolicy.cs",
+    "src/DeskCue/App.AotManagedUiSmoke.cs",
+    "src/DeskCue/App.AotWeatherSettingsPersistenceSmoke.cs",
+    "src/DeskCue/Services/WeatherSettingsPolicy.cs",
     # Batch 38 moved the settings page's weather policy writes from the
     # SettingsViewModel.WeatherOptions shell facade into the feature-section
     # coordinator; the "product writer reuses the local policy" pin follows
     # the owner.
-    "src/DeskBox/Services/FeatureWidgetsSettingsCoordinator.cs",
-    "src/DeskBox/Services/WeatherWidgetViewModeSettings.cs",
-    "src/DeskBox/Services/WidgetManager.AotWeatherSettingsPersistenceSmoke.cs",
-    "src/DeskBox/ViewModels/WeatherWidgetViewModel.RefreshAndLayout.cs",
+    "src/DeskCue/Services/FeatureWidgetsSettingsCoordinator.cs",
+    "src/DeskCue/Services/WeatherWidgetViewModeSettings.cs",
+    "src/DeskCue/Services/WidgetManager.AotWeatherSettingsPersistenceSmoke.cs",
+    "src/DeskCue/ViewModels/WeatherWidgetViewModel.RefreshAndLayout.cs",
     "scripts/run-aot-managed-ui-smoke.ps1"
 )
 $stage5B4B2C2ASources = [ordered]@{}
@@ -5247,7 +5247,7 @@ $stage5B4B2C2ARunnerSource =
     $stage5B4B2C2ASources[$stage5B4B2C2ASourceFiles[1]]
 $stage5B4B2C2ARequiredRunnerPatterns = @(
     'WeatherSettingsPersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_WEATHER_SETTINGS_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_WEATHER_SETTINGS_PHASE',
     'AotManagedUiWeatherSettingsMutatePhase',
     'AotManagedUiWeatherSettingsVerifyRestorePhase',
     'AotManagedUiWeatherSettingsPostflightPhase',
@@ -5337,7 +5337,7 @@ $stage5B4B2C2AMissingManagerPatterns = @(
 )
 $stage5B4B2C2ARequiredSmokeScriptPatterns = @(
     'WeatherSettingsPersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_WEATHER_SETTINGS_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_WEATHER_SETTINGS_PHASE',
     'Invoke-WeatherSettingsPersistencePhase',
     'Assert-WeatherSettingsStateEqual',
     'Assert-WeatherSettingsEvidenceState',
@@ -5358,7 +5358,7 @@ $stage5B4B2C2ARequiredSmokeScriptPatterns = @(
     'weatherSettingsPreviewProcessesAfter',
     'previewRootCleaned',
     'Stop-ExactPreviewProcess',
-    '.deskbox-aot-managed-ui-owned.json'
+    '.deskcue-aot-managed-ui-owned.json'
 )
 $stage5B4B2C2AMissingSmokeScriptPatterns = @(
     foreach ($pattern in $stage5B4B2C2ARequiredSmokeScriptPatterns) {
@@ -5418,21 +5418,21 @@ $stage5B4B2C2AActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4B2C2BSourceFiles = @(
-    "src/DeskBox/App.AotManagedUiSmoke.cs",
-    "src/DeskBox/App.AotWeatherSurfacePersistenceSmoke.cs",
-    "src/DeskBox/Services/AotWeatherSurfaceFixture.cs",
-    "src/DeskBox/Services/WeatherService.cs",
-    "src/DeskBox/Services/WeatherWidgetContentProvider.cs",
-    "src/DeskBox/Controls/WidgetContents/WeatherWidgetContentAdapter.cs",
-    "src/DeskBox/ViewModels/WeatherWidgetViewModel.cs",
-    "src/DeskBox/ViewModels/WeatherWidgetViewModel.DataProcessing.cs",
-    "src/DeskBox/ViewModels/WeatherViewModels.AotBindableProperties.cs",
-    "src/DeskBox/Controls/WidgetContents/WeatherWidgetContent.xaml",
-    "src/DeskBox/Controls/WidgetContents/WeatherWidgetContent.xaml.cs",
-    "src/DeskBox/Controls/WidgetContents/WeatherWidgetContent.AotSurfaceSmoke.cs",
-    "src/DeskBox/Services/WidgetManager.AotWeatherSurfaceSmoke.cs",
-    "src/DeskBox/Services/WeatherWidgetViewModeSettings.cs",
-    "src/DeskBox/Services/WeatherSettingsPolicy.cs",
+    "src/DeskCue/App.AotManagedUiSmoke.cs",
+    "src/DeskCue/App.AotWeatherSurfacePersistenceSmoke.cs",
+    "src/DeskCue/Services/AotWeatherSurfaceFixture.cs",
+    "src/DeskCue/Services/WeatherService.cs",
+    "src/DeskCue/Services/WeatherWidgetContentProvider.cs",
+    "src/DeskCue/Controls/WidgetContents/WeatherWidgetContentAdapter.cs",
+    "src/DeskCue/ViewModels/WeatherWidgetViewModel.cs",
+    "src/DeskCue/ViewModels/WeatherWidgetViewModel.DataProcessing.cs",
+    "src/DeskCue/ViewModels/WeatherViewModels.AotBindableProperties.cs",
+    "src/DeskCue/Controls/WidgetContents/WeatherWidgetContent.xaml",
+    "src/DeskCue/Controls/WidgetContents/WeatherWidgetContent.xaml.cs",
+    "src/DeskCue/Controls/WidgetContents/WeatherWidgetContent.AotSurfaceSmoke.cs",
+    "src/DeskCue/Services/WidgetManager.AotWeatherSurfaceSmoke.cs",
+    "src/DeskCue/Services/WeatherWidgetViewModeSettings.cs",
+    "src/DeskCue/Services/WeatherSettingsPolicy.cs",
     "scripts/run-aot-managed-ui-smoke.ps1"
 )
 $stage5B4B2C2BSources = [ordered]@{}
@@ -5445,7 +5445,7 @@ $stage5B4B2C2BRunnerSource =
     $stage5B4B2C2BSources[$stage5B4B2C2BSourceFiles[1]]
 $stage5B4B2C2BRequiredRunnerPatterns = @(
     'WeatherSurfacePersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_WEATHER_SURFACE_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_WEATHER_SURFACE_PHASE',
     'AotManagedUiWeatherSurfaceMutatePhase',
     'AotManagedUiWeatherSurfaceVerifyRestorePhase',
     'AotManagedUiWeatherSurfacePostflightPhase',
@@ -5477,10 +5477,10 @@ $stage5B4B2C2BFixtureSource =
     $stage5B4B2C2BSources[$stage5B4B2C2BSourceFiles[3]] +
     $stage5B4B2C2BSources[$stage5B4B2C2BSourceFiles[4]]
 $stage5B4B2C2BRequiredFixturePatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
+    '#if DESKCUE_NATIVE_AOT',
     'WeatherSurfacePersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_SMOKE',
-    'DESKBOX_AOT_MANAGED_UI_WEATHER_SURFACE_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_SMOKE',
+    'DESKCUE_AOT_MANAGED_UI_WEATHER_SURFACE_PHASE',
     'aot-5b4b2c2b-weather',
     'Shanghai AOT Surface',
     'TryCreateService',
@@ -5584,7 +5584,7 @@ $stage5B4B2C2BMissingManagerPatterns = @(
 )
 $stage5B4B2C2BRequiredSmokeScriptPatterns = @(
     'WeatherSurfacePersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_WEATHER_SURFACE_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_WEATHER_SURFACE_PHASE',
     'Invoke-WeatherSurfacePersistencePhase',
     'Assert-WeatherSurfaceStateEqual',
     'Assert-WeatherSurfaceEvidenceState',
@@ -5610,7 +5610,7 @@ $stage5B4B2C2BRequiredSmokeScriptPatterns = @(
     'weatherSurfacePreviewProcessesAfter',
     'previewRootCleaned',
     'Stop-ExactPreviewProcess',
-    '.deskbox-aot-managed-ui-owned.json'
+    '.deskcue-aot-managed-ui-owned.json'
 )
 $stage5B4B2C2BMissingSmokeScriptPatterns = @(
     foreach ($pattern in $stage5B4B2C2BRequiredSmokeScriptPatterns) {
@@ -5670,14 +5670,14 @@ $stage5B4B2C2BActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4C1ASourceFiles = @(
-    "src/DeskBox/App.AotManagedUiSmoke.cs",
-    "src/DeskBox/App.AotLocalFilePersistenceSmoke.cs",
-    "src/DeskBox/Services/AotLocalFileSurfaceFixture.cs",
-    "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.AotLocalFileSmoke.cs",
-    "src/DeskBox/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
-    "src/DeskBox/Controls/FileItemSurface.AotBindableProperties.cs",
-    "src/DeskBox/Models/WidgetItem.AotBindableProperties.cs",
-    "src/DeskBox/ViewModels/WidgetViewModel.AotBindableProperties.cs",
+    "src/DeskCue/App.AotManagedUiSmoke.cs",
+    "src/DeskCue/App.AotLocalFilePersistenceSmoke.cs",
+    "src/DeskCue/Services/AotLocalFileSurfaceFixture.cs",
+    "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.AotLocalFileSmoke.cs",
+    "src/DeskCue/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
+    "src/DeskCue/Controls/FileItemSurface.AotBindableProperties.cs",
+    "src/DeskCue/Models/WidgetItem.AotBindableProperties.cs",
+    "src/DeskCue/ViewModels/WidgetViewModel.AotBindableProperties.cs",
     "scripts/run-aot-managed-ui-smoke.ps1"
 )
 $stage5B4C1ASources = [ordered]@{}
@@ -5690,7 +5690,7 @@ $stage5B4C1ARunnerSource =
     $stage5B4C1ASources[$stage5B4C1ASourceFiles[1]]
 $stage5B4C1ARequiredRunnerPatterns = @(
     'LocalFileSurfacePersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_LOCAL_FILE_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_LOCAL_FILE_PHASE',
     'AotManagedUiLocalFileMutatePhase',
     'AotManagedUiLocalFileVerifyRestorePhase',
     'AotManagedUiLocalFilePostflightPhase',
@@ -5720,9 +5720,9 @@ $stage5B4C1AMissingRunnerPatterns = @(
 $stage5B4C1AFixtureSource =
     $stage5B4C1ASources[$stage5B4C1ASourceFiles[2]]
 $stage5B4C1ARequiredFixturePatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
+    '#if DESKCUE_NATIVE_AOT',
     'LocalFileSurfacePersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_LOCAL_FILE_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_LOCAL_FILE_PHASE',
     'aot-5b4c1a-file',
     'local-file-surface',
     'widget-root',
@@ -5832,7 +5832,7 @@ $stage5B4C1AMissingBindablePatterns = @(
 )
 $stage5B4C1ARequiredSmokeScriptPatterns = @(
     'LocalFileSurfacePersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_LOCAL_FILE_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_LOCAL_FILE_PHASE',
     'Invoke-LocalFilePersistencePhase',
     'Get-LocalFileFixtureState',
     'Assert-LocalFileDiskState',
@@ -5856,7 +5856,7 @@ $stage5B4C1ARequiredSmokeScriptPatterns = @(
     'localFilePreviewProcessesAfter',
     'previewRootCleaned',
     'Stop-ExactPreviewProcess',
-    '.deskbox-aot-managed-ui-owned.json'
+    '.deskcue-aot-managed-ui-owned.json'
 )
 $stage5B4C1AMissingSmokeScriptPatterns = @(
     foreach ($pattern in $stage5B4C1ARequiredSmokeScriptPatterns) {
@@ -5925,20 +5925,20 @@ $stage5B4C1AActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4C1B1SourceFiles = @(
-    "src/DeskBox/App.AotManagedUiSmoke.cs",
-    "src/DeskBox/App.AotRecycleBinSmoke.cs",
-    "src/DeskBox/Services/AotRecycleBinFixture.cs",
-    "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.AotRecycleBinSmoke.cs",
-    "src/DeskBox/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
-    "src/DeskBox/Helpers/RecycleBinNativeBackend.cs",
-    "src/DeskBox/Controls/FileItemMenuBuilder.cs",
-    "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.SelectionAndMenus.cs",
-    "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.xaml.cs",
-    "src/DeskBox/ViewModels/WidgetViewModel.Operations.cs",
-    "src/DeskBox/Services/FileService.cs",
-    "native/deskbox-native/src/lib.rs",
-    "native/deskbox-native/src/recycle_bin.rs",
-    "native/include/deskbox_native.h",
+    "src/DeskCue/App.AotManagedUiSmoke.cs",
+    "src/DeskCue/App.AotRecycleBinSmoke.cs",
+    "src/DeskCue/Services/AotRecycleBinFixture.cs",
+    "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.AotRecycleBinSmoke.cs",
+    "src/DeskCue/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
+    "src/DeskCue/Helpers/RecycleBinNativeBackend.cs",
+    "src/DeskCue/Controls/FileItemMenuBuilder.cs",
+    "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.SelectionAndMenus.cs",
+    "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.xaml.cs",
+    "src/DeskCue/ViewModels/WidgetViewModel.Operations.cs",
+    "src/DeskCue/Services/FileService.cs",
+    "native/deskcue-native/src/lib.rs",
+    "native/deskcue-native/src/recycle_bin.rs",
+    "native/include/deskcue_native.h",
     "scripts/build-rust-native.ps1",
     "scripts/run-aot-managed-ui-smoke.ps1"
 )
@@ -5952,7 +5952,7 @@ $stage5B4C1B1RunnerSource =
     $stage5B4C1B1Sources[$stage5B4C1B1SourceFiles[1]]
 $stage5B4C1B1RequiredRunnerPatterns = @(
     'RecycleBinMenuPersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_RECYCLE_BIN_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_RECYCLE_BIN_PHASE',
     'AotManagedUiRecycleBinMutatePhase',
     'AotManagedUiRecycleBinVerifyRestorePhase',
     'AotManagedUiRecycleBinPostflightPhase',
@@ -5976,10 +5976,10 @@ $stage5B4C1B1MissingRunnerPatterns = @(
 $stage5B4C1B1FixtureSource =
     $stage5B4C1B1Sources[$stage5B4C1B1SourceFiles[2]]
 $stage5B4C1B1RequiredFixturePatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
+    '#if DESKCUE_NATIVE_AOT',
     'RecycleBinMenuPersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_RECYCLE_BIN_PHASE',
-    'DESKBOX_AOT_MANAGED_UI_RECYCLE_BIN_RUN_ID',
+    'DESKCUE_AOT_MANAGED_UI_RECYCLE_BIN_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_RECYCLE_BIN_RUN_ID',
     'aot-5b4c1b1-file',
     'recycle-bin-menu',
     'widget-root',
@@ -6057,11 +6057,11 @@ $stage5B4C1B1NativeSource =
     $stage5B4C1B1Sources[$stage5B4C1B1SourceFiles[13]] +
     $stage5B4C1B1Sources[$stage5B4C1B1SourceFiles[14]]
 $stage5B4C1B1RequiredNativePatterns = @(
-    'DESKBOX_NATIVE_CAPABILITY_RECYCLE_BIN_V1',
-    'DESKBOX_RECYCLE_BIN_REQUEST_V1_SIZE_64',
-    'DESKBOX_RECYCLE_BIN_RESULT_V1_SIZE_64',
-    'deskbox_recycle_bin_v1',
-    'assert_eq!(deskbox_native_capabilities(), 511);',
+    'DESKCUE_NATIVE_CAPABILITY_RECYCLE_BIN_V1',
+    'DESKCUE_RECYCLE_BIN_REQUEST_V1_SIZE_64',
+    'DESKCUE_RECYCLE_BIN_RESULT_V1_SIZE_64',
+    'deskcue_recycle_bin_v1',
+    'assert_eq!(deskcue_native_capabilities(), 511);',
     'RecycleBinCapability = 1UL << 8',
     'NativeLibrary.TryGetExport',
     'result.Reserved5 != 0',
@@ -6088,13 +6088,13 @@ $stage5B4C1B1RustSource =
     $stage5B4C1B1Sources[$stage5B4C1B1SourceFiles[12]]
 $stage5B4C1B1RestoreInvokeAfterEnumeration =
     $stage5B4C1B1RustSource.IndexOf(
-        'result.enumerate_hresult = DESKBOX_NATIVE_S_OK',
+        'result.enumerate_hresult = DESKCUE_NATIVE_S_OK',
         [StringComparison]::Ordinal) -ge 0 -and
     $stage5B4C1B1RustSource.IndexOf(
         'item.InvokeVerb(&verb)',
         [StringComparison]::Ordinal) -gt
         $stage5B4C1B1RustSource.IndexOf(
-            'result.enumerate_hresult = DESKBOX_NATIVE_S_OK',
+            'result.enumerate_hresult = DESKCUE_NATIVE_S_OK',
             [StringComparison]::Ordinal)
 $stage5B4C1B1RequiredScenarioPatterns = @(
     'InvokeAotRecycleBinMenuDeleteAsync',
@@ -6205,20 +6205,20 @@ $stage5B4C1B1ActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4C1B2ASourceFiles = @(
-    "src/DeskBox/App.AotManagedUiSmoke.cs",
-    "src/DeskBox/App.AotShellMoveSmoke.cs",
-    "src/DeskBox/Services/AotShellMoveFixture.cs",
-    "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.AotShellMoveSmoke.cs",
-    "src/DeskBox/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
-    "src/DeskBox/Controls/FileItemMenuBuilder.cs",
-    "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.SelectionAndMenus.cs",
-    "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.xaml.cs",
-    "src/DeskBox/ViewModels/WidgetViewModel.Operations.cs",
-    "src/DeskBox/Services/OrganizerService.cs",
-    "src/DeskBox/Services/FileService.cs",
+    "src/DeskCue/App.AotManagedUiSmoke.cs",
+    "src/DeskCue/App.AotShellMoveSmoke.cs",
+    "src/DeskCue/Services/AotShellMoveFixture.cs",
+    "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.AotShellMoveSmoke.cs",
+    "src/DeskCue/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
+    "src/DeskCue/Controls/FileItemMenuBuilder.cs",
+    "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.SelectionAndMenus.cs",
+    "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.xaml.cs",
+    "src/DeskCue/ViewModels/WidgetViewModel.Operations.cs",
+    "src/DeskCue/Services/OrganizerService.cs",
+    "src/DeskCue/Services/FileService.cs",
     "scripts/run-aot-managed-ui-smoke.ps1",
     "scripts/run-aot-shell-move-persistence-smoke.ps1",
-    "native/deskbox-native/src/lib.rs"
+    "native/deskcue-native/src/lib.rs"
 )
 $stage5B4C1B2ASources = [ordered]@{}
 foreach ($sourceFile in $stage5B4C1B2ASourceFiles) {
@@ -6230,7 +6230,7 @@ $stage5B4C1B2ARunnerSource =
     $stage5B4C1B2ASources[$stage5B4C1B2ASourceFiles[1]]
 $stage5B4C1B2ARequiredRunnerPatterns = @(
     'ShellMovePersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_SHELL_MOVE_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_SHELL_MOVE_PHASE',
     'AotManagedUiShellMoveMutatePhase',
     'AotManagedUiShellMoveVerifyRestorePhase',
     'AotManagedUiShellMovePostflightPhase',
@@ -6254,10 +6254,10 @@ $stage5B4C1B2AMissingRunnerPatterns = @(
 $stage5B4C1B2AFixtureSource =
     $stage5B4C1B2ASources[$stage5B4C1B2ASourceFiles[2]]
 $stage5B4C1B2ARequiredFixturePatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
+    '#if DESKCUE_NATIVE_AOT',
     'ShellMovePersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_SHELL_MOVE_PHASE',
-    'DESKBOX_AOT_MANAGED_UI_SHELL_MOVE_RUN_ID',
+    'DESKCUE_AOT_MANAGED_UI_SHELL_MOVE_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_SHELL_MOVE_RUN_ID',
     'aot-5b4c1b2a-file',
     'widget-root',
     'desktop-root',
@@ -6429,7 +6429,7 @@ $stage5B4C1B2AForbiddenScopePatterns = @(
 )
 $stage5B4C1B2ARustAbiUnchanged =
     $stage5B4C1B2ASources[$stage5B4C1B2ASourceFiles[13]].Contains(
-        'assert_eq!(deskbox_native_capabilities(), 511);') -and
+        'assert_eq!(deskcue_native_capabilities(), 511);') -and
     [regex]::Matches(
         $stage5B4C1B2ASources[$stage5B4C1B2ASourceFiles[13]],
         [regex]::Escape('#[unsafe(no_mangle)]')).Count -eq 10
@@ -6452,18 +6452,18 @@ $stage5B4C1B2AActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4C1B2BSourceFiles = @(
-    "src/DeskBox/App.AotManagedUiSmoke.cs",
-    "src/DeskBox/App.AotFilePropertiesSmoke.cs",
-    "src/DeskBox/Services/AotFilePropertiesFixture.cs",
-    "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.AotFilePropertiesSmoke.cs",
-    "src/DeskBox/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
-    "src/DeskBox/Controls/FileItemMenuBuilder.cs",
-    "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.SelectionAndMenus.cs",
-    "src/DeskBox/Helpers/ShellContextMenuHelper.cs",
-    "src/DeskBox/Platform/Win32Helper.cs",
+    "src/DeskCue/App.AotManagedUiSmoke.cs",
+    "src/DeskCue/App.AotFilePropertiesSmoke.cs",
+    "src/DeskCue/Services/AotFilePropertiesFixture.cs",
+    "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.AotFilePropertiesSmoke.cs",
+    "src/DeskCue/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
+    "src/DeskCue/Controls/FileItemMenuBuilder.cs",
+    "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.SelectionAndMenus.cs",
+    "src/DeskCue/Helpers/ShellContextMenuHelper.cs",
+    "src/DeskCue/Platform/Win32Helper.cs",
     "scripts/run-aot-managed-ui-smoke.ps1",
     "scripts/run-aot-file-properties-smoke.ps1",
-    "native/deskbox-native/src/lib.rs"
+    "native/deskcue-native/src/lib.rs"
 )
 $stage5B4C1B2BSources = [ordered]@{}
 foreach ($sourceFile in $stage5B4C1B2BSourceFiles) {
@@ -6496,9 +6496,9 @@ $stage5B4C1B2BMissingRunnerPatterns = @(
 $stage5B4C1B2BFixtureSource =
     $stage5B4C1B2BSources[$stage5B4C1B2BSourceFiles[2]]
 $stage5B4C1B2BRequiredFixturePatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
+    '#if DESKCUE_NATIVE_AOT',
     'FilePropertiesReadOnly',
-    'DESKBOX_AOT_MANAGED_UI_FILE_PROPERTIES_RUN_ID',
+    'DESKCUE_AOT_MANAGED_UI_FILE_PROPERTIES_RUN_ID',
     'aot-5b4c1b2b-file',
     'file-properties',
     'widget-root',
@@ -6657,7 +6657,7 @@ $stage5B4C1B2BForbiddenScopePatterns = @(
                 'IFileOperation',
                 'SHFileOperation',
                 'RecycleBinNativeBackend',
-                'deskbox_native_')) {
+                'deskcue_native_')) {
             if ($stage5B4C1B2BSources[$sourceFile].IndexOf(
                     $pattern,
                     [StringComparison]::Ordinal) -ge 0) {
@@ -6668,7 +6668,7 @@ $stage5B4C1B2BForbiddenScopePatterns = @(
 )
 $stage5B4C1B2BRustAbiUnchanged =
     $stage5B4C1B2BSources[$stage5B4C1B2BSourceFiles[11]].Contains(
-        'assert_eq!(deskbox_native_capabilities(), 511);') -and
+        'assert_eq!(deskcue_native_capabilities(), 511);') -and
     [regex]::Matches(
         $stage5B4C1B2BSources[$stage5B4C1B2BSourceFiles[11]],
         [regex]::Escape('#[unsafe(no_mangle)]')).Count -eq 10
@@ -6691,18 +6691,18 @@ $stage5B4C1B2BActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4C1C1SourceFiles = @(
-    "src/DeskBox/App.AotManagedUiSmoke.cs",
-    "src/DeskBox/App.AotPickerClipboardSmoke.cs",
-    "src/DeskBox/Services/AotPickerClipboardFixture.cs",
-    "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.AotPickerClipboardSmoke.cs",
-    "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.xaml.cs",
-    "src/DeskBox/Services/FileOpenPickerService.cs",
-    "src/DeskBox/Services/FileService.cs",
-    "src/DeskBox/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
-    "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.AotLocalFileSmoke.cs",
+    "src/DeskCue/App.AotManagedUiSmoke.cs",
+    "src/DeskCue/App.AotPickerClipboardSmoke.cs",
+    "src/DeskCue/Services/AotPickerClipboardFixture.cs",
+    "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.AotPickerClipboardSmoke.cs",
+    "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.xaml.cs",
+    "src/DeskCue/Services/FileOpenPickerService.cs",
+    "src/DeskCue/Services/FileService.cs",
+    "src/DeskCue/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
+    "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.AotLocalFileSmoke.cs",
     "scripts/run-aot-managed-ui-smoke.ps1",
     "scripts/run-aot-picker-clipboard-smoke.ps1",
-    "native/deskbox-native/src/lib.rs"
+    "native/deskcue-native/src/lib.rs"
 )
 $stage5B4C1C1Sources = [ordered]@{}
 foreach ($sourceFile in $stage5B4C1C1SourceFiles) {
@@ -6716,7 +6716,7 @@ $stage5B4C1C1RequiredRunnerPatterns = @(
     'PickerClipboardStorageItemsPersistenceRestart',
     'picker-clipboard-storage-items-persistence-restart',
     'aot-5b4c1c1-file',
-    'DESKBOX_AOT_MANAGED_UI_PICKER_CLIPBOARD_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_PICKER_CLIPBOARD_PHASE',
     'CaptureAotManagedUiPickerClipboardAsync',
     'PickerClipboard = pickerClipboardPhase is null',
     'NormalShutdownRequested = true',
@@ -6759,9 +6759,9 @@ $stage5B4C1C1MissingProductPatterns = @(
 $stage5B4C1C1FixtureSource =
     $stage5B4C1C1Sources[$stage5B4C1C1SourceFiles[2]]
 $stage5B4C1C1RequiredFixturePatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
+    '#if DESKCUE_NATIVE_AOT',
     'PickerClipboardStorageItemsPersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_PICKER_CLIPBOARD_RUN_ID',
+    'DESKCUE_AOT_MANAGED_UI_PICKER_CLIPBOARD_RUN_ID',
     'aot-5b4c1c1-file',
     'runId is not { Length: 32 }',
     "character is not (>= '0' and <= '9')",
@@ -6889,7 +6889,7 @@ $stage5B4C1C1ForbiddenScopePatterns = @(
                 'NativeDrop',
                 'IDropTarget',
                 'IFileOperation',
-                'deskbox_native_',
+                'deskcue_native_',
                 'Clipboard.SetContent',
                 'Clipboard.GetContent')) {
             if ($stage5B4C1C1Sources[$sourceFile].IndexOf(
@@ -6902,7 +6902,7 @@ $stage5B4C1C1ForbiddenScopePatterns = @(
 )
 $stage5B4C1C1RustAbiUnchanged =
     $stage5B4C1C1Sources[$stage5B4C1C1SourceFiles[11]].Contains(
-        'assert_eq!(deskbox_native_capabilities(), 511);') -and
+        'assert_eq!(deskcue_native_capabilities(), 511);') -and
     [regex]::Matches(
         $stage5B4C1C1Sources[$stage5B4C1C1SourceFiles[11]],
         [regex]::Escape('#[unsafe(no_mangle)]')).Count -eq 10
@@ -6925,22 +6925,22 @@ $stage5B4C1C1ActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4C1C2ASourceFiles = @(
-    "src/DeskBox/App.AotManagedUiSmoke.cs",
-    "src/DeskBox/App.AotNativeDropSmoke.cs",
-    "src/DeskBox/Services/AotNativeDropFixture.cs",
-    "src/DeskBox/Views/ContentWidgetWindow.AotNativeDropSmoke.cs",
-    "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.AotNativeDropSmoke.cs",
-    "src/DeskBox/Views/ContentWidgetWindow.NativeDragDrop.cs",
-    "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.xaml.cs",
-    "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.xaml",
-    "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.ImportProgress.cs",
-    "src/DeskBox/Helpers/NativeDropTarget.cs",
-    "src/DeskBox/Helpers/NativeDropComDataReader.cs",
-    "src/DeskBox/Helpers/NativeDropTargetComInterop.cs",
-    "src/DeskBox/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
+    "src/DeskCue/App.AotManagedUiSmoke.cs",
+    "src/DeskCue/App.AotNativeDropSmoke.cs",
+    "src/DeskCue/Services/AotNativeDropFixture.cs",
+    "src/DeskCue/Views/ContentWidgetWindow.AotNativeDropSmoke.cs",
+    "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.AotNativeDropSmoke.cs",
+    "src/DeskCue/Views/ContentWidgetWindow.NativeDragDrop.cs",
+    "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.xaml.cs",
+    "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.xaml",
+    "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.ImportProgress.cs",
+    "src/DeskCue/Helpers/NativeDropTarget.cs",
+    "src/DeskCue/Helpers/NativeDropComDataReader.cs",
+    "src/DeskCue/Helpers/NativeDropTargetComInterop.cs",
+    "src/DeskCue/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
     "scripts/run-aot-managed-ui-smoke.ps1",
     "scripts/run-aot-native-drop-smoke.ps1",
-    "native/deskbox-native/src/lib.rs"
+    "native/deskcue-native/src/lib.rs"
 )
 $stage5B4C1C2ASources = [ordered]@{}
 foreach ($sourceFile in $stage5B4C1C2ASourceFiles) {
@@ -6953,7 +6953,7 @@ $stage5B4C1C2ARunnerSource =
 $stage5B4C1C2ARequiredRunnerPatterns = @(
     'NativeDropPersistenceRestart',
     'native-drop-persistence-restart',
-    'DESKBOX_AOT_MANAGED_UI_NATIVE_DROP_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_NATIVE_DROP_PHASE',
     'AotManagedUiNativeDropWidgetId',
     'bool isNativeDrop',
     '? AotManagedUiNativeDropWidgetId',
@@ -7011,10 +7011,10 @@ $stage5B4C1C2AMissingProductPatterns = @(
 $stage5B4C1C2AFixtureSource =
     $stage5B4C1C2ASources[$stage5B4C1C2ASourceFiles[2]]
 $stage5B4C1C2ARequiredFixturePatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
+    '#if DESKCUE_NATIVE_AOT',
     'NativeDropPersistenceRestart',
-    'DESKBOX_AOT_MANAGED_UI_NATIVE_DROP_PHASE',
-    'DESKBOX_AOT_MANAGED_UI_NATIVE_DROP_RUN_ID',
+    'DESKCUE_AOT_MANAGED_UI_NATIVE_DROP_PHASE',
+    'DESKCUE_AOT_MANAGED_UI_NATIVE_DROP_RUN_ID',
     'aot-5b4c1c2a-file',
     'runId is not { Length: 32 }',
     "character is not (>= '0' and <= '9')",
@@ -7171,7 +7171,7 @@ $stage5B4C1C2AForbiddenScopePatterns = @(
                 'SendInput',
                 'mouse_event',
                 'Process.Start("explorer',
-                'deskbox_native_')) {
+                'deskcue_native_')) {
             if ($stage5B4C1C2ASources[$sourceFile].IndexOf(
                     $pattern,
                     [StringComparison]::Ordinal) -ge 0) {
@@ -7182,7 +7182,7 @@ $stage5B4C1C2AForbiddenScopePatterns = @(
 )
 $stage5B4C1C2ARustAbiUnchanged =
     $stage5B4C1C2ASources[$stage5B4C1C2ASourceFiles[15]].Contains(
-        'assert_eq!(deskbox_native_capabilities(), 511);') -and
+        'assert_eq!(deskcue_native_capabilities(), 511);') -and
     [regex]::Matches(
         $stage5B4C1C2ASources[$stage5B4C1C2ASourceFiles[15]],
         [regex]::Escape('#[unsafe(no_mangle)]')).Count -eq 10
@@ -7205,15 +7205,15 @@ $stage5B4C1C2AActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4C2ASourceFiles = @(
-    "src/DeskBox/App.AotHotkeySmoke.cs",
-    "src/DeskBox/Platform/Win32Helper.AotHotkeySmoke.cs",
-    "src/DeskBox/Services/GlobalHotkeyService.cs",
-    "src/DeskBox/Services/SearchHotkeyService.cs",
-    "src/DeskBox/Services/ReservedHotkeyHookService.cs",
-    "src/DeskBox/Services/WinSpaceHotkeyStateMachine.cs",
-    "src/DeskBox/App.xaml.cs",
+    "src/DeskCue/App.AotHotkeySmoke.cs",
+    "src/DeskCue/Platform/Win32Helper.AotHotkeySmoke.cs",
+    "src/DeskCue/Services/GlobalHotkeyService.cs",
+    "src/DeskCue/Services/SearchHotkeyService.cs",
+    "src/DeskCue/Services/ReservedHotkeyHookService.cs",
+    "src/DeskCue/Services/WinSpaceHotkeyStateMachine.cs",
+    "src/DeskCue/App.xaml.cs",
     "scripts/run-aot-hotkey-smoke.ps1",
-    "native/deskbox-native/src/lib.rs"
+    "native/deskcue-native/src/lib.rs"
 )
 $stage5B4C2ASources = [ordered]@{}
 foreach ($sourceFile in $stage5B4C2ASourceFiles) {
@@ -7223,10 +7223,10 @@ foreach ($sourceFile in $stage5B4C2ASourceFiles) {
 $stage5B4C2AScenarioSource =
     $stage5B4C2ASources[$stage5B4C2ASourceFiles[0]]
 $stage5B4C2ARequiredScenarioPatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
-    'DESKBOX_AOT_HOTKEY_SMOKE',
-    'DESKBOX_AOT_HOTKEY_PHASE',
-    'DESKBOX_AOT_HOTKEY_RUN_ID',
+    '#if DESKCUE_NATIVE_AOT',
+    'DESKCUE_AOT_HOTKEY_SMOKE',
+    'DESKCUE_AOT_HOTKEY_PHASE',
+    'DESKCUE_AOT_HOTKEY_RUN_ID',
     'RegistrationLifecycle',
     'Guid.TryParseExact(runId, "N"',
     'dataPaths.IsDevelopmentRoot',
@@ -7342,7 +7342,7 @@ $stage5B4C2AForbiddenScopePatterns = @(
                 'PhysicalWinSpaceVerified = true',
                 'PhysicalRecorderVerified = true',
                 'ReservedHookSyntheticTriggerAttempted = true',
-                'deskbox_native_')) {
+                'deskcue_native_')) {
             if ($stage5B4C2ASources[$sourceFile].IndexOf(
                     $pattern,
                     [StringComparison]::Ordinal) -ge 0) {
@@ -7353,7 +7353,7 @@ $stage5B4C2AForbiddenScopePatterns = @(
 )
 $stage5B4C2ARustAbiUnchanged =
     $stage5B4C2ASources[$stage5B4C2ASourceFiles[8]].Contains(
-        'assert_eq!(deskbox_native_capabilities(), 511);') -and
+        'assert_eq!(deskcue_native_capabilities(), 511);') -and
     [regex]::Matches(
         $stage5B4C2ASources[$stage5B4C2ASourceFiles[8]],
         [regex]::Escape('#[unsafe(no_mangle)]')).Count -eq 10
@@ -7376,20 +7376,20 @@ $stage5B4C2AActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4C3ASourceFiles = @(
-    "src/DeskBox/App.AotTodoRecurrenceReminderSmoke.cs",
-    "src/DeskBox/App.xaml.cs",
-    "src/DeskBox/Services/TodoReminderService.cs",
-    "src/DeskBox/Services/TodoRecurrenceService.cs",
-    "src/DeskBox/Services/TodoWidgetStore.cs",
-    "src/DeskBox/Services/SettingsService.cs",
-    "src/DeskBox/Services/LocalizationService.cs",
-    "src/DeskBox/Models/TodoItem.cs",
-    "src/DeskBox/Models/TodoRecurrence.cs",
-    "src/DeskBox/Models/TodoReminderOptions.cs",
-    "src/DeskBox/Models/TodoWidgetData.cs",
+    "src/DeskCue/App.AotTodoRecurrenceReminderSmoke.cs",
+    "src/DeskCue/App.xaml.cs",
+    "src/DeskCue/Services/TodoReminderService.cs",
+    "src/DeskCue/Services/TodoRecurrenceService.cs",
+    "src/DeskCue/Services/TodoWidgetStore.cs",
+    "src/DeskCue/Services/SettingsService.cs",
+    "src/DeskCue/Services/LocalizationService.cs",
+    "src/DeskCue/Models/TodoItem.cs",
+    "src/DeskCue/Models/TodoRecurrence.cs",
+    "src/DeskCue/Models/TodoReminderOptions.cs",
+    "src/DeskCue/Models/TodoWidgetData.cs",
     "scripts/run-aot-todo-recurrence-reminder-smoke.ps1",
     "scripts/run-aot-managed-ui-smoke.ps1",
-    "native/deskbox-native/src/lib.rs"
+    "native/deskcue-native/src/lib.rs"
 )
 $stage5B4C3ASources = [ordered]@{}
 foreach ($sourceFile in $stage5B4C3ASourceFiles) {
@@ -7399,10 +7399,10 @@ foreach ($sourceFile in $stage5B4C3ASourceFiles) {
 $stage5B4C3AScenarioSource =
     $stage5B4C3ASources[$stage5B4C3ASourceFiles[0]]
 $stage5B4C3ARequiredScenarioPatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
-    'DESKBOX_AOT_TODO_RECURRENCE_REMINDER_SMOKE',
-    'DESKBOX_AOT_TODO_RECURRENCE_REMINDER_PHASE',
-    'DESKBOX_AOT_TODO_RECURRENCE_REMINDER_RUN_ID',
+    '#if DESKCUE_NATIVE_AOT',
+    'DESKCUE_AOT_TODO_RECURRENCE_REMINDER_SMOKE',
+    'DESKCUE_AOT_TODO_RECURRENCE_REMINDER_PHASE',
+    'DESKCUE_AOT_TODO_RECURRENCE_REMINDER_RUN_ID',
     'DeterministicStateMatrix',
     'Guid.TryParseExact(runId, "N"',
     'dataPaths.IsDevelopmentRoot',
@@ -7516,7 +7516,7 @@ $stage5B4C3AForbiddenScopePatterns = @(
                 'NativeAppNotification',
                 'AppNotificationManager',
                 'ToastNotification',
-                'deskbox_native_')) {
+                'deskcue_native_')) {
             if ($stage5B4C3ASources[$sourceFile].IndexOf(
                     $pattern,
                     [StringComparison]::Ordinal) -ge 0) {
@@ -7527,7 +7527,7 @@ $stage5B4C3AForbiddenScopePatterns = @(
 )
 $stage5B4C3ARustAbiUnchanged =
     $stage5B4C3ASources[$stage5B4C3ASourceFiles[13]].Contains(
-        'assert_eq!(deskbox_native_capabilities(), 511);') -and
+        'assert_eq!(deskcue_native_capabilities(), 511);') -and
     [regex]::Matches(
         $stage5B4C3ASources[$stage5B4C3ASourceFiles[13]],
         [regex]::Escape('#[unsafe(no_mangle)]')).Count -eq 10
@@ -7550,14 +7550,14 @@ $stage5B4C3AActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4C3B1SourceFiles = @(
-    "src/DeskBox/App.AotTodoNotificationLifecycleSmoke.cs",
-    "src/DeskBox/App.xaml.cs",
-    "src/DeskBox/Services/NativeAppNotificationService.cs",
-    "src/DeskBox/Package.appxmanifest",
+    "src/DeskCue/App.AotTodoNotificationLifecycleSmoke.cs",
+    "src/DeskCue/App.xaml.cs",
+    "src/DeskCue/Services/NativeAppNotificationService.cs",
+    "src/DeskCue/Package.appxmanifest",
     "scripts/run-aot-todo-notification-smoke.ps1",
     "scripts/run-aot-managed-ui-smoke.ps1",
-    "native/deskbox-native/src/lib.rs",
-    "src/DeskBox/DeskBox.csproj"
+    "native/deskcue-native/src/lib.rs",
+    "src/DeskCue/DeskCue.csproj"
 )
 $stage5B4C3B1Sources = [ordered]@{}
 foreach ($sourceFile in $stage5B4C3B1SourceFiles) {
@@ -7567,10 +7567,10 @@ foreach ($sourceFile in $stage5B4C3B1SourceFiles) {
 $stage5B4C3B1ScenarioSource =
     $stage5B4C3B1Sources[$stage5B4C3B1SourceFiles[0]]
 $stage5B4C3B1RequiredScenarioPatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
-    'DESKBOX_AOT_TODO_NOTIFICATION_SMOKE',
-    'DESKBOX_AOT_TODO_NOTIFICATION_PHASE',
-    'DESKBOX_AOT_TODO_NOTIFICATION_RUN_ID',
+    '#if DESKCUE_NATIVE_AOT',
+    'DESKCUE_AOT_TODO_NOTIFICATION_SMOKE',
+    'DESKCUE_AOT_TODO_NOTIFICATION_PHASE',
+    'DESKCUE_AOT_TODO_NOTIFICATION_RUN_ID',
     'RealDisplayAndCleanup',
     'Guid.TryParseExact(runId, "N"',
     'dataPaths.IsDevelopmentRoot',
@@ -7689,7 +7689,7 @@ $stage5B4C3B1ForbiddenScopePatterns = @(
                 'RedirectActivation',
                 'RemoveAllAsync',
                 'RemoveByGroupAsync',
-                'deskbox_native_')) {
+                'deskcue_native_')) {
             if ($stage5B4C3B1Sources[$sourceFile].IndexOf(
                     $pattern,
                     [StringComparison]::Ordinal) -ge 0) {
@@ -7707,7 +7707,7 @@ $stage5B4C3B1ForbiddenScopePatterns = @(
 )
 $stage5B4C3B1RustAbiUnchanged =
     $stage5B4C3B1Sources[$stage5B4C3B1SourceFiles[6]].Contains(
-        'assert_eq!(deskbox_native_capabilities(), 511);') -and
+        'assert_eq!(deskcue_native_capabilities(), 511);') -and
     [regex]::Matches(
         $stage5B4C3B1Sources[$stage5B4C3B1SourceFiles[6]],
         [regex]::Escape('#[unsafe(no_mangle)]')).Count -eq 10
@@ -7730,15 +7730,15 @@ $stage5B4C3B1ActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4C3B2ASourceFiles = @(
-    "src\DeskBox\App.AotTodoNotificationActivationSmoke.cs",
-    "src\DeskBox\App.xaml.cs",
-    "src\DeskBox\Services\TodoNotificationActivationRouter.cs",
-    "src\DeskBox\Services\TodoReminderService.cs",
-    "src\DeskBox\Services\TodoWidgetStore.cs",
+    "src\DeskCue\App.AotTodoNotificationActivationSmoke.cs",
+    "src\DeskCue\App.xaml.cs",
+    "src\DeskCue\Services\TodoNotificationActivationRouter.cs",
+    "src\DeskCue\Services\TodoReminderService.cs",
+    "src\DeskCue\Services\TodoWidgetStore.cs",
     "scripts\run-aot-todo-notification-activation-smoke.ps1",
     "scripts\run-aot-managed-ui-smoke.ps1",
-    "native\deskbox-native\src\lib.rs",
-    "src\DeskBox\DeskBox.csproj"
+    "native\deskcue-native\src\lib.rs",
+    "src\DeskCue\DeskCue.csproj"
 )
 $stage5B4C3B2ASources = @{}
 foreach ($sourceFile in $stage5B4C3B2ASourceFiles) {
@@ -7753,10 +7753,10 @@ foreach ($sourceFile in $stage5B4C3B2ASourceFiles) {
 $stage5B4C3B2AScenarioSource =
     $stage5B4C3B2ASources[$stage5B4C3B2ASourceFiles[0]]
 $stage5B4C3B2ARequiredScenarioPatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
-    'DESKBOX_AOT_TODO_NOTIFICATION_ACTIVATION_SMOKE',
-    'DESKBOX_AOT_TODO_NOTIFICATION_ACTIVATION_PHASE',
-    'DESKBOX_AOT_TODO_NOTIFICATION_ACTIVATION_RUN_ID',
+    '#if DESKCUE_NATIVE_AOT',
+    'DESKCUE_AOT_TODO_NOTIFICATION_ACTIVATION_SMOKE',
+    'DESKCUE_AOT_TODO_NOTIFICATION_ACTIVATION_PHASE',
+    'DESKCUE_AOT_TODO_NOTIFICATION_ACTIVATION_RUN_ID',
     'DeterministicActionRouting',
     'Guid.TryParseExact(runId, "N"',
     'dataPaths.IsDevelopmentRoot',
@@ -7880,7 +7880,7 @@ $stage5B4C3B2AForbiddenScopePatterns = @(
                 'RedirectActivation',
                 'RemoveAllAsync',
                 'RemoveByGroupAsync',
-                'deskbox_native_')) {
+                'deskcue_native_')) {
             if ($stage5B4C3B2ASources[$sourceFile].IndexOf(
                     $pattern,
                     [StringComparison]::Ordinal) -ge 0) {
@@ -7891,7 +7891,7 @@ $stage5B4C3B2AForbiddenScopePatterns = @(
 )
 $stage5B4C3B2ARustAbiUnchanged =
     $stage5B4C3B2ASources[$stage5B4C3B2ASourceFiles[7]].Contains(
-        'assert_eq!(deskbox_native_capabilities(), 511);') -and
+        'assert_eq!(deskcue_native_capabilities(), 511);') -and
     [regex]::Matches(
         $stage5B4C3B2ASources[$stage5B4C3B2ASourceFiles[7]],
         [regex]::Escape('#[unsafe(no_mangle)]')).Count -eq 10
@@ -7914,17 +7914,17 @@ $stage5B4C3B2AActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4C3B2B1SourceFiles = @(
-    "src\DeskBox\App.AotTodoNotificationForwardingSmoke.cs",
-    "src\DeskBox\App.xaml.cs",
-    "src\DeskBox\Services\NativeNotificationActivationEnvelopeStore.cs",
-    "src\DeskBox\Services\NativeAppNotificationService.cs",
-    "src\DeskBox\Services\TodoNotificationActivationRouter.cs",
-    "src\DeskBox\Services\TodoReminderService.cs",
+    "src\DeskCue\App.AotTodoNotificationForwardingSmoke.cs",
+    "src\DeskCue\App.xaml.cs",
+    "src\DeskCue\Services\NativeNotificationActivationEnvelopeStore.cs",
+    "src\DeskCue\Services\NativeAppNotificationService.cs",
+    "src\DeskCue\Services\TodoNotificationActivationRouter.cs",
+    "src\DeskCue\Services\TodoReminderService.cs",
     "scripts\run-aot-todo-notification-forwarding-smoke.ps1",
     "scripts\run-aot-managed-ui-smoke.ps1",
     "scripts\start-aot-preview.ps1",
-    "native\deskbox-native\src\lib.rs",
-    "src\DeskBox\DeskBox.csproj"
+    "native\deskcue-native\src\lib.rs",
+    "src\DeskCue\DeskCue.csproj"
 )
 $stage5B4C3B2B1Sources = @{}
 foreach ($sourceFile in $stage5B4C3B2B1SourceFiles) {
@@ -7939,10 +7939,10 @@ foreach ($sourceFile in $stage5B4C3B2B1SourceFiles) {
 $stage5B4C3B2B1ScenarioSource =
     $stage5B4C3B2B1Sources[$stage5B4C3B2B1SourceFiles[0]]
 $stage5B4C3B2B1RequiredScenarioPatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
-    'DESKBOX_AOT_TODO_NOTIFICATION_FORWARDING_SMOKE',
-    'DESKBOX_AOT_TODO_NOTIFICATION_FORWARDING_PHASE',
-    'DESKBOX_AOT_TODO_NOTIFICATION_FORWARDING_RUN_ID',
+    '#if DESKCUE_NATIVE_AOT',
+    'DESKCUE_AOT_TODO_NOTIFICATION_FORWARDING_SMOKE',
+    'DESKCUE_AOT_TODO_NOTIFICATION_FORWARDING_PHASE',
+    'DESKCUE_AOT_TODO_NOTIFICATION_FORWARDING_RUN_ID',
     'EnvelopeAndSingleInstance',
     'SeedColdStart',
     'ColdStartConsume',
@@ -8069,7 +8069,7 @@ $stage5B4C3B2B1ForbiddenScopePatterns = @(
                 'RedirectActivation',
                 'RemoveAllAsync',
                 'RemoveByGroupAsync',
-                'deskbox_native_')) {
+                'deskcue_native_')) {
             if ($stage5B4C3B2B1Sources[$sourceFile].IndexOf(
                     $pattern,
                     [StringComparison]::Ordinal) -ge 0) {
@@ -8080,7 +8080,7 @@ $stage5B4C3B2B1ForbiddenScopePatterns = @(
 )
 $stage5B4C3B2B1RustAbiUnchanged =
     $stage5B4C3B2B1Sources[$stage5B4C3B2B1SourceFiles[9]].Contains(
-        'assert_eq!(deskbox_native_capabilities(), 511);') -and
+        'assert_eq!(deskcue_native_capabilities(), 511);') -and
     [regex]::Matches(
         $stage5B4C3B2B1Sources[$stage5B4C3B2B1SourceFiles[9]],
         [regex]::Escape('#[unsafe(no_mangle)]')).Count -eq 10
@@ -8106,17 +8106,17 @@ $stage5B4C3B2B1ActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4C3B2B2ASourceFiles = @(
-    "src\DeskBox\App.AotTodoNotificationSurfaceSmoke.cs",
-    "src\DeskBox\App.AotManagedUiSmoke.cs",
-    "src\DeskBox\App.xaml.cs",
-    "src\DeskBox\Services\TodoNotificationActivationRouter.cs",
-    "src\DeskBox\Services\WidgetManager.FeatureWidgets.cs",
-    "src\DeskBox\Controls\WidgetContents\TodoWidgetContent.xaml.cs",
+    "src\DeskCue\App.AotTodoNotificationSurfaceSmoke.cs",
+    "src\DeskCue\App.AotManagedUiSmoke.cs",
+    "src\DeskCue\App.xaml.cs",
+    "src\DeskCue\Services\TodoNotificationActivationRouter.cs",
+    "src\DeskCue\Services\WidgetManager.FeatureWidgets.cs",
+    "src\DeskCue\Controls\WidgetContents\TodoWidgetContent.xaml.cs",
     "scripts\run-aot-todo-notification-surface-smoke.ps1",
     "scripts\run-aot-managed-ui-smoke.ps1",
     "scripts\start-aot-preview.ps1",
-    "native\deskbox-native\src\lib.rs",
-    "src\DeskBox\DeskBox.csproj"
+    "native\deskcue-native\src\lib.rs",
+    "src\DeskCue\DeskCue.csproj"
 )
 $stage5B4C3B2B2ASources = @{}
 foreach ($sourceFile in $stage5B4C3B2B2ASourceFiles) {
@@ -8131,8 +8131,8 @@ foreach ($sourceFile in $stage5B4C3B2B2ASourceFiles) {
 $stage5B4C3B2B2AScenarioSource =
     $stage5B4C3B2B2ASources[$stage5B4C3B2B2ASourceFiles[0]]
 $stage5B4C3B2B2ARequiredScenarioPatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
-    'DESKBOX_AOT_TODO_NOTIFICATION_SURFACE_SMOKE',
+    '#if DESKCUE_NATIVE_AOT',
+    'DESKCUE_AOT_TODO_NOTIFICATION_SURFACE_SMOKE',
     'TodoNotificationSurfaceRouting',
     'Stage = "5B-4C3B2B2A"',
     'RouteTodoNotificationActivationAsync(',
@@ -8230,7 +8230,7 @@ $stage5B4C3B2B2AForbiddenScopePatterns = @(
                 'UserClickVerified = true',
                 'RemoveAllAsync',
                 'RemoveByGroupAsync',
-                'deskbox_native_')) {
+                'deskcue_native_')) {
             if ($stage5B4C3B2B2ASources[$sourceFile].IndexOf(
                     $pattern,
                     [StringComparison]::Ordinal) -ge 0) {
@@ -8241,7 +8241,7 @@ $stage5B4C3B2B2AForbiddenScopePatterns = @(
 )
 $stage5B4C3B2B2ARustAbiUnchanged =
     $stage5B4C3B2B2ASources[$stage5B4C3B2B2ASourceFiles[9]].Contains(
-        'assert_eq!(deskbox_native_capabilities(), 511);') -and
+        'assert_eq!(deskcue_native_capabilities(), 511);') -and
     [regex]::Matches(
         $stage5B4C3B2B2ASources[$stage5B4C3B2B2ASourceFiles[9]],
         [regex]::Escape('#[unsafe(no_mangle)]')).Count -eq 10
@@ -8267,17 +8267,17 @@ $stage5B4C3B2B2AActualWmc1510Count = @(
     $warningMatches | Where-Object { $_ -ieq "WMC1510" }
 ).Count
 $stage5B4C3B2B2BSourceFiles = @(
-    "src\DeskBox\App.AotTodoNotificationUserClickSmoke.cs",
-    "src\DeskBox\App.AotManagedUiSmoke.cs",
-    "src\DeskBox\App.xaml.cs",
-    "src\DeskBox\Services\NativeAppNotificationService.cs",
-    "src\DeskBox\Services\NativeNotificationActivationEnvelopeStore.cs",
-    "src\DeskBox\Services\TodoNotificationActivationRouter.cs",
-    "src\DeskBox\Controls\WidgetContents\TodoWidgetContent.xaml.cs",
+    "src\DeskCue\App.AotTodoNotificationUserClickSmoke.cs",
+    "src\DeskCue\App.AotManagedUiSmoke.cs",
+    "src\DeskCue\App.xaml.cs",
+    "src\DeskCue\Services\NativeAppNotificationService.cs",
+    "src\DeskCue\Services\NativeNotificationActivationEnvelopeStore.cs",
+    "src\DeskCue\Services\TodoNotificationActivationRouter.cs",
+    "src\DeskCue\Controls\WidgetContents\TodoWidgetContent.xaml.cs",
     "scripts\run-aot-todo-notification-user-click-smoke.ps1",
     "scripts\start-aot-preview.ps1",
-    "native\deskbox-native\src\lib.rs",
-    "src\DeskBox\DeskBox.csproj"
+    "native\deskcue-native\src\lib.rs",
+    "src\DeskCue\DeskCue.csproj"
 )
 $stage5B4C3B2B2BSources = @{}
 foreach ($sourceFile in $stage5B4C3B2B2BSourceFiles) {
@@ -8292,8 +8292,8 @@ foreach ($sourceFile in $stage5B4C3B2B2BSourceFiles) {
 $stage5B4C3B2B2BScenarioSource =
     $stage5B4C3B2B2BSources[$stage5B4C3B2B2BSourceFiles[0]]
 $stage5B4C3B2B2BRequiredScenarioPatterns = @(
-    '#if DESKBOX_NATIVE_AOT',
-    'DESKBOX_AOT_TODO_NOTIFICATION_USER_CLICK_SMOKE',
+    '#if DESKCUE_NATIVE_AOT',
+    'DESKCUE_AOT_TODO_NOTIFICATION_USER_CLICK_SMOKE',
     'RealWindowsNotificationUserClick',
     'RunningMatrix',
     'ColdSeed',
@@ -8411,7 +8411,7 @@ $stage5B4C3B2B2BForbiddenScopePatterns = @(
                 'UIAutomationClient',
                 'RemoveAllAsync',
                 'RemoveByGroupAsync',
-                'deskbox_native_')) {
+                'deskcue_native_')) {
             if ($stage5B4C3B2B2BSources[$sourceFile].IndexOf(
                     $pattern,
                     [StringComparison]::Ordinal) -ge 0) {
@@ -8422,7 +8422,7 @@ $stage5B4C3B2B2BForbiddenScopePatterns = @(
 )
 $stage5B4C3B2B2BRustAbiUnchanged =
     $stage5B4C3B2B2BSources[$stage5B4C3B2B2BSourceFiles[9]].Contains(
-        'assert_eq!(deskbox_native_capabilities(), 511);') -and
+        'assert_eq!(deskcue_native_capabilities(), 511);') -and
     [regex]::Matches(
         $stage5B4C3B2B2BSources[$stage5B4C3B2B2BSourceFiles[9]],
         [regex]::Escape('#[unsafe(no_mangle)]')).Count -eq 10
@@ -9256,7 +9256,7 @@ $summary = [ordered]@{
         abiVersion = $rustAbiVersion
         capabilities = $rustCapabilities
         requiredExports = @($rustRequiredExports)
-        dllName = if ($rustNativeEnabled) { "deskbox_native.dll" } else { $null }
+        dllName = if ($rustNativeEnabled) { "deskcue_native.dll" } else { $null }
         stagingSha256 = $rustStagingSha256
         publishSha256 = $rustPublishSha256
         publishMatchesStaging = $rustPublishMatchesStaging
@@ -9266,38 +9266,38 @@ $summary = [ordered]@{
         lockedPackages = @($rustLockedPackages)
         shortcutBackendPolicy = [ordered]@{
             jitDefault = "csharp"
-            explicitOptInEnvironmentVariable = "DESKBOX_SHORTCUT_BACKEND"
+            explicitOptInEnvironmentVariable = "DESKCUE_SHORTCUT_BACKEND"
             nativeAot = "rust"
-            nativeAotCompileTimeDefine = "DESKBOX_NATIVE_AOT"
+            nativeAotCompileTimeDefine = "DESKCUE_NATIVE_AOT"
             fallbackOnNativeFailure = $false
         }
         musicVolumeBackendPolicy = [ordered]@{
             jitDefault = "csharp"
-            explicitOptInEnvironmentVariable = "DESKBOX_MUSIC_VOLUME_BACKEND"
+            explicitOptInEnvironmentVariable = "DESKCUE_MUSIC_VOLUME_BACKEND"
             nativeAot = "rust"
-            nativeAotCompileTimeDefine = "DESKBOX_NATIVE_AOT"
+            nativeAotCompileTimeDefine = "DESKCUE_NATIVE_AOT"
             fallbackOnNativeFailure = $false
         }
         explorerShellBackendPolicy = [ordered]@{
             jitDefault = "csharp"
-            explicitOptInEnvironmentVariable = "DESKBOX_EXPLORER_SHELL_BACKEND"
+            explicitOptInEnvironmentVariable = "DESKCUE_EXPLORER_SHELL_BACKEND"
             nativeAot = "rust"
-            nativeAotCompileTimeDefine = "DESKBOX_NATIVE_AOT"
+            nativeAotCompileTimeDefine = "DESKCUE_NATIVE_AOT"
             fallbackOnNativeFailure = $false
             productFallback = "Process.Start/SHOpenWithDialog"
         }
         quickAccessBackendPolicy = [ordered]@{
             jitDefault = "csharp"
-            explicitOptInEnvironmentVariable = "DESKBOX_QUICK_ACCESS_BACKEND"
+            explicitOptInEnvironmentVariable = "DESKCUE_QUICK_ACCESS_BACKEND"
             nativeAot = "rust"
-            nativeAotCompileTimeDefine = "DESKBOX_NATIVE_AOT"
+            nativeAotCompileTimeDefine = "DESKCUE_NATIVE_AOT"
             fallbackOnNativeFailure = $false
             asynchronousApartment = "dedicated STA"
         }
         recycleBinBackendPolicy = [ordered]@{
             productDelete = "C# SHFileOperationW"
             nativeAotExactQueryAndRestore = "rust"
-            nativeAotCompileTimeDefine = "DESKBOX_NATIVE_AOT"
+            nativeAotCompileTimeDefine = "DESKCUE_NATIVE_AOT"
             fallbackOnNativeFailure = $false
             exactIdentity = "original parent plus item name"
             restoreRequiresExactlyOneMatch = $true

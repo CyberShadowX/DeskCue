@@ -1,4 +1,4 @@
-# DeskBox Current Architecture
+# DeskCue Current Architecture
 
 Foundation overview: 2026-07-20. Maintenance entry updated: 2026-09-23.
 
@@ -67,7 +67,7 @@ per-batch record lives in
   (update card) stay on the shell by the batch-50 verdict: host-lifeline
   sections whose writers are services the Features layer must not reference.
 - P/Invoke. Non-Platform declarations are a hard zero since batch 31: all 270
-  declarations live under `src/DeskBox/Platform`.
+  declarations live under `src/DeskCue/Platform`.
 - AppSettings. Re-qualified by batch 51 as a frozen on-disk wire contract:
   the 220 passthroughs are pure disk-schema mapping and cannot be deleted,
   slice-direct serialization cannot stay byte-equivalent, and runtime
@@ -89,7 +89,7 @@ This document describes the current architecture after the 1.2.0 widget foundati
 
 ## Current Goal
 
-DeskBox is moving toward a reusable widget foundation without forcing every existing widget into the same implementation immediately.
+DeskCue is moving toward a reusable widget foundation without forcing every existing widget into the same implementation immediately.
 
 The current rule is:
 
@@ -138,14 +138,14 @@ Use this path for future content-type widgets whenever possible.
 
 Core widget foundation:
 
-- `src/DeskBox/Models/WidgetKind.cs`
-- `src/DeskBox/Models/WidgetConfig.cs`
-- `src/DeskBox/Services/WidgetRegistry.cs`
-- `src/DeskBox/Services/WidgetContentDescriptor.cs`
-- `src/DeskBox/Services/WidgetContentFactory.cs`
-- `src/DeskBox/Services/IWidgetContentProvider.cs`
-- `src/DeskBox/Services/ContentWidgetWindowFactory.cs`
-- `src/DeskBox/Services/WidgetManager.cs`
+- `src/DeskCue/Models/WidgetKind.cs`
+- `src/DeskCue/Models/WidgetConfig.cs`
+- `src/DeskCue/Services/WidgetRegistry.cs`
+- `src/DeskCue/Services/WidgetContentDescriptor.cs`
+- `src/DeskCue/Services/WidgetContentFactory.cs`
+- `src/DeskCue/Services/IWidgetContentProvider.cs`
+- `src/DeskCue/Services/ContentWidgetWindowFactory.cs`
+- `src/DeskCue/Services/WidgetManager.cs`
 
 Window creation routing:
 
@@ -155,56 +155,56 @@ Window creation routing:
 
 Shared shell and window helpers:
 
-- `src/DeskBox/Controls/WidgetShell.xaml`
-- `src/DeskBox/Controls/WidgetShell.xaml.cs`
-- `src/DeskBox/Controls/WidgetShellContentHost.cs`
-- `src/DeskBox/Services/WidgetTrayAnimationController.cs`
-- `src/DeskBox/Services/WidgetTitleBarMetrics.cs`
-- `src/DeskBox/Services/WidgetSessionManager.cs`
+- `src/DeskCue/Controls/WidgetShell.xaml`
+- `src/DeskCue/Controls/WidgetShell.xaml.cs`
+- `src/DeskCue/Controls/WidgetShellContentHost.cs`
+- `src/DeskCue/Services/WidgetTrayAnimationController.cs`
+- `src/DeskCue/Services/WidgetTitleBarMetrics.cs`
+- `src/DeskCue/Services/WidgetSessionManager.cs`
 
 Display binding (widgets pinned to a display by hardware identity; requirements in `docs/requirements/widget-screen-binding.md`):
 
-- `src/DeskBox/Services/WidgetScreenCatalog.cs`: enumerates monitors into stable identities (PnP device-interface id via `Win32Helper.ResolveStableMonitorId`, rejecting unstable `\\.\DISPLAYn` fallbacks) and resolves bound widgets/groups to a target work area.
-- `src/DeskBox/Services/WidgetScreenMenuBuilder.cs`: builds the per-widget/group "show on" context-menu section (auto / follow primary / pinned to a named display).
-- `src/DeskBox/Views/SettingsSections/DisplaySettingsSection.xaml(.cs)`: the Displays settings page — arrangement preview (accent-filled selection applied in code-behind), identify overlay trigger, per-screen widget lists with inline rebind combos, pin-all, and the clearable default display for new widgets.
-- `src/DeskBox/Views/DisplayIdentifyOverlayWindow.cs`: borderless topmost per-monitor overlay that flashes the display number and fades out (classic layered-window alpha).
+- `src/DeskCue/Services/WidgetScreenCatalog.cs`: enumerates monitors into stable identities (PnP device-interface id via `Win32Helper.ResolveStableMonitorId`, rejecting unstable `\\.\DISPLAYn` fallbacks) and resolves bound widgets/groups to a target work area.
+- `src/DeskCue/Services/WidgetScreenMenuBuilder.cs`: builds the per-widget/group "show on" context-menu section (auto / follow primary / pinned to a named display).
+- `src/DeskCue/Views/SettingsSections/DisplaySettingsSection.xaml(.cs)`: the Displays settings page — arrangement preview (accent-filled selection applied in code-behind), identify overlay trigger, per-screen widget lists with inline rebind combos, pin-all, and the clearable default display for new widgets.
+- `src/DeskCue/Views/DisplayIdentifyOverlayWindow.cs`: borderless topmost per-monitor overlay that flashes the display number and fades out (classic layered-window alpha).
 
 Current windows:
 
-- `src/DeskBox/Views/QuickCaptureWidgetWindow.xaml.cs`: QuickCapture / note widget.
-- `src/DeskBox/Views/ContentWidgetWindow.xaml.cs`: File, Todo, Music, Weather, Search, and future content widgets.
+- `src/DeskCue/Views/QuickCaptureWidgetWindow.xaml.cs`: QuickCapture / note widget.
+- `src/DeskCue/Views/ContentWidgetWindow.xaml.cs`: File, Todo, Music, Weather, Search, and future content widgets.
 
 Current Todo implementation:
 
-- `src/DeskBox/Controls/WidgetContents/TodoWidgetContent.xaml`
-- `src/DeskBox/Controls/WidgetContents/TodoWidgetContent.xaml.cs`
-- `src/DeskBox/Controls/WidgetContents/TodoWidgetContentAdapter.cs`
-- `src/DeskBox/ViewModels/TodoWidgetViewModel.cs`
-- `src/DeskBox/Services/TodoWidgetStore.cs`
-- `src/DeskBox/Services/TodoWidgetContentProvider.cs`
+- `src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml`
+- `src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml.cs`
+- `src/DeskCue/Controls/WidgetContents/TodoWidgetContentAdapter.cs`
+- `src/DeskCue/ViewModels/TodoWidgetViewModel.cs`
+- `src/DeskCue/Services/TodoWidgetStore.cs`
+- `src/DeskCue/Services/TodoWidgetContentProvider.cs`
 
 Current Music implementation:
 
-- `src/DeskBox/Controls/WidgetContents/MusicWidgetContent.xaml`
-- `src/DeskBox/Controls/WidgetContents/MusicWidgetContent.xaml.cs`
-- `src/DeskBox/Controls/WidgetContents/MusicWidgetContentAdapter.cs`
-- `src/DeskBox/ViewModels/MusicWidgetViewModel.cs`
-- `src/DeskBox/ViewModels/MusicBarViewModel.cs`
-- `src/DeskBox/Services/MusicSessionService.cs`
-- `src/DeskBox/Services/MusicVolumeService.cs`
-- `src/DeskBox/Services/MusicWidgetContentProvider.cs`
+- `src/DeskCue/Controls/WidgetContents/MusicWidgetContent.xaml`
+- `src/DeskCue/Controls/WidgetContents/MusicWidgetContent.xaml.cs`
+- `src/DeskCue/Controls/WidgetContents/MusicWidgetContentAdapter.cs`
+- `src/DeskCue/ViewModels/MusicWidgetViewModel.cs`
+- `src/DeskCue/ViewModels/MusicBarViewModel.cs`
+- `src/DeskCue/Services/MusicSessionService.cs`
+- `src/DeskCue/Services/MusicVolumeService.cs`
+- `src/DeskCue/Services/MusicWidgetContentProvider.cs`
 
 Current Weather implementation:
 
-- `src/DeskBox/Controls/WidgetContents/WeatherWidgetContent.xaml`
-- `src/DeskBox/Controls/WidgetContents/WeatherWidgetContent.xaml.cs`
-- `src/DeskBox/Controls/WidgetContents/WeatherWidgetContentAdapter.cs`
-- `src/DeskBox/ViewModels/WeatherWidgetViewModel.cs`
-- `src/DeskBox/ViewModels/WeatherWidgetViewModel.DataProcessing.cs`
-- `src/DeskBox/ViewModels/WeatherWidgetViewModel.RefreshAndLayout.cs`
-- `src/DeskBox/Services/WeatherService.cs`
-- `src/DeskBox/Helpers/WeatherCodeMapper.cs`
-- `src/DeskBox/Helpers/WindowsLocationHelper.cs`
+- `src/DeskCue/Controls/WidgetContents/WeatherWidgetContent.xaml`
+- `src/DeskCue/Controls/WidgetContents/WeatherWidgetContent.xaml.cs`
+- `src/DeskCue/Controls/WidgetContents/WeatherWidgetContentAdapter.cs`
+- `src/DeskCue/ViewModels/WeatherWidgetViewModel.cs`
+- `src/DeskCue/ViewModels/WeatherWidgetViewModel.DataProcessing.cs`
+- `src/DeskCue/ViewModels/WeatherWidgetViewModel.RefreshAndLayout.cs`
+- `src/DeskCue/Services/WeatherService.cs`
+- `src/DeskCue/Helpers/WeatherCodeMapper.cs`
+- `src/DeskCue/Helpers/WindowsLocationHelper.cs`
 
 ## WidgetRegistry
 
@@ -484,11 +484,11 @@ Menu font and spacing are centralized in `App.xaml`.
 
 Relevant resources include:
 
-- `DeskBoxMenuFontFamily`
-- `DeskBoxMenuPresenterPadding`
-- `DeskBoxMenuItemPadding`
-- `DeskBoxMenuItemMinHeight`
-- `DeskBoxMenuItemFontSize`
+- `DeskCueMenuFontFamily`
+- `DeskCueMenuPresenterPadding`
+- `DeskCueMenuItemPadding`
+- `DeskCueMenuItemMinHeight`
+- `DeskCueMenuItemFontSize`
 
 Tray menu, widget title menus, and content menus should use these shared resources. Do not hard-code local menu font or padding unless there is a specific WinUI limitation.
 
@@ -496,23 +496,23 @@ Tray menu, widget title menus, and content menus should use these shared resourc
 
 Main settings:
 
-- `%LocalAppData%/DeskBox/settings.json`
+- `%LocalAppData%/DeskCue/settings.json`
 
 Widget-specific data:
 
-- `%LocalAppData%/DeskBox/data/widgets/{widgetId}/...`
+- `%LocalAppData%/DeskCue/data/widgets/{widgetId}/...`
 
 Todo data:
 
-- `%LocalAppData%/DeskBox/data/widgets/{widgetId}/todo.json`
+- `%LocalAppData%/DeskCue/data/widgets/{widgetId}/todo.json`
 
 QuickCapture data:
 
-- `%LocalAppData%/DeskBox/data/quick-capture/quick-capture.json`
-- `%LocalAppData%/DeskBox/data/quick-capture/images/...`
-- `%LocalAppData%/DeskBox/data/quick-capture/thumbnails/...`
+- `%LocalAppData%/DeskCue/data/quick-capture/quick-capture.json`
+- `%LocalAppData%/DeskCue/data/quick-capture/images/...`
+- `%LocalAppData%/DeskCue/data/quick-capture/thumbnails/...`
 
-Uninstalling the app may remove binaries but should not be assumed to remove `%LocalAppData%/DeskBox`. This is user data. (Correction 2026-10-04: this holds for the direct-install channel. The store build's `%LocalAppData%` writes are redirected by MSIX AppData write virtualization to `Packages/[PFN]/LocalCache`, which is removed on uninstall and preserved only across same-PackageFamilyName updates — see `module-boundary-roadmap-20260918.md`.)
+Uninstalling the app may remove binaries but should not be assumed to remove `%LocalAppData%/DeskCue`. This is user data. (Correction 2026-10-04: this holds for the direct-install channel. The store build's `%LocalAppData%` writes are redirected by MSIX AppData write virtualization to `Packages/[PFN]/LocalCache`, which is removed on uninstall and preserved only across same-PackageFamilyName updates — see `module-boundary-roadmap-20260918.md`.)
 
 ## Adding A New Content Widget
 
@@ -548,7 +548,7 @@ Reasons:
 
 Then:
 
-- `Tags`: internal DeskBox index only, no file metadata writes.
+- `Tags`: internal DeskCue index only, no file metadata writes.
 
 Last:
 
@@ -575,8 +575,8 @@ Touch these only with focused changes and manual regression.
 Most recent verification:
 
 ```powershell
-dotnet build .\DeskBox.sln -c Debug -p:Platform=x64 --no-restore
-dotnet test .\DeskBox.sln -c Debug -p:Platform=x64 --no-build
+dotnet build .\DeskCue.sln -c Debug -p:Platform=x64 --no-restore
+dotnet test .\DeskCue.sln -c Debug -p:Platform=x64 --no-build
 ```
 
 Result:

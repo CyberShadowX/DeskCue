@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-3C 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-3C 完成与复盘报告
 
 - 审计日期：2026-08-22
 - 范围：可控媒体 session 匹配 getter、session setter、应用内恢复、强制终止后的独立恢复
@@ -22,11 +22,11 @@
 
 ## 2. 可控 Rust 音频夹具
 
-新增工作区包 `native/deskbox-audio-session-fixture`。它只供 5B-3C 外层脚本使用：
+新增工作区包 `native/deskcue-audio-session-fixture`。它只供 5B-3C 外层脚本使用：
 
 - 生成 8 kHz、16-bit、mono 的 1 秒 PCM WAV，数据区全部为 0；
 - 通过 `PlaySoundW` 的 `SND_FILENAME | SND_ASYNC | SND_LOOP | SND_NODEFAULT` 建立稳定 session；
-- 可执行文件名和传给产品的 display name 均固定为 `deskbox-audio-session-fixture`；
+- 可执行文件名和传给产品的 display name 均固定为 `deskcue-audio-session-fixture`；
 - 接受绝对 `--wave`、`--ready`、`--stop` 和 `--parent-pid` 参数；
 - 持有父脚本进程句柄，父进程退出时自动停止音频并退出；正常流程由 stop marker 收尾；
 - 音频负载为静音，不产生可听声音，但仍提供真实 Core Audio session。
@@ -35,18 +35,18 @@
 
 ## 3. 产品调用与身份边界
 
-新增 `App.AotMusicVolumeSessionMutationSmoke.cs`，仅在 `DESKBOX_NATIVE_AOT` 中编译，并且只有显式设置以下变量才运行：
+新增 `App.AotMusicVolumeSessionMutationSmoke.cs`，仅在 `DESKCUE_NATIVE_AOT` 中编译，并且只有显式设置以下变量才运行：
 
 ```text
-DESKBOX_AOT_MUSIC_VOLUME_SESSION_MUTATION_SMOKE
-DESKBOX_AOT_MUSIC_VOLUME_SESSION_FIXTURE_PID
+DESKCUE_AOT_MUSIC_VOLUME_SESSION_MUTATION_SMOKE
+DESKCUE_AOT_MUSIC_VOLUME_SESSION_FIXTURE_PID
 ```
 
 runner 要求 preview 数据根、唯一同名进程和传入 PID 三者同时成立，否则返回 `RefusedNonPreviewRoot` 或 `RefusedUntrustedFixture`。它使用固定 identity：
 
 ```text
-sourceAppUserModelId = DeskBox.Aot.Controlled.Session.Identity
-sourceDisplayName   = deskbox-audio-session-fixture
+sourceAppUserModelId = DeskCue.Aot.Controlled.Session.Identity
+sourceDisplayName   = deskcue-audio-session-fixture
 expectedMatchKind   = 4
 ```
 
@@ -113,7 +113,7 @@ aot-music-volume-session-mutation-smoke/session-recovery-intent.json
 .artifacts/aot-music-volume-session-mutation-smoke/win-x64/session.json
 ```
 
-并保留六个阶段 result JSON。证据记录同次 `DeskBox.exe`、`deskbox_native.dll` 和夹具 EXE 的路径与 SHA-256；哈希用于绑定本次审计和运行，不宣称跨次 Native AOT 构建字节级可复现。
+并保留六个阶段 result JSON。证据记录同次 `DeskCue.exe`、`deskcue_native.dll` 和夹具 EXE 的路径与 SHA-256；哈希用于绑定本次审计和运行，不宣称跨次 Native AOT 构建字节级可复现。
 
 ## 6. AOT 与自动化门禁
 

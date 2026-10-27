@@ -1,7 +1,7 @@
-# DeskBox Rust 与 Native AOT 分阶段优化报告
+# DeskCue Rust 与 Native AOT 分阶段优化报告
 
 - 报告日期：2026-08-23
-- 代码基线：`22d29480bdcac98f636b94b2990ceff2b8f2a0de`（DeskBox 1.4.3）
+- 代码基线：`22d29480bdcac98f636b94b2990ceff2b8f2a0de`（DeskCue 1.4.3）
 - 核对范围：旧规划、当前 C#/WinUI 代码、项目与发布脚本、现有测试静态清单、多次 x64 Native AOT 实际发布审计
 - 当前实施状态：阶段 0/1/2、3A、3B、3C、4A 至 4E-5、5A、5B-1 至 5B-3C、5B-4A、5B-4B1、5B-4B2A、5B-4B2B1、5B-4B2B2A、5B-4B2B2B1、5B-4B2B2B2、5B-4B2C1、5B-4B2C2A、5B-4B2C2B、5B-4C1A、5B-4C1B1、5B-4C1B2A、5B-4C1B2B、5B-4C1C1、5B-4C1C2A、5B-4C2A、5B-4C3A、5B-4C3B1、5B-4C3B2A、5B-4C3B2B1 和 5B-4C3B2B2A 已完成到各自定义的构建、测试、AOT 产物审计或实际运行边界。C1C2B 已增加真实 Explorer 窗口与注入鼠标的自动补充证据，但 `PhysicalExplorerMouseVerified` 仍为 false；C2A 已完成可自动化的主/搜索热键注册和 hook 生命周期；C3B1 已证明真实系统通知的展示与清理，C3B2A 已证明 grammar 和确定性动作路由，C3B2B1 以类型化 envelope 保存 arguments、完整 `UserInput`、来源 PID 与时序信息并通过冷启动恢复和真实第二实例 mutex/event 转发矩阵；C3B2B2A 又证明受控 activation 进入产品后能在真实 Todo HWND/XamlRoot 定位正文目标，并在 Complete/Snooze 后完成两帧可见刷新。产品 JSON 固定为 29 个文件、65/65 处 source-generated 调用和 27 个 context 所有者。普通 JIT 的四个既有原生产品边界默认仍走 C#；NativeAOT 对这些产品操作使用 Rust，并增加内部回收站精确查询/恢复边界，产品 Shell move、Properties、Picker、StorageItems、OLE drop、热键和 Todo 通知/activation 路由继续保留更简单的 C#/WinRT/source-generated COM/Win32 实现。生产模块保持 ABI 2、能力 511 和十个必需导出。最新 x64 审计为 profile 56 / schema 53，WMC1506=0、WMC1510=1211，完整 `always-throw` 及原始 IL2026、IL2050、IL2072、IL2075、IL3050 均为 0；全部 AOT 相关测试 452/452、Rust 57/57、x64 全量 2468/2468。C1C2B 与 C2B 物理输入门继续作为发布前条件；下一项为 5B-4C3B2B2B1 运行中主实例的真实 Windows 通知点击与 activation 来源证明。
 
@@ -38,7 +38,7 @@
 >
 > 2026-08-24 阶段 7C1 自动化分发矩阵完成：GitHub 原生 x64/ARM64 runner 均通过最终 Direct AOT
 > publish、Inno 安装器、Store MSIX/appxsym/msixupload 与包内容/哈希审计；Store AOT 明确包含静态
-> `deskbox_native.dll`，不包含 Updater、SearchCore、managed runtime 元数据或 PDB。该结果不包含签名、
+> `deskcue_native.dll`，不包含 Updater、SearchCore、managed runtime 元数据或 PDB。该结果不包含签名、
 > WACK、安装、覆盖升级或实体设备。原始目标加权约 98%；下一阶段为 7C2 合并 Store 上传包和外部发布证据。
 
 ## 1. 结论摘要
@@ -48,8 +48,8 @@
 3. **不需要先重做功能或测试体系。** 仓库现有测试足以作为分批修改基础；5B-4C3B2B2A 增加目标/刷新结果语义、5 条阶段契约和 1 条失败分支单元测试，并继续区分静态契约、实际 AOT 运行、真实第二应用实例、Windows 外部 activation 与目标系统人工验证。程序化 HDROP 不冒充真人 Explorer 鼠标，`SendInput` 只证明标准 `RegisterHotKey` 的 OS 分发，不冒充物理键盘或 Win+Space hook 触发；受控 activation 只证明真实 Todo surface 行为，不冒充通知中心真人点击。
 4. **Rust 适合选择性引入，不适合改写 WinUI、ViewModel 或所有 Win32 代码。** Rust 现已接管 Native AOT 中全部 `CLSID_ShellLink` 产品操作、音乐音量 Core Audio、Explorer 托管启动和 Quick Access 边界，并为 C1B1 提供完整粗粒度的回收站精确查询/恢复；产品删除仍保留更简单的 C# P/Invoke，普通 JIT 默认保留四个既有产品边界的 C# oracle。SearchCore 已通过 6D 稳定性、整机内存和 7B 原生 ARM64 后端门禁，在 Direct x64/ARM64 模块构建中默认启用；Store 保持 managed。两个 Rust DLL 的生产默认采用静态 CRT，不扩大到 WinUI 重写。
 5. **AOT 和 Rust 是两条可独立验收的路线。** AOT 兼容性清理不能依赖搜索核心已经 Rust 化；Rust 模块也不能以“主程序能 AOT 编译”代替自身的 ABI、架构和结果一致性验证。
-6. **第一项最小 AOT 交付物应是更新器。** `DeskBox.Updater` 已单独完成无警告 AOT 发布，且代码边界很小。主项目原先没有把 `PublishAot` 传给更新器，阶段 1 已修正这一问题，并消除了 AOT 目录中混入的 CoreCLR/JIT 更新器运行时。
-7. **3C-3-R 已封闭项目级 AOT/Rust 属性矛盾。** `ValidateDeskBoxNativeAotConfiguration` 在编译前要求 `Platform=x64`、`RuntimeIdentifier=win-x64` 和 `DeskBoxRustNative=true`；普通 JIT 默认仍为 `false`。审计脚本只保留受支持的 x64 路径，ARM64 会在解析 dotnet host、创建或清理产物前失败。真实 MSBuild 正反向组合、负向 `dotnet build` 和脚本提前失败均已验证。
+6. **第一项最小 AOT 交付物应是更新器。** `DeskCue.Updater` 已单独完成无警告 AOT 发布，且代码边界很小。主项目原先没有把 `PublishAot` 传给更新器，阶段 1 已修正这一问题，并消除了 AOT 目录中混入的 CoreCLR/JIT 更新器运行时。
+7. **3C-3-R 已封闭项目级 AOT/Rust 属性矛盾。** `ValidateDeskCueNativeAotConfiguration` 在编译前要求 `Platform=x64`、`RuntimeIdentifier=win-x64` 和 `DeskCueRustNative=true`；普通 JIT 默认仍为 `false`。审计脚本只保留受支持的 x64 路径，ARM64 会在解析 dotnet host、创建或清理产物前失败。真实 MSBuild 正反向组合、负向 `dotnet build` 和脚本提前失败均已验证。
 8. **4A 已移除 FolderPicker 的传统 COM 硬阻断并完成验收。** 服务改为 Windows App SDK `FolderPicker(WindowId)` 异步 API，8 个产品入口全部显式等待并传递有效 owner；托盘与 JumpList 统一使用长期存在的托盘宿主 HWND，服务拒绝零句柄和失效句柄。自动化、AOT 审计以及设置、引导、Glance、桌面整理、托盘与 JumpList 的人工选择/取消/窗口关系矩阵均已通过。
 9. **4B JSON source generation 阶段已完成。** 当时的 16 个文件、49 处产品调用已全部显式绑定 14 个分域 context；反射型调用与非泛型 converter 均为 0。后续隔离 AOT runner 继续使用显式 context。当前固定清单为 29 个文件、65/65 处调用、27 个 context 所有者；5B-4C3B2B2A 复用现有 managed UI 结果 context，没有增加 JSON 调用或反射回退。既有用户持久化格式没有变化。
 10. **4C 音乐音量 COM 已完成结构迁移和真实边界验证。** 选择现有 Rust DLL 的粗粒度 Core Audio 边界而非逐接口生成式 COM；冻结并复现默认 endpoint、系统/session 音量、匹配、apartment 和失败回退语义。普通 JIT 默认仍为 C#，显式 Rust 与 AOT 使用 ABI v1 音量导出；配置 14 / schema 11 的结构审计确认 ABI 2、能力 63、七个导出、同次哈希一致和 `always-throw=0`。后续 5B-3A/3B/3C 已分别实际验证只读边界、系统主音量 setter 以及匹配 session getter/setter；5B-3C 使用测试专用 Rust 静音夹具完成应用内与独立新进程恢复，未控制用户播放器。
@@ -73,7 +73,7 @@
 28. **5B-2B Quick Access pin/unpin 与故障补偿 AOT → Rust 冒烟已完成。** 独立 preview 根中的稳定目标先后覆盖正常 `NotPinned → Pinned → NotPinned`、固定后应用内主动失败、固定后受审计进程强制终止，以及新 AOT 进程观察 `Pinned` 后补偿到 `NotPinned`。11 条契约最终 11/11、Rust 52/52、x64 全量 2160/2160；profile 32 / schema 29 保持 WMC1510=1216、`always-throw=0`、Rust ABI 2/能力 255/九个导出。六个实际 AOT 进程均按精确 EXE 路径清理，正式数据指纹不变。下一批拆为 5B-3A 音乐音量只读 getter；系统与 session setter 分别留给有原值持久化和独立补偿的后续小批次。
 29. **5B-3A 音乐音量只读 AOT → Rust 冒烟已完成。** 产品系统 getter、产品 snapshot 与直接原生明细读取均成功，系统音量前后为 `0.370000004768372`；本机无匹配 session，因此明确只证明 `HasSessionVolume=false` 路径。10 条新契约、Rust 52/52、x64 全量 2170/2170；profile 33 / schema 30 保持 WMC1510=1216、`always-throw=0`、Rust ABI 2/能力 255/九个导出。
 30. **5B-3B 系统主音量 setter 与故障恢复 AOT → Rust 冒烟已完成。** 每次写入前原子持久化并回读原值，只通过产品 setter 把 `0.370000004768372` 临时改为约 `0.42`，直接 Rust getter 负责复查。应用内主动异常由 App `finally` 恢复；强制结束后，独立新 AOT 进程先读取到约 `0.4200000167` 再恢复原值。10 条新契约、Rust 52/52、x64 全量 2180/2180；profile 34 / schema 31 保持 39 个发布文件、WMC1510=1216、`always-throw=0`、Rust ABI 2/能力 255/九个导出。恢复意图最终不存在，正式数据指纹前后一致。
-31. **5B-3C 可控媒体 session getter/setter 与故障恢复 AOT → Rust 冒烟已完成。** 测试专用 Rust 夹具循环播放全零 PCM，提供固定 `deskbox-audio-session-fixture` 身份且随父脚本退出；它不进入产品发布，也不控制用户播放器。产品与直接 Rust getter 均确认 match kind 4，只通过产品 session setter 完成 `1.0 → 0.92 → 1.0`；应用内异常、强制终止后的独立恢复、session 消失保留意图、系统主音量不变和最终 postflight 均有门禁。12 条新契约、Rust 54/54、x64 全量 2192/2192；profile 35 / schema 32 保持 39 个发布文件、WMC1510=1216、`always-throw=0`、生产 Rust ABI 2/能力 255/九个导出。JSON 清单为 22 个文件、57/57 处调用和 20 个 context 所有者。下一批开放 5B-4 x64 Native AOT 托管 UI 功能矩阵。
+31. **5B-3C 可控媒体 session getter/setter 与故障恢复 AOT → Rust 冒烟已完成。** 测试专用 Rust 夹具循环播放全零 PCM，提供固定 `deskcue-audio-session-fixture` 身份且随父脚本退出；它不进入产品发布，也不控制用户播放器。产品与直接 Rust getter 均确认 match kind 4，只通过产品 session setter 完成 `1.0 → 0.92 → 1.0`；应用内异常、强制终止后的独立恢复、session 消失保留意图、系统主音量不变和最终 postflight 均有门禁。12 条新契约、Rust 54/54、x64 全量 2192/2192；profile 35 / schema 32 保持 39 个发布文件、WMC1510=1216、`always-throw=0`、生产 Rust ABI 2/能力 255/九个导出。JSON 清单为 22 个文件、57/57 处调用和 20 个 context 所有者。下一批开放 5B-4 x64 Native AOT 托管 UI 功能矩阵。
 32. **5B-4A 基础托管 UI 只读矩阵已完成。** 受审计 AOT 产物在 owned preview 根恢复 File/Search 两个 Widget，装载 12 套语言资源，依次打开六个设置主分区，并对搜索六类筛选与四列各两次排序完成真实 handler 核对。首次实际运行发现并窄修复空私有 managed 数组的 WinRT `ItemsSource` 投影。12 条新契约、x64 全量 2204/2204；profile 36 / schema 33 保持 `always-throw=0`，JSON 清单更新为 23/58/21。
 33. **5B-4B1 深层设置与 managed collection 只读矩阵已完成。** 非空设置搜索激活 `BackupRestoreSettings`，24 个深层设置路由、嵌套 breadcrumb/父页返回、1 条文件叠放规则和非空备份清单均由真实 AOT UI 证明。设置 ViewModel 建立 282/282 精确生成绑定清单；DataTemplate 条目和三类失败集合增加窄的生成元数据或 `object[]` UI 投影，WMC1510 降至 1211。12 条新契约、Rust 54/54、x64 全量 2216/2216；profile 37 / schema 34 保持 39 个发布文件、WMC1506=0、`always-throw=0`、Rust ABI 2/能力 255/九个导出。下一批拆为 5B-4B2A 设置与 Widget 拓扑持久化/重启恢复。
 34. **5B-4B2A 设置与 Widget 拓扑持久化/重启恢复已完成。** 同一受审计 AOT 产物依次启动 `Mutate`、`VerifyRestore`、`Postflight` 三个不同进程，通过真实 Settings ViewModel 和 Widget 产品路径完成四类设置以及固定 File Widget 标题、视图、锁定和 HWND 边界的写入、重载、恢复与再次重载。三次显式 flush 和 3/3 应用内正常退出均通过；Search Widget 对照项不变，owned preview 根最终清理，正式数据指纹不变。12 条新契约、全部 AOT 阶段契约 208/208、Rust 54/54、x64 全量 2228/2228；profile 38 / schema 35 保持 39 个发布文件、WMC1506=0、WMC1510=1211、`always-throw=0`、Rust ABI 2/能力 255/九个导出。下一批拆为 5B-4B2B1 Quick Capture 内容 store。
@@ -121,11 +121,11 @@
 ### 3.1 项目配置
 
 - 主项目和更新器目标均为 `net10.0-windows10.0.22621.0`。
-- 支持普通 JIT 的 `win-x64` 和 `win-arm64`；现有 `DeskBoxAotAudit` 是显式 opt-in，不改变默认 Debug/Release。3C-3-R 后，Native AOT 暂只允许 `Platform=x64`、`RuntimeIdentifier=win-x64` 且显式启用 Rust 模块；ARM64 AOT 在阶段 7 前由项目和审计脚本共同 fail fast。
+- 支持普通 JIT 的 `win-x64` 和 `win-arm64`；现有 `DeskCueAotAudit` 是显式 opt-in，不改变默认 Debug/Release。3C-3-R 后，Native AOT 暂只允许 `Platform=x64`、`RuntimeIdentifier=win-x64` 且显式启用 Rust 模块；ARM64 AOT 在阶段 7 前由项目和审计脚本共同 fail fast。
 - 主项目使用 Windows App SDK 2.5.1；4A 已直接使用当前解析到的 `FolderPicker(WindowId)`、`PickSingleFolderAsync()` 和 `PickFolderResult.Path`，没有为此升级 SDK。
 - `global.json` 已固定 .NET SDK 10.0.401，并允许 `latestPatch` 范围的补丁滚动。
 - 仓库 override 已实际验证为 Rust 1.96.0 MSVC x64；`rustc`、`cargo`、`clippy`、`rustfmt` 和 `x86_64-pc-windows-msvc` target 均可用。`aarch64-pc-windows-msvc` 保留到阶段 7。
-- 当前 Cargo workspace 包含生产 `deskbox-native` crate 和仅供 5B-3C 测试的静音音频 session 夹具；生产模块覆盖五类 shortcut 操作、音乐音量、Explorer 托管启动、Quick Access 以及内部回收站精确查询/恢复，ABI 为 2，x64 能力掩码为 511、必需导出为十个。AOT 编译以 `DESKBOX_NATIVE_AOT` 排除四类旧 C# COM/dynamic oracle，普通 JIT 默认仍保留它们；产品回收站删除仍使用 C# `SHFileOperationW`，测试夹具不进入产品发布。
+- 当前 Cargo workspace 包含生产 `deskcue-native` crate 和仅供 5B-3C 测试的静音音频 session 夹具；生产模块覆盖五类 shortcut 操作、音乐音量、Explorer 托管启动、Quick Access 以及内部回收站精确查询/恢复，ABI 为 2，x64 能力掩码为 511、必需导出为十个。AOT 编译以 `DESKCUE_NATIVE_AOT` 排除四类旧 C# COM/dynamic oracle，普通 JIT 默认仍保留它们；产品回收站删除仍使用 C# `SHFileOperationW`，测试夹具不进入产品发布。
 
 后续升级 Windows App SDK 可以单独评估，但不应与首批 AOT 兼容性修改合并。当前 2.5.1 已足以推进现有 AOT 兼容性工作；分开升级更容易判断警告、运行行为和安装依赖变化由哪一项引起。
 
@@ -145,7 +145,7 @@
 
 ### 3.3 搜索索引现状
 
-`src/DeskBox/Services/SearchIndexService.cs` 中仍有以下特征：
+`src/DeskCue/Services/SearchIndexService.cs` 中仍有以下特征：
 
 - `MaxIndexEntries = 300_000`；
 - 常驻索引是以完整路径为键的 `Dictionary<string, IndexedFileEntry>`；
@@ -165,17 +165,17 @@
 ```
 
 以下命令保留为直接 x64 AOT 发布的最小示例。必须显式带上
-`DeskBoxRustNative=true`；3C-3-R 后省略该属性会由项目在编译前拒绝，不再生成编译期只
+`DeskCueRustNative=true`；3C-3-R 后省略该属性会由项目在编译前拒绝，不再生成编译期只
 保留 Rust shortcut 路径、却没有构建/复制 Rust DLL 的不完整输出。日常审计仍应优先使用
 上面的脚本：
 
 ```powershell
-dotnet publish .\src\DeskBox\DeskBox.csproj `
+dotnet publish .\src\DeskCue\DeskCue.csproj `
   --configuration Release `
   -p:Platform=x64 `
   -p:RuntimeIdentifier=win-x64 `
   -p:PublishAot=true `
-  -p:DeskBoxRustNative=true `
+  -p:DeskCueRustNative=true `
   -p:SelfContained=true `
   -p:WindowsAppSDKSelfContained=false `
   -p:PublishSingleFile=false `
@@ -270,7 +270,7 @@ AOT 运行暴露的问题，不恢复按警告总数机械迁移全部 Binding �
 
 ### 4.4 更新器与发布目录混合问题
 
-第一轮核对时，主项目的 `PublishDeskBoxUpdater` 目标会把 `Configuration`、`Platform`、`RuntimeIdentifier` 和 `SelfContained` 传给更新器，但没有传递 `PublishAot`。因此当时的主程序 AOT 发布目录中仍包含：
+第一轮核对时，主项目的 `PublishDeskCueUpdater` 目标会把 `Configuration`、`Platform`、`RuntimeIdentifier` 和 `SelfContained` 传给更新器，但没有传递 `PublishAot`。因此当时的主程序 AOT 发布目录中仍包含：
 
 - `coreclr.dll`、`clrjit.dll` 和 `System.Private.CoreLib.dll`；
 - 一个仍依赖 CoreCLR 的更新器；
@@ -278,17 +278,17 @@ AOT 运行暴露的问题，不恢复按警告总数机械迁移全部 Binding �
 
 修正前的混合输出为 229 个文件、约 348.4 MiB。这个数字不能与现有约 90.4 MiB 的框架依赖输出快照直接比较，因为里面同时包含更新器运行时和大体积 PDB。
 
-单独以 AOT 发布 `DeskBox.Updater` 已成功，0 个警告：
+单独以 AOT 发布 `DeskCue.Updater` 已成功，0 个警告：
 
-- `DeskBox.Updater.exe`：约 1.93 MiB；
+- `DeskCue.Updater.exe`：约 1.93 MiB；
 - PDB：约 9.19 MiB；
 - 不包含 `coreclr.dll` 或托管更新器 DLL。
 
 第一批发布链已经完成以下实现：
 
-- `DeskBoxAotAudit` 为显式 opt-in，不改变默认 Debug/Release；
+- `DeskCueAotAudit` 为显式 opt-in，不改变默认 Debug/Release；
 - AOT publish 不再预先复制托管更新器构建输出；
-- `PublishAot` 和审计配置会传递到 `DeskBox.Updater`；
+- `PublishAot` 和审计配置会传递到 `DeskCue.Updater`；
 - `scripts/publish-aot-audit.ps1` 使用隔离中间工件、分离 PDB，并验证 PE 架构、CoreCLR/JIT 和托管应用文件残留；
 - `global.json` 固定 .NET SDK，`rust-toolchain.toml` 固定并实际验证 Rust x64 工具链；
 - 增加针对发布契约的静态测试。
@@ -297,12 +297,12 @@ AOT 运行暴露的问题，不恢复按警告总数机械迁移全部 Binding �
 
 - 发布目录 39 个文件、约 79.4 MiB；
 - 独立 symbols 目录 3 个 PDB、约 164.8 MiB；
-- `DeskBox.exe`、`DeskBox.Updater.exe` 和 `deskbox_native.dll` 均为 `0x8664` x64 PE；发布目录中的 Rust DLL 实际加载后返回 ABI 版本 1；
+- `DeskCue.exe`、`DeskCue.Updater.exe` 和 `deskcue_native.dll` 均为 `0x8664` x64 PE；发布目录中的 Rust DLL 实际加载后返回 ABI 版本 1；
 - 不含 `coreclr.dll`、`clrjit.dll`、`System.Private.CoreLib.dll`、托管应用 DLL、deps 或 runtimeconfig；
 - 仍有 4 个 ILC “always throw”和 12 类警告代码；`MVVMTK0045` 与 `CsWinRT1028` 均为 0，尚不能作为可运行发布物；
 - 审计摘要记录 .NET/Rust 工具链、Git 基线、dirty 状态、发布前后工作树指纹、警告出现次数、三个 PE 的 SHA-256 和完整导入依赖；本次前后指纹一致，`sourceStableDuringAudit=true`；
 - Rust staging 与 Cargo target 分别位于本次 `.artifacts/aot-audit/win-x64` 下的独立目录，不再读取共享 `native/target`；架构矛盾的 `Platform=x64` + `RuntimeIdentifier=win-arm64` 已实测在 Cargo 前失败；
-- `deskbox_native.dll` 导入 `vcruntime140.dll`，而主程序和更新器没有该直接导入；该事实已进入摘要，不再只依赖开发机手工 `dumpbin`；
+- `deskcue_native.dll` 导入 `vcruntime140.dll`，而主程序和更新器没有该直接导入；该事实已进入摘要，不再只依赖开发机手工 `dumpbin`；
 - 带 Rust opt-in 的规范 Debug 构建为 0 错误，规范 x64 测试为 1926/1926，同一测试二进制又连续执行三轮全量并全部通过；新增契约覆盖中文转换缓冲区、属性声明、构造期副作用抑制、CsWinRT partial 类型、AOT 发布配置和 Rust 3A 集成。
 
 这证明更新器 AOT、发布目录结构和 Rust 3A 的 x64 构建/打包链已经通过自动化审计。更新器真实替换、失败回滚和 AOT 主程序运行验证仍属于后续阶段，不能由结构检查替代。
@@ -310,8 +310,8 @@ AOT 运行暴露的问题，不恢复按警告总数机械迁移全部 Binding �
 2026-08-20 阶段 3B-2 的最新 x64 审计结果（审计配置版本 7、摘要 schema 6）：
 
 - 发布目录仍为 39 个文件、约 79.4 MiB；独立 symbols 目录为 3 个 PDB、约 164.9 MiB；
-- `DeskBox.exe`、`DeskBox.Updater.exe` 与 `deskbox_native.dll` 均为 `0x8664` x64 PE；Rust DLL 实际加载后返回 ABI 2、能力掩码 7 和四个必需导出；
-- 审计记录 JIT 默认 `csharp`、显式开关 `DESKBOX_SHORTCUT_BACKEND`、Native AOT 强制 `rust`，以及原生失败不回退；锁定依赖图包含 16 个包；
+- `DeskCue.exe`、`DeskCue.Updater.exe` 与 `deskcue_native.dll` 均为 `0x8664` x64 PE；Rust DLL 实际加载后返回 ABI 2、能力掩码 7 和四个必需导出；
+- 审计记录 JIT 默认 `csharp`、显式开关 `DESKCUE_SHORTCUT_BACKEND`、Native AOT 强制 `rust`，以及原生失败不回退；锁定依赖图包含 16 个包；
 - 发布前后工作树指纹一致，`sourceStableDuringAudit=true`；`MVVMTK0045` 与 `CsWinRT1028` 仍为 0；
 - 仍有相同的 12 类警告代码和 4 个 ILC “always throw”。本阶段保留的 C# shortcut 写入、带 UI 修复及其他 COM 路径仍可达，因此这些结果符合 3B-2 边界，不能据此启动 AOT 主程序。
 
@@ -321,9 +321,9 @@ AOT 运行暴露的问题，不恢复按警告总数机械迁移全部 Binding �
 
 - 发布目录仍为 39 个文件、约 79.5 MiB；独立 symbols 目录为 3 个 PDB、约
   164.9 MiB；
-- `DeskBox.exe`、`DeskBox.Updater.exe` 与 `deskbox_native.dll` 均为 `0x8664` x64 PE；
+- `DeskCue.exe`、`DeskCue.Updater.exe` 与 `deskcue_native.dll` 均为 `0x8664` x64 PE；
   Rust DLL 实际加载后返回 ABI 2、能力掩码 15 和五个必需导出；
-- 审计继续记录 JIT 默认 `csharp`、显式开关 `DESKBOX_SHORTCUT_BACKEND`、Native AOT
+- 审计继续记录 JIT 默认 `csharp`、显式开关 `DESKCUE_SHORTCUT_BACKEND`、Native AOT
   强制 `rust` 以及原生失败不回退；锁定依赖图仍为 16 个包；
 - 发布前后工作树指纹一致，`sourceStableDuringAudit=true`；`MVVMTK0045` 与
   `CsWinRT1028` 仍为 0；
@@ -338,9 +338,9 @@ AOT 运行暴露的问题，不恢复按警告总数机械迁移全部 Binding �
 
 - 发布目录仍为 39 个文件、约 79.5 MiB；独立 symbols 目录为 3 个 PDB、约
   164.9 MiB；
-- `DeskBox.exe`、`DeskBox.Updater.exe` 与 `deskbox_native.dll` 均为 `0x8664` x64 PE；
+- `DeskCue.exe`、`DeskCue.Updater.exe` 与 `deskcue_native.dll` 均为 `0x8664` x64 PE；
   Rust DLL 实际加载后返回 ABI 2、能力掩码 31 和六个必需导出；
-- 审计继续记录 JIT 默认 `csharp`、显式开关 `DESKBOX_SHORTCUT_BACKEND`、Native AOT
+- 审计继续记录 JIT 默认 `csharp`、显式开关 `DESKCUE_SHORTCUT_BACKEND`、Native AOT
   强制 `rust` 以及原生失败不回退；锁定依赖图仍为 16 个包；
 - 发布前后工作树指纹一致，`sourceStableDuringAudit=true`；`MVVMTK0045` 与
   `CsWinRT1028` 仍为 0；
@@ -373,7 +373,7 @@ AOT 运行暴露的问题，不恢复按警告总数机械迁移全部 Binding �
 `.artifacts/manual-shortcut-3c2/20260820-211241`，结果如下：
 
 - 显式 Rust JIT 进程来自规范 Debug 输出，进程实际加载的也是同一输出目录中的
-  `deskbox_native.dll`，不是仅凭环境变量推断后端；
+  `deskcue_native.dll`，不是仅凭环境变量推断后端；
 - Widget HWND 为 `0x430DBE`，取消对话框 HWND 为 `0x380F62`，其 owner 为该 Widget；
   取消后磁盘 `.lnk` 与界面项目均保留；
 - 把目标在同卷移动后重新触发修复，Shell 跟踪把已存储目标更新为新路径；下一次激活
@@ -384,7 +384,7 @@ AOT 运行暴露的问题，不恢复按警告总数机械迁移全部 Binding �
 
 2026-08-20 阶段 3C-3 的最新 x64 审计结果（审计配置版本 10、摘要 schema 9）：
 
-- `PublishAot=true` 定义 `DESKBOX_NATIVE_AOT`。五类 shortcut 产品操作在 AOT 中直接
+- `PublishAot=true` 定义 `DESKCUE_NATIVE_AOT`。五类 shortcut 产品操作在 AOT 中直接
   调用 Rust，旧 helper、`ComImport` coclass/interface 及其调用只在非 AOT JIT 中编译；
   普通 JIT 默认仍为 C#，显式 Rust 失败仍不回退；
 - 无 HWND 的 ViewModel 命令已删除，`FileService.OpenItem` 也不再提供默认空句柄；文件
@@ -392,13 +392,13 @@ AOT 运行暴露的问题，不恢复按警告总数机械迁移全部 Binding �
 - 诊断 schema 升为 5，只记录策略、相对模块名、存在性、PE 架构、SHA-256，以及加载器
   已经被产品路径探测时的缓存结果；导出诊断不会创建 `Lazy.Value`、主动加载 DLL、记录
   绝对路径或把 DLL 放入诊断包；
-- x64 Inno 输入显式从所选 publish 根目录收入唯一的 `deskbox_native.dll`，通配规则排除
+- x64 Inno 输入显式从所选 publish 根目录收入唯一的 `deskcue_native.dll`，通配规则排除
   重复 DLL/PDB；ARM64 输入显式排除 x64 DLL，分离更新器也不会复制原生模块；
 - Rust 格式化、Clippy `-D warnings` 与 33/33 原生测试通过；shortcut/AOT 契约定向测试
-  85/85、显式 Rust 产品入口 3/3、DeskBox x64 全量测试 1963/1963 通过；
+  85/85、显式 Rust 产品入口 3/3、DeskCue x64 全量测试 1963/1963 通过；
 - 最终规范 Debug 构建为 0 错误、30 条既有警告；随后在未设置 shortcut opt-in 的环境
   启动唯一实例，进程路径精确指向规范 Debug 输出，启动阶段加载的
-  `deskbox_native.dll` 数量为 0，确认普通 JIT 默认仍为 C#；
+  `deskcue_native.dll` 数量为 0，确认普通 JIT 默认仍为 C#；
 - 发布目录为 39 个文件、约 79.5 MiB，独立 symbols 目录为 3 个 PDB、约 164.9 MiB；
   ABI 2、能力 31、六个导出和 x64 PE 均通过检查。隔离 staging 与发布 DLL 的 SHA-256
   完全一致；每次审计的具体值以对应 `summary.json` 为准，不把一次构建的哈希固化为长期
@@ -415,14 +415,14 @@ AOT 运行暴露的问题，不恢复按警告总数机械迁移全部 Binding �
   不证明整个主程序已经具备 AOT 运行或发布条件。
 
 随后完成的 3C-3-R 把审计配置升级为 11，摘要 schema 保持 9。项目级允许/拒绝组合、
-ARM64 脚本提前失败、AOT 发布契约测试 19/19 和 DeskBox x64 全量测试 1970/1970 通过；
+ARM64 脚本提前失败、AOT 发布契约测试 19/19 和 DeskCue x64 全量测试 1970/1970 通过；
 最新隔离 x64 审计继续保持 39 个发布文件、3 个分离 PDB、12 类既有警告、2 条主程序
 `always-throw` 和 0 条 shortcut `always-throw`，ABI 2、能力 31 与同次 staging/publish
 哈希一致性均未改变。AOT 主程序仍未启动。
 
 阶段 4A 把审计配置升级为 12，摘要 schema 仍为 9。FolderPicker 改用 Windows App SDK
 现代异步 Picker，8 个入口的 owner/await 静态契约和零句柄拒绝测试共 4/4 通过；与现有
-AOT 发布契约合并执行为 23/23，DeskBox x64 全量测试为 1974/1974，规范 Debug 构建仍为
+AOT 发布契约合并执行为 23/23，DeskCue x64 全量测试为 1974/1974，规范 Debug 构建仍为
 0 错误、30 条既有警告。隔离 x64 审计继续产出 39 个文件和 3 个分离 PDB，12 类警告代码
 未扩张，工作树前后指纹一致；主程序 `always-throw` 从 2 条降为 1 条，唯一剩余项为
 `MusicVolumeService.MMDeviceEnumeratorComObject`，shortcut 为 0。ABI 2、能力 31 和同次
@@ -472,7 +472,7 @@ PDB 和 12 类既有警告；JSON 直接相关记录由 24 降到 0，备份服�
 0；工作树前后指纹一致，1 条音乐音量 `always-throw`、0 条 shortcut `always-throw`、ABI 2、
 能力 31 和同次 staging/publish 哈希一致。AOT 主程序仍未启动。
 
-4B-4 没有修改生产 JSON 调用或格式，只在主程序和更新器的 `DeskBoxAotAudit=true` 条件组
+4B-4 没有修改生产 JSON 调用或格式，只在主程序和更新器的 `DeskCueAotAudit=true` 条件组
 关闭默认 JSON 反射，并让审计脚本在 restore/publish 中显式传入该值。新增契约先在旧实现
 上按预期失败，实施后 AOT/JSON 定向契约 32/32、x64 全量测试 1994/1994 通过；普通构建
 实际求值为空，审计构建为 `false`。配置 13 / schema 10 的隔离 AOT 审计继续产出 39 个
@@ -614,7 +614,7 @@ P/Invoke。ABI 固定 DLL 名、导出名、版本探针、固定宽度状态码
 
 ### 6.4 复杂度比较
 
-以下等级是相对于当前 DeskBox 代码规模的工程复杂度，不是单纯代码行数，也不代表工期承诺。
+以下等级是相对于当前 DeskCue 代码规模的工程复杂度，不是单纯代码行数，也不代表工期承诺。
 
 | 工作项 | 复杂度 | 主要难点 | 返工风险 |
 | --- | --- | --- | --- |
@@ -689,7 +689,7 @@ P/Invoke。ABI 固定 DLL 名、导出名、版本探针、固定宽度状态码
 
 - 修复并验证仓库锁定的 Rust 1.96.0 MSVC 工具链；
 - 建立单一 Cargo workspace 并生成 `Cargo.lock`；
-- 建立 `deskbox_native.dll`、ABI 版本 1、固定导出名和 C 头文件；
+- 建立 `deskcue_native.dll`、ABI 版本 1、固定导出名和 C 头文件；
 - `cdylib` 的 Debug/Release 都采用明确的 panic 策略，Release 保留可分离的原生符号；
 - 增加显式 opt-in 的 x64 MSBuild 构建/复制规则，普通 JIT 与 ARM64 默认不启用；
 - x64 AOT 审计强制包含 Rust DLL/PDB，直接读取发布 DLL 的 ABI，并记录架构、哈希、工具链和工作树来源；
@@ -740,7 +740,7 @@ Resolve 已存在于 Rust DLL，产品具有显式诊断接入，但普通 JIT �
 - 调用方长度查询、精确 required 长度、无部分写入、字段 HRESULT、损坏 Load、目标
   缺失、空可选字段与负图标索引均已覆盖；目标路径遵守 `GetPath` 的 `MAX_PATH`
   约束，参数保留 260/512 源缓冲行为，并测试 259/260/261、511/512/513 边界；
-- Rust 格式化、Clippy 与显式 x64 的 19 个测试通过，DeskBox x64 全量测试为
+- Rust 格式化、Clippy 与显式 x64 的 19 个测试通过，DeskCue x64 全量测试为
   1927/1927，规范非平台 Debug 构建为 0 warning / 0 error；AOT 审计升级为配置 6、
   schema 5，并额外记录 Cargo 锁定包与实际启用 feature；
 - 第一批没有产品加载器、差分开关、写入、损坏链接 UI、Resolve 或缓存。规范 JIT
@@ -756,14 +756,14 @@ Resolve 已存在于 Rust DLL，产品具有显式诊断接入，但普通 JIT �
   HRESULT 当成“未解析”；
 - 新增 x64 托管 ABI 布局、固定应用目录加载、受限 DLL 依赖搜索、ABI/导出/能力检查
   和静态非托管函数指针调用。JIT 默认 C#，启动前设置
-  `DESKBOX_SHORTCUT_BACKEND=rust` 才显式选择 Rust；显式 Rust 失败不回退；
+  `DESKCUE_SHORTCUT_BACKEND=rust` 才显式选择 Rust；显式 Rust 失败不回退；
 - Native AOT 通过 `RuntimeFeature.IsDynamicCodeSupported == false` 强制选择 Rust，
   但本阶段仍不运行 AOT 主程序。`.url` 保持在加载 Rust 之前由 C# 分派；
 - JIT x64 差分以旧 C# COM 为 oracle，覆盖普通/长 Unicode、描述、参数、工作目录、
   负图标索引、259/260/261 与 511/512/513、相对路径、UNC、原始环境变量、目标
   缺失、损坏文件、PIDL、STA/MTA、并发读取以及有效/缺失目标 Resolve；
 - 本轮 Rust 格式化、Clippy `-D warnings` 和 23/23 单元测试通过；AOT 契约与快捷
-  方式差分定向测试为 33/33，DeskBox x64 全量测试为 1949/1949；规范 Debug 构建
+  方式差分定向测试为 33/33，DeskCue x64 全量测试为 1949/1949；规范 Debug 构建
   为 0 错误、30 条既有 C#/XAML 警告；
 - 审计配置 7 / schema 6 的 x64 AOT 发布通过，ABI 2、能力 7、四个导出、39 个发布
   文件、3 个分离 PDB 和前后工作树指纹均通过检查；AOT 主程序未启动，4 个现存
@@ -775,7 +775,7 @@ Resolve 已存在于 Rust DLL，产品具有显式诊断接入，但普通 JIT �
 ##### 阶段 3C-1：写入
 
 - 当前进度：实现完成。ABI 继续保持版本 2，以新增能力位 `1 << 3`、独立写入请求/
-  结果结构和 `deskbox_shortcut_write_v2` 扩展现有边界；当前能力掩码为 15；
+  结果结构和 `deskcue_shortcut_write_v2` 扩展现有边界；当前能力掩码为 15；
 - Rust 每次创建新的 `IShellLinkW`，依次写入目标、描述、参数、工作目录、图标路径/
   有符号索引，再以 `IPersistFile::Save(..., TRUE)` 创建或覆盖 `.lnk`。所有可选字段
   都显式调用 setter，因此空值能清除旧元数据；只把 Save 的 `S_OK` 视为成功；
@@ -786,7 +786,7 @@ Resolve 已存在于 Rust DLL，产品具有显式诊断接入，但普通 JIT �
 - 差分覆盖完整 Unicode 五字段、负图标索引、文件夹/应用产品形状、覆盖后清空旧
   字段、非法输入、Save 失败、STA/MTA、并发写入和产品写入后的缓存失效。
 - 本轮 Rust 格式化、Clippy `-D warnings` 和 29/29 单元测试通过；AOT 契约与快捷
-  方式差分定向测试为 41/41，显式 Rust 产品入口测试为 2/2，DeskBox x64 全量测试
+  方式差分定向测试为 41/41，显式 Rust 产品入口测试为 2/2，DeskCue x64 全量测试
   为 1957/1957；规范 Debug 构建为 0 错误、30 条既有 C#/XAML 警告；
 - 审计配置 8 / schema 7 的 x64 AOT 发布通过，ABI 2、能力 15、五个导出、39 个发布
   文件、3 个分离 PDB 和前后工作树指纹均通过检查；AOT 主程序未启动，4 个现存
@@ -796,7 +796,7 @@ Resolve 已存在于 Rust DLL，产品具有显式诊断接入，但普通 JIT �
 
 - 当前进度：代码、自动化与缺失目标人工交互验证均已完成。ABI 继续保持版本 2，新增
   能力位 `1 << 4`、独立的 64 字节请求/结果和
-  `deskbox_shortcut_resolve_with_ui_v2`；当前能力掩码为 31；
+  `deskcue_shortcut_resolve_with_ui_v2`；当前能力掩码为 31；
 - Rust 在调用方线程创建独立 Shell Link，按 `STGM_READ` Load，并把传入的 owner HWND
   原样交给 `Resolve`。flags 固定为 `SLR_UPDATE | SLR_NOSEARCH |
   SLR_OFFER_DELETE_WITHOUT_FILE`，明确不含 `SLR_NO_UI`，从而保留 Windows 原生更新、
@@ -824,9 +824,9 @@ Resolve 已存在于 Rust DLL，产品具有显式诊断接入，但普通 JIT �
   人工门禁在开始本阶段前已留下记录；
 - “完整切换”只表示五类 shortcut 产品操作都受同一后端策略控制，且 AOT 中只保留
   Rust 实现，不表示把普通 JIT 默认后端改为 Rust。Debug/Release JIT 继续默认 C#，
-  `DESKBOX_SHORTCUT_BACKEND=rust` 继续作为显式差分入口，旧 C# 实现继续作为 JIT
+  `DESKCUE_SHORTCUT_BACKEND=rust` 继续作为显式差分入口，旧 C# 实现继续作为 JIT
   oracle；
-- `PublishAot=true` 现在定义 `DESKBOX_NATIVE_AOT`。两套 legacy helper、`ComImport`
+- `PublishAot=true` 现在定义 `DESKCUE_NATIVE_AOT`。两套 legacy helper、`ComImport`
   coclass/interface 及其调用引用都在 AOT 编译期排除；运行时强制 Rust 仍作为第二层
   保护，原生模块失败继续 fail closed；
 - 无 HWND `OpenItemCommand` 旁路已删除，`FileService.OpenItem` 也要求调用方显式传入
@@ -837,20 +837,20 @@ Resolve 已存在于 Rust DLL，产品具有显式诊断接入，但普通 JIT �
   `MusicVolumeService.MMDeviceEnumeratorComObject` 两条，警告代码仍严格限定为既有
   12 类；
 - x64 AOT publish 从本次隔离 staging 生成且只携带一个根目录
-  `deskbox_native.dll`；其 PE 架构、ABI 2、能力 31、六个导出和 SHA-256 均已复核，
+  `deskcue_native.dll`；其 PE 架构、ABI 2、能力 31、六个导出和 SHA-256 均已复核，
   staging 与 publish 哈希一致。ARM64 Inno 输入显式排除 x64 DLL；
-- 分离运行的更新器只复制 `DeskBox.Updater.*`，不会携带或加载 Rust DLL；自动更新安装器
+- 分离运行的更新器只复制 `DeskCue.Updater.*`，不会携带或加载 Rust DLL；自动更新安装器
   对主程序 DLL 的真实替换、失败回滚和文件占用验证仍归阶段 5；
 - 诊断包以无副作用方式记录 shortcut 策略、相对模块名、存在性、架构和哈希。只有加载器
   已经被产品路径探测时才读取缓存中的 ABI、能力和加载结果；导出诊断不会触发
   `Lazy.Value`、主动加载 DLL、泄露绝对路径/加载详情或包含 DLL 二进制；
 - Rust 原生测试 33/33、shortcut/AOT 契约定向测试 85/85、显式 Rust 产品入口 3/3、
-  DeskBox x64 全量测试 1963/1963 均通过。隔离 AOT 发布为 39 个文件、3 个分离 PDB，
+  DeskCue x64 全量测试 1963/1963 均通过。隔离 AOT 发布为 39 个文件、3 个分离 PDB，
   发布前后工作树指纹一致；
 - 最终规范 Debug 构建为 0 错误、30 条既有警告；未设置 opt-in 的新实例精确运行自
-  `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，且启动阶段没有加载
-  `deskbox_native.dll`；
-- 本阶段仍不启动 `DeskBox.exe` 的 AOT 产物。定向 shortcut AOT 运行冒烟保留到阶段 5，
+  `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，且启动阶段没有加载
+  `deskcue_native.dll`；
+- 本阶段仍不启动 `DeskCue.exe` 的 AOT 产物。定向 shortcut AOT 运行冒烟保留到阶段 5，
   在其余 AOT 硬阻断项清除且使用干净测试用户/虚拟机或明确隔离的数据根后执行。
 
 ##### 阶段 3C-3-R：发布属性契约加固（已完成）
@@ -858,16 +858,16 @@ Resolve 已存在于 Rust DLL，产品具有显式诊断接入，但普通 JIT �
 3C-3 完成后的只读复盘发现，受支持 x64 脚本产物和项目级属性契约之间还有一个窄缺口；
 本阶段已经按以下边界封闭：
 
-- 新增 `ValidateDeskBoxNativeAotConfiguration`，在 `PrepareForBuild`/`Publish` 前检查
+- 新增 `ValidateDeskCueNativeAotConfiguration`，在 `PrepareForBuild`/`Publish` 前检查
   Native AOT 必须同时满足 `Platform=x64`、`RuntimeIdentifier=win-x64` 和
-  `DeskBoxRustNative=true`；普通 JIT 不进入该目标，默认仍为 C#；
-- 直接 `PublishAot=true` 或 `DeskBoxAotAudit=true` 但未启用 Rust 时会在编译前失败；
+  `DeskCueRustNative=true`；普通 JIT 不进入该目标，默认仍为 C#；
+- 直接 `PublishAot=true` 或 `DeskCueAotAudit=true` 但未启用 Rust 时会在编译前失败；
   Platform/RID 冲突和 ARM64 AOT 也使用独立、可诊断的错误提前失败；
 - `scripts/publish-aot-audit.ps1` 的审计配置升级为 11，当前只允许 x64。ARM64 在解析
   `DotNetPath`、采集工作树、创建或清理 `.artifacts/aot-audit` 之前失败；脚本内部
   `rustNativeEnabled` 因而固定为 `true`，摘要不会再形成“策略为 Rust、模块未启用”的矛盾；
 - 自动化真实执行普通 JIT、完整 x64 direct/audit AOT、缺失 Rust、ARM64 和 Platform/RID
-  冲突组合；AOT 发布契约测试 19/19、DeskBox x64 全量测试 1970/1970 通过；
+  冲突组合；AOT 发布契约测试 19/19、DeskCue x64 全量测试 1970/1970 通过；
 - 隔离 x64 AOT 审计保持 schema 9、39 个发布文件、3 个分离 PDB、ABI 2、能力 31、
   staging/publish 同次哈希一致、12 类既有警告、2 条主程序 `always-throw` 与 0 条
   shortcut `always-throw`。本阶段没有启动 AOT 主程序，也没有开始 FolderPicker 或 JSON。
@@ -916,8 +916,8 @@ Core Audio Rust 边界和最后一条 `always-throw` 清理，4D-1A/1B 也已完
 3. **4C：音乐音量 COM（已完成结构迁移，人工 setter 门槛待确认）。** 已比较生成式 COM
    与边界完整的 Rust 原生服务，选择后者并冻结默认设备、endpoint、session 匹配、COM
    apartment 与失败回退语义。Rust DLL 保持 ABI 2，新增能力位 `1 << 5`、v1 请求/结果和
-   `deskbox_music_volume_v1`；完整能力掩码为 63。普通 JIT 默认仍走 C#，可用
-   `DESKBOX_MUSIC_VOLUME_BACKEND=rust` 显式验证；Native AOT 编译期排除旧 coclass 与接口。
+   `deskcue_music_volume_v1`；完整能力掩码为 63。普通 JIT 默认仍走 C#，可用
+   `DESKCUE_MUSIC_VOLUME_BACKEND=rust` 显式验证；Native AOT 编译期排除旧 coclass 与接口。
    Rust 格式、42/42 单元测试、托管契约/真实只读 ABI 探测和配置 14 / schema 11 隔离 AOT
    审计通过，最后一条 `always-throw` 已消除。自动化未主动改变系统音量，真实系统/session
    setter 和默认设备切换仍需单独人工确认；
@@ -1000,15 +1000,15 @@ activation，以及目标 Widget/item 的实际打开、定位和可见刷新。
 
 ### 阶段 5：x64 AOT 内部预览
 
-**5A：隔离数据入口、首次启动、退出与重启已完成。** `DESKBOX_NATIVE_AOT` 构建现在支持显式
-`DESKBOX_AOT_PREVIEW_DATA_ROOT`，严格启动器会拒绝正式 `%LOCALAPPDATA%\DeskBox` 及重叠路径、
+**5A：隔离数据入口、首次启动、退出与重启已完成。** `DESKCUE_NATIVE_AOT` 构建现在支持显式
+`DESKCUE_AOT_PREVIEW_DATA_ROOT`，严格启动器会拒绝正式 `%LOCALAPPDATA%\DeskCue` 及重叠路径、
 拒绝过期摘要和不匹配哈希，并且只管理可执行文件完整路径等于受审计 AOT 产物的进程。实际 x64
 AOT 已在隔离根中完成首次启动、单实例、托盘正常退出和重启；正式目录运行前后保持相同文件数、
 字节数和确定性元数据指纹。完整记录见 `aot-stage-5a-report.md`。
 
 **5B-1：shortcut AOT 到 Rust 真实边界冒烟已完成。** 五个独立 preview 根已覆盖 `.lnk`
 创建、读取、覆盖、无 UI Resolve、损坏、有效目标、取消、同卷移动修复和删除；实际 AOT 进程加载
-的 `deskbox_native.dll` 路径与哈希和 profile 30 审计一致，两个模态窗口的 owner 也与真实托盘
+的 `deskcue_native.dll` 路径与哈希和 profile 30 审计一致，两个模态窗口的 owner 也与真实托盘
 HWND 相同。完整记录见 `aot-stage-5b-1-report.md`。
 
 **5B-2A：Explorer 启动与 Quick Access 只读查询的 AOT 到 Rust 真实边界冒烟已完成。**
@@ -1131,10 +1131,10 @@ postflight。自动化没有覆盖用户全局剪贴板；系统会话 Clipboard
 
 ### 阶段 6：Rust `SearchCore`
 
-- **6A 已完成**：独立 `deskbox_search_core.dll`、ABI v1、批量 caller-owned UTF-16、目录池、连续
+- **6A 已完成**：独立 `deskcue_search_core.dll`、ABI v1、批量 caller-owned UTF-16、目录池、连续
   arenas、有界 Top-N、取消、tracked capacity、显式 C# 所有者和真实 DLL 差异门禁；
 - 6A 没有修改 `SearchIndexService` 默认路径，也没有把 SearchCore 加入普通或 AOT 产品输出，生产
-  `deskbox_native.dll` 继续保持 ABI 2、能力 511 和十个导出；
+  `deskcue_native.dll` 继续保持 ABI 2、能力 511 和十个导出；
 - 20,000 条共享长目录样本的 Rust tracked capacity 为 1,480,124 bytes，是当前托管结构仅重复
   完整路径 UTF-16 字符载荷保守下限 3,320,000 bytes 的 44.58%；该证据支持继续推进，但不冒充
   进程工作集结果；
@@ -1153,7 +1153,7 @@ postflight。自动化没有覆盖用户全局剪贴板；系统会话 Clipboard
 - 6C ABI3 隔离 300k resident private 为 managed 85.38 MiB、Rust 22.07 MiB（-74.2%），peak
   private 86.55→26.45 MiB（-69.4%）；三档六组查询签名一致。10k resident 差值受基线噪声主导，
   不作为决策依据；
-- 真实 DeskBox 使用 207,925 条 DBIX、16,992 个目录和 11 个启用 Widget，各后端两次重复：Private
+- 真实 DeskCue 使用 207,925 条 DBIX、16,992 个目录和 11 个启用 Widget，各后端两次重复：Private
   Bytes 中位数 269.23→236.86 MiB（-12.02%），Working Set 387.36→355.76 MiB（-8.16%），正式
   settings/DBIX 指纹不变；
 - x64 AOT 审计升级为 profile 57 / schema 54，SearchCore ABI 3、14 导出、唯一根 DLL、x64 PE、
@@ -1296,7 +1296,7 @@ Native AOT 的 COM、WinRT、XAML 和资源问题经常只在裁剪后的真实�
     schema 9 隔离 AOT 审计通过；JSON 直接相关警告 24→0，备份服务 IL2026/IL3050 为 0，
     警告类别与 always-throw 集合没有扩张。
 18. **阶段 4B-4 JSON 默认反射关闭审计（已完成）**：主程序与更新器只在
-    `DeskBoxAotAudit=true` 条件组设置 `JsonSerializerIsReflectionEnabledByDefault=false`，
+    `DeskCueAotAudit=true` 条件组设置 `JsonSerializerIsReflectionEnabledByDefault=false`，
     普通构建实际求值为空；审计脚本在 restore/publish 显式传入并在摘要中记录该值。
     新契约先失败后通过，AOT/JSON 定向契约 32/32、x64 全量测试 1994/1994、配置 13 /
     schema 10 隔离审计通过；JSON 警告和反射回退错误为 0，现有 12 类警告与 1 条音乐
@@ -1411,7 +1411,7 @@ Native AOT 的 COM、WinRT、XAML 和资源问题经常只在裁剪后的真实�
     `always-throw` 均为 0；39 个发布文件、3 个 PDB、源码指纹、Rust ABI 2、能力 255、九个导出
     及同次哈希保持一致。该批完成后进入阶段 5A。
 34. **阶段 5A x64 AOT 隔离启动与基础存活（已完成实际运行边界）**：增加
-    `DESKBOX_AOT_PREVIEW_DATA_ROOT` 的 NativeAOT-only 分支和严格启动器；旧摘要、正式数据根、
+    `DESKCUE_AOT_PREVIEW_DATA_ROOT` 的 NativeAOT-only 分支和严格启动器；旧摘要、正式数据根、
     重叠路径、产物哈希不一致和非精确进程目标均在启动前拒绝。9 条新契约先 9/9 失败，实施后
     9/9；5A/数据路径组合 20/20、x64 全量 2133/2133 通过。配置 29 / schema 26 的最终审计为
     39 个发布文件、3 个 PDB、WMC1506=0、WMC1510=1216、完整 `always-throw=0`，Rust ABI 2、
@@ -1903,7 +1903,7 @@ ABI 2、能力 255、九个必需导出及 staging/publish 哈希一致。完整
 
 ### 5A 完成复盘与阶段 5B-1 调整
 
-5A 新增 `DESKBOX_AOT_PREVIEW_DATA_ROOT`，仅在 `DESKBOX_NATIVE_AOT` 编译中读取；普通 Release
+5A 新增 `DESKCUE_AOT_PREVIEW_DATA_ROOT`，仅在 `DESKCUE_NATIVE_AOT` 编译中读取；普通 Release
 JIT 不接受该覆盖，未显式设置时产品默认数据语义也不变。`start-aot-preview.ps1` 固定接受 profile
 29 / schema 26 的稳定摘要，核对 EXE/Rust SHA-256，拒绝正式数据根和任意父子重叠路径，只停止
 可执行文件完整路径等于受审计 EXE 的进程，并在调用结束后恢复环境变量。正式目录元数据记录改用
@@ -1916,7 +1916,7 @@ JIT 不接受该覆盖，未显式设置时产品默认数据语义也不变。`
 
 受审计 AOT 产物已在独立根实际完成首次启动、单实例、重启和托盘菜单正常退出；日志确认
 `OnLaunched completed successfully`、托盘、原生通知、OLE 拖放目标和默认 Widget 建立。正式
-`%LOCALAPPDATA%\DeskBox` 运行前后均为 122 个文件、303,016,768 bytes，确定性元数据指纹均为
+`%LOCALAPPDATA%\DeskCue` 运行前后均为 122 个文件、303,016,768 bytes，确定性元数据指纹均为
 `254EB84254707C6A61158F5038C59ED65A9B120157C320C0EBEA1FF0430EF7F0`。完整证据见
 `aot-stage-5a-report.md`。
 
@@ -1928,7 +1928,7 @@ JIT 不接受该覆盖，未显式设置时产品默认数据语义也不变。`
 
 ### 5B-1 完成复盘与阶段 5B-2 调整
 
-5B-1 新增仅在 `DESKBOX_NATIVE_AOT` 中编译的显式 shortcut smoke 入口，并在 `OnLaunched`
+5B-1 新增仅在 `DESKCUE_NATIVE_AOT` 中编译的显式 shortcut smoke 入口，并在 `OnLaunched`
 成功完成后调度。runner 只接受显式 AOT preview 根和五个固定场景，复用产品的
 `DragDropPermissionService`、`ShortcutHelper`、真实托盘 HWND 与 Rust loader；脚本再核对 EXE/Rust
 路径、SHA-256、动态代码状态、ABI/能力、非零模块句柄、场景结果和正式数据指纹。
@@ -1952,7 +1952,7 @@ Quick Access 临时目录 pin/unpin 单独留到 **5B-2B**，复杂度为中等�
 
 ### 5B-2A 完成复盘与阶段 5B-2B 调整
 
-5B-2A 新增仅在 `DESKBOX_NATIVE_AOT` 中编译的组合 smoke。Explorer 部分通过实际产品服务启动
+5B-2A 新增仅在 `DESKCUE_NATIVE_AOT` 中编译的组合 smoke。Explorer 部分通过实际产品服务启动
 一次性 `.cmd`，只有外部标记文件内容正确才算通过；Quick Access 部分依次执行公共异步查询、
 原生 `QueryPinState` 明细查询和公共复查，三次均要求 `NotPinned`。runner 只接受显式 preview 根，
 脚本还会隔离 shortcut/shell 两个 smoke 环境变量、核对同次审计哈希并在外层 `finally` 精确清理进程。
@@ -2055,7 +2055,7 @@ source-generated 调用和 19 个 context 所有者。
 ### 5B-3C 完成复盘与阶段 5B-4 调整
 
 5B-3C 新增的是测试基础设施和 NativeAOT-only runner，没有重写 4C 已冻结的产品 Rust Core Audio
-实现。测试专用 `deskbox-audio-session-fixture` 生成并循环播放全零 PCM，以固定进程/display name
+实现。测试专用 `deskcue-audio-session-fixture` 生成并循环播放全零 PCM，以固定进程/display name
 建立真实 Core Audio session；它要求绝对路径与父 PID，父进程退出或 stop marker 出现时停止，且
 不会复制到产品 publish。runner 还要求精确夹具 PID、唯一同名进程、preview 根和固定 match kind 4，
 因此不会把用户第三方播放器作为测试目标。
@@ -2085,7 +2085,7 @@ FolderPicker、Shell 与媒体等 OS 交互。每批先在隔离 preview 根做�
 
 5B-4A 新增 NativeAOT-only 的 `BasicReadOnly` runner 和外层隔离脚本。脚本只接受
 `.artifacts/aot-managed-ui-smoke/win-x64` 下带所有权标记的 preview 根，预置固定 ID 的 File/Search
-两个 Widget，并在运行前后比较正式 `%LOCALAPPDATA%\DeskBox` 指纹。runner 验证动态代码关闭、
+两个 Widget，并在运行前后比较正式 `%LOCALAPPDATA%\DeskCue` 指纹。runner 验证动态代码关闭、
 托盘 HWND、两个已恢复且可见的 Widget、12 套已发布语言资源、设置六个主分区，以及搜索中的六种
 筛选和名称/大小/日期/类型各两次排序；结果只写入隔离根，并显式使用独立 source-generated context。
 
@@ -2337,7 +2337,7 @@ IL2026/IL2050/IL2072/IL2075/IL3050=0、生产 Rust ABI 2/能力 255/九个导出
 可读性层和操作层。三个 PID 均不同且 3/3 正常退出，owned PNG 前后 SHA-256 一致，正式数据指纹
 不变，运行日志失败数和残留 AOT 进程数为 0，证据归档后才删除 owned preview 根。
 
-Glance 真实 XAML 使用运行时 Binding，因此只在 `DESKBOX_NATIVE_AOT` 下增加一组允许 33 个属性的
+Glance 真实 XAML 使用运行时 Binding，因此只在 `DESKCUE_NATIVE_AOT` 下增加一组允许 33 个属性的
 `GeneratedBindableCustomProperty`。首次 AOT 编译发现当前特性构造函数必须显式提供空写属性清单；
 修正后真实图片 surface 通过。审计把阶段 C#/IL 源警告与全局 WMC1510 精确基线分开，C1 源警告为 0，
 WMC1510 仍精确保持 1211。全量回归还补齐了历史测试的当前 profile 文本和 22/14/5/8 绑定数量描述。
@@ -2350,7 +2350,7 @@ IL2026/IL2050/IL2072/IL2075/IL3050=0、生产 Rust ABI 2/能力 255/九个导出
 `aot-stage-5b-4b2c1-report.md`。
 
 本轮没有扩展 Rust。实际图片字节由 WinUI 解码与呈现，托管层只保留少量路径和偏好；跨 FFI 搬运这些
-状态不会形成明确内存收益。用户原图仍是外部引用而非 DeskBox 托管副本；图片移动/删除、其他格式、
+状态不会形成明确内存收益。用户原图仍是外部引用而非 DeskCue 托管副本；图片移动/删除、其他格式、
 大图、多图轮播、损坏图片和 Picker 人工交互继续作为后续边界。
 
 天气代码复盘后，将原 5B-4B2C2 调整为两个顺序门：
@@ -2487,7 +2487,7 @@ Widget 单选/多选 `MenuFlyout` 定位删除项，以 automation invoke 进入
 进程中要求三个原路径消失、回收站中各有唯一匹配，再经 Rust 逐项恢复；Postflight 在第三进程核对
 原路径、长度、SHA-256 和匹配残留 0。
 
-Rust 新增 `deskbox_recycle_bin_v1`。输入为原父目录和项目名；实现通过 Shell namespace CSIDL 10
+Rust 新增 `deskcue_recycle_bin_v1`。输入为原父目录和项目名；实现通过 Shell namespace CSIDL 10
 完整枚举 `FolderItem.Name` 与 `System.Recycle.DeletedFrom`，只有完成枚举且匹配数严格为 1 才调用
 `InvokeVerb("undelete")`。它不解析 `$I`/`$R`，不访问 `$Recycle.Bin`，不清空回收站，也不处理非
 匹配项目。生产模块因此更新为 ABI 2、能力 511、十个必需导出；产品删除仍为 C# P/Invoke。
@@ -2801,13 +2801,13 @@ ABI 3 后，产品 watcher、扫描和 reconciliation 仍由 C# 控制，Rust �
 Direct x64 普通/AOT 输出打包 DLL，Store 与 ARM64 继续排除。
 
 隔离 ABI3 基准在 300k 下把 resident private 从 85.38 MiB 降到 22.07 MiB，六组结果签名一致；真实
-DeskBox 使用 207,925 条索引和 11 个启用 Widget，各后端两次重复后，整体 Private Bytes 中位数从
+DeskCue 使用 207,925 条索引和 11 个启用 Widget，各后端两次重复后，整体 Private Bytes 中位数从
 269.23 MiB 降到 236.86 MiB，Working Set 从 387.36 MiB 降到 355.76 MiB。前者证明索引结构收益，
 后者证明全部格子显示且视觉不变时的整进程收益，两类百分比不混用。产品测量脚本确认实际后端日志、
 规范 Debug EXE、隔离数据副本、源指纹不变和精确进程清理。
 
 x64 AOT 审计已升为 profile 57 / schema 54，SearchCore ABI 3、14 导出、唯一根 DLL、x64 PE、同次
-staging/publish 哈希和 PDB 分离通过；生产 `deskbox_native.dll` 仍为 ABI 2、能力 511、十导出。
+staging/publish 哈希和 PDB 分离通过；生产 `deskcue_native.dll` 仍为 ABI 2、能力 511、十导出。
 完整证据见 `docs/architecture/search-core-native-abi-v3.md` 与
 `docs/architecture/rust-stage-6c-search-core-report.md`。
 
@@ -2833,7 +2833,7 @@ live set。第三类是受审计 x64 Native AOT 产品界面：owned DBIX 文件
 完整格子三轮内存：208,021 entries、16,994 directories、11 个启用 Widget 下，Private Bytes 真中位数
 269.73 → 235.08 MiB（-12.85%），Working Set 388.00 → 351.67 MiB（-9.36%）。
 
-因此默认策略调整为：`DESKBOX_SEARCH_CORE_DEFAULT` 只在 Direct x64 且 SearchCore 模块参与构建时定义；
+因此默认策略调整为：`DESKCUE_SEARCH_CORE_DEFAULT` 只在 Direct x64 且 SearchCore 模块参与构建时定义；
 Store x64 与 Direct ARM64 的实际 MSBuild 求值均为模块关闭、默认关闭。已序列化的用户布尔选择优先，
 新默认不会覆盖显式 `false`，也不会自动打开自定义索引器主功能。完整记录见
 `docs/architecture/rust-stage-6d-search-core-report.md`。
@@ -2854,7 +2854,7 @@ Windows SDK ARM64 库，并将普通 PowerShell 中缺失的 ARM64 linker/`LIB`/
 构建。NativeAOT 主程序和 Updater 复用同一次已校验环境，避免子发布重新依赖 Visual Studio 安装事务
 中的易变注册状态。
 
-两个 Rust DLL 的独立 Release 交叉构建均通过：`deskbox_native.dll` 为 ABI 2、能力 511、10 导出，
+两个 Rust DLL 的独立 Release 交叉构建均通过：`deskcue_native.dll` 为 ABI 2、能力 511、10 导出，
 SearchCore 为 ABI 3、14 导出；两者 machine 均为 `0xAA64`，且没有在 x64 主机加载。Direct ARM64
 Native AOT 静态审计生成 40 个发布文件（90.82 MiB）和 4 个分离 PDB（204.23 MiB），主程序、Updater、
 两个 DLL 全部为 `0xAA64`，staging/publish 哈希一致，源指纹在审计期间不变。结构化证据固定标记
@@ -2900,7 +2900,7 @@ Direct ARM64 的 SearchCore 默认值据此开放，与 Direct x64 一致；Stor
 
 7C1 新增 `distribution-audit.yml`，在 `windows-2025-vs2026` 原生 x64 与
 `windows-11-vs2026-arm` 原生 ARM64 runner 并行执行。最终运行
-[32650821484](https://github.com/Tianyu199509/DeskBox/actions/runs/32650821484) 对提交
+[32650821484](https://github.com/CyberShadowX/DeskCue/actions/runs/32650821484) 对提交
 `ebbb8ecf341db9068b3bbf71c7101fd9c19ff886` 的两个架构全部通过，并由第三个 job 生成只有两边均通过
 才成立的跨架构摘要。
 
@@ -2908,9 +2908,9 @@ Direct 侧重新执行完整 AOT publish，核对主程序、Updater、两个 Ru
 静态 CRT、PDB 排除和 publish 清单，再用 Inno 6 编译带 `NativeAot` 后缀的 x64/ARM64 安装器。AOT
 安装器只跳过 .NET Desktop Runtime 检测，继续保留 Windows App Runtime 2.2 依赖处理。
 
-Store 侧修正了 Windows App SDK AOT package payload：AOT `DeskBox.exe` 与静态
-`deskbox_native.dll` 进入 MSIX，两个 PDB 只进入 `.appxsym`；`DeskBox.deps.json`、
-`DeskBox.runtimeconfig.json`、Updater、SearchCore、CoreCLR/JIT 和 Direct 素材被禁止。拆包审计确认正式
+Store 侧修正了 Windows App SDK AOT package payload：AOT `DeskCue.exe` 与静态
+`deskcue_native.dll` 进入 MSIX，两个 PDB 只进入 `.appxsym`；`DeskCue.deps.json`、
+`DeskCue.runtimeconfig.json`、Updater、SearchCore、CoreCLR/JIT 和 Direct 素材被禁止。拆包审计确认正式
 Partner Center identity、x64/ARM64 architecture、`Microsoft.WindowsAppRuntime.2` framework dependency、
 EXE 无 CLR header、Rust 导出/依赖、publish/package hash 和单架构 `.msixupload` 结构。
 

@@ -1,7 +1,7 @@
 # 反馈 #112-115 处理交接文档（2026-09-19）
 
 > 面向接手的 agent / 会话。本轮：拉取后台反馈 → 逐条对码核实 → 后台回复 → 四条全部修复 → 3893/3893 绿（合并态）→ 未提交，待 Simon 真机验证。
-> 敏感信息（服务器 IP、SSH 细节）不入库：见会话记忆 `deskbox-feedback-backend-workflow`（同工作区共享）。本文用 `<server>` 占位。
+> 敏感信息（服务器 IP、SSH 细节）不入库：见会话记忆 `deskcue-feedback-backend-workflow`（同工作区共享）。本文用 `<server>` 占位。
 
 ## 1. 后台用户反馈数据怎么拉
 
@@ -20,10 +20,10 @@ curl -s https://deskbox.fun/stats/api/feedback/public
 ### 1.2 诊断包（SSH 直取）
 
 ```
-scp root@<server>:/var/www/deskbox-analytics/uploads/feedback/{id}.zip <本地目录>
+scp root@<server>:/var/www/deskcue-analytics/uploads/feedback/{id}.zip <本地目录>
 ```
 
-- 服务器 IP 与免密配置见记忆 `deskbox-feedback-backend-workflow`，本地凭据文件（不入库）只有 DNS/百度 token。
+- 服务器 IP 与免密配置见记忆 `deskcue-feedback-backend-workflow`，本地凭据文件（不入库）只有 DNS/百度 token。
 - 用户不带附件时该路径 404（#113/114/115 都没有，只有 #112 有）。
 - 本地先例目录：`D:\project\wingezi\artifacts\feedback-{id}\`。
 
@@ -39,7 +39,7 @@ curl -X PATCH http://127.0.0.1:3002/api/admin/feedback/{id} \
 # → {"ok":true}
 ```
 
-- 3002 = deskbox-analytics 服务监听端口（`ss -tlnp` 可核实）。
+- 3002 = deskcue-analytics 服务监听端口（`ss -tlnp` 可核实）。
 - `reply` ≤1000 字符（服务端 cleanText 截断）；`status` 只接受 open/confirmed/in_progress/done/wontfix。
 - 回复后用 1.1 的公开 API 复核生效。
 
@@ -48,7 +48,7 @@ curl -X PATCH http://127.0.0.1:3002/api/admin/feedback/{id} \
 | 文件 | 说明 |
 |---|---|
 | `diagnostics.json` | schemaVersion 5。有用字段：appVersion / distributionChannel(Direct\|store) / isPackaged / OS / 进程架构 / uiCulture / hotkeys / settings（加载恢复状态）/ shortcutNative / runtimeHealth / widgetManager（每个表面的 widgetKind/bounds/可见性——**格子几何尺寸在这，判断视口类 bug 用它**）/ displays |
-| `DeskBox-sanitized.log` | **只有尾部**（非全量），路径全脱敏成 `<PATH>`/`<REDACTED>`；事件类日志（[Import]/[DropTarget]/[FileTransfer]/[Memory] 等）健在 |
+| `DeskCue-sanitized.log` | **只有尾部**（非全量），路径全脱敏成 `<PATH>`/`<REDACTED>`；事件类日志（[Import]/[DropTarget]/[FileTransfer]/[Memory] 等）健在 |
 | `README.txt` | 说明 |
 
 ## 2. 四条反馈的分析（全部对码核实过，均属实）
@@ -92,31 +92,31 @@ curl -X PATCH http://127.0.0.1:3002/api/admin/feedback/{id} \
 
 ### 3.1 #115 反馈弹窗
 
-**`src/DeskBox/Services/FeedbackService.cs`**
+**`src/DeskCue/Services/FeedbackService.cs`**
 - `SubmitAsync` / `GetMyFeedbackAsync` 的 OCE 拆分：`catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }` 保留用户取消语义；其余 OCE（=HttpClient 超时）转 `NetworkFailure()` / `Failure()`。
 
-**`src/DeskBox/Views/SettingsWindow.Feedback.cs`**
+**`src/DeskCue/Views/SettingsWindow.Feedback.cs`**
 - `PrimaryButtonClick` 整体包 try/catch/finally：finally 保证 `deferral.Complete()`；catch 写错误提示（兜底，正常不该到）。
 - `errorText` 挪出 formPanel，挂外层 StackPanel（成功后仍可见）。
 - 成功面板加"再提交一条"按钮（`submitAnotherButton`）：回表单、清文本、重选 suggestion。
 - 限流分支禁用主按钮；**复查补刀**：`rateLimitedPrimaryDisabled` 标志防止 `RefreshValidation`（文本编辑触发）在限流窗口内重新启用按钮；"再提交一条"复位该标志。
 
-**文案**：新 key `Feedback.Dialog.SubmitAnother` ×12 语言（`src/DeskBox/Strings/*.json`）。
+**文案**：新 key `Feedback.Dialog.SubmitAnother` ×12 语言（`src/DeskCue/Strings/*.json`）。
 
 **测试**：`FeedbackServiceTests` +2：`Submit_HttpTimeoutReportsNetworkFailureInsteadOfThrowing`、`Submit_UserCancellationStillThrows`。
 
 ### 3.2 #112 迁移回滚失败上报 + 归位入口
 
-**`src/DeskBox/Services/WidgetManager.cs`**
+**`src/DeskCue/Services/WidgetManager.cs`**
 - 新 `record ManagedStorageRollbackFailure(WidgetId, WidgetName, DestinationFolder, SourceFolder, PreserveExisting, Reason)`。
 - 新 `ManagedStorageRollbackFailureException`：携带原始异常（InnerException 保留）+ 未归位清单。
 
-**`src/DeskBox/Services/WidgetManager.Storage.cs`**
+**`src/DeskCue/Services/WidgetManager.Storage.cs`**
 - 迁移 catch 块收集回滚失败（`PreserveExisting` = 原回滚走保守合并路径的 widget），有失败则抛 `ManagedStorageRollbackFailureException` 而非裸 rethrow。
 - `completedMoves` 元组加 `WidgetName`。
 - 新 `RetryMigrationRollbackAsync(failures)`：保守重试归位（PreserveExisting 用 `RestoreMigratedDirectoryPreservingExistingAsync`，其余 `RelocateDirectoryAsync`），带 busy 标志和 widget 刷新，返回仍失败的清单。
 
-**`src/DeskBox/Services/ManagedStorageMigrationResidueDialog.cs`**
+**`src/DeskCue/Services/ManagedStorageMigrationResidueDialog.cs`**
 - 新 `ShowRollbackFailureAsync`：列出未归位文件夹（格子名+新根路径）、解释文件可能两处并存、循环"重试归位"直到全部归位或用户关闭；全部归位显示完成提示，部分归位刷新剩余清单。
 
 **调用侧**：`SettingsWindow.StorageAndUpdates.cs` + `OnboardingWindow.Storage.cs` 各加 `catch (ManagedStorageRollbackFailureException)`（在 `ManagedStorageDestinationResidueException` 之后、泛型 catch 之前）。
@@ -127,7 +127,7 @@ curl -X PATCH http://127.0.0.1:3002/api/admin/feedback/{id} \
 
 ### 3.3 #113 同名残留文件夹接管
 
-**`src/DeskBox/Services/WidgetManager.Storage.cs` 的 `RenameManagedWidgetFolderAsync`**，逻辑改为三分支：
+**`src/DeskCue/Services/WidgetManager.Storage.cs` 的 `RenameManagedWidgetFolderAsync`**，逻辑改为三分支：
 1. `IsManagedWidgetNameInUse`（活格子占用）→ 仍报 `Widget.Error.ManagedFolderNameExists`。
 2. 目标是已存在的**目录**：
    - 当前格子文件夹**非空** → 报新 key（防合并丢数据）；
@@ -140,7 +140,7 @@ curl -X PATCH http://127.0.0.1:3002/api/admin/feedback/{id} \
 
 ### 3.4 #114 重叠提示细化
 
-**`src/DeskBox/Services/WidgetManager.cs`**
+**`src/DeskCue/Services/WidgetManager.cs`**
 - 新 `enum FileWidgetPathRelation { SameDirectory, CandidateInsideOther, CandidateContainsOther, UnresolvableOverlap }`。
 - 新 `DescribeFileWidgetPathRelation(candidate, other)` 静态判定器（同路径/互相包含=同目录；复用 `FileService.TryIsPathUnderDirectoryResolved`；判定不了进 UnresolvableOverlap）。
 - 新 `FormatFileWidgetPathConflictMessage(candidate, otherName, otherPath)`：按关系选 4 个 key 之一，Format 参数 = (对方名, 对方路径)。
@@ -161,9 +161,9 @@ curl -X PATCH http://127.0.0.1:3002/api/admin/feedback/{id} \
 
 - **修复批次验证**：2026-09-19 15:36 全量 `dotnet test -p:Platform=x64` **3893/3893 绿**（我的批次+并行批次合并态）。
 - **全部未提交**，涉及文件：`FeedbackService.cs`、`SettingsWindow.Feedback.cs`、`WidgetManager.cs`、`WidgetManager.Storage.cs`、`ManagedStorageMigrationResidueDialog.cs`、`SettingsWindow.StorageAndUpdates.cs`、`OnboardingWindow.Storage.cs`、`Strings/*.json` ×12、测试 `FeedbackServiceTests` / `ManagedStorageMigrationSafetyTests` / `WidgetManagerStorageCleanupTests`。
-- **并行会话**：同一工作区有另一 agent 持续活跃（Settings slice 迁移、#112 orphan restore、Platform P/Invoke 重构）。2026-09-19 15:5x 起它在重写 `src/DeskBox/Platform/{AdvApi32,Kernel32,Ole32,Shell32}NativeMethods.cs` + `Win32Helper.SessionDisplayFont.cs`，导致 3 个源码契约测试挂（`AotStage5B4C1B2BContractTests.ShellHelper_...`、`AotStage4D3BContractTests.DropTargetRegistration_...`、`AotPublishContractTests.RustNativeStage3C2_...`）——**归因明确是它的批次收尾责任，与本批次无关，勿修**。等它收尾后需一轮全量回归。
-- **DeskBox 运行中**：canonical Debug 路径 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`（重启时验证过 pid 与路径）。
-- 本轮撞车实录与协议经验：见记忆 `deskbox-feedback-112-115-fixes`（契约测试挂了先查文件 mtime 归因，别急着改 manifest）。
+- **并行会话**：同一工作区有另一 agent 持续活跃（Settings slice 迁移、#112 orphan restore、Platform P/Invoke 重构）。2026-09-19 15:5x 起它在重写 `src/DeskCue/Platform/{AdvApi32,Kernel32,Ole32,Shell32}NativeMethods.cs` + `Win32Helper.SessionDisplayFont.cs`，导致 3 个源码契约测试挂（`AotStage5B4C1B2BContractTests.ShellHelper_...`、`AotStage4D3BContractTests.DropTargetRegistration_...`、`AotPublishContractTests.RustNativeStage3C2_...`）——**归因明确是它的批次收尾责任，与本批次无关，勿修**。等它收尾后需一轮全量回归。
+- **DeskCue 运行中**：canonical Debug 路径 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`（重启时验证过 pid 与路径）。
+- 本轮撞车实录与协议经验：见记忆 `deskcue-feedback-112-115-fixes`（契约测试挂了先查文件 mtime 归因，别急着改 manifest）。
 
 ## 5. 接下来做什么
 
@@ -195,13 +195,13 @@ curl -X PATCH http://127.0.0.1:3002/api/admin/feedback/{id} \
 
 ### 5.4 发版挂接
 
-后台回复的承诺口径：#115 "尽快修复"、#112 归位入口"优先"、#112 容错/#113 引导"后续版本"。**这些修复进 1.5.4.x 热修还是 1.5.5 由 Simon 拍板**；发版流程用 `/deskbox-release` skill（三种范围措辞触发，别越权提交推送）。
+后台回复的承诺口径：#115 "尽快修复"、#112 归位入口"优先"、#112 容错/#113 引导"后续版本"。**这些修复进 1.5.4.x 热修还是 1.5.5 由 Simon 拍板**；发版流程用 `/deskcue-release` skill（三种范围措辞触发，别越权提交推送）。
 
 ## 6. 红线与坑（接手必读）
 
-1. **AGENTS.md 规则**（全文在仓库根）：改应用代码后先停本仓库路径下的 DeskBox.exe 再构建、重启用 canonical Debug 路径；测试必须 `dotnet test .\tests\DeskBox.Tests\DeskBox.Tests.csproj --no-restore --verbosity:minimal -p:Platform=x64`（AnyCPU 会被 MSIX 拒）；提交只带 `Simon <1047078635@qq.com>` 身份。
-2. **并行会话协议**：工作区可能同时有别的 agent（当前就有）。测试挂了/构建挂了，**先查文件 mtime 归因**再动手；绝不 stash/reset 别人的改动；等对面写完再验证。记忆 `deskbox-parallel-agent-collision`。
-3. **12 语言契约**：新增/修改文案 key 必须 `src/DeskBox/Strings/*.json` 12 个全同步；Format 参数个数变更也是全量同步；改完 `JSON.parse` 校验一遍（node 一行）。新增 JsonSerializer 调用另有基线+8 个阶段守卫（见记忆 `deskbox-json-frozen-count-trap`）。
+1. **AGENTS.md 规则**（全文在仓库根）：改应用代码后先停本仓库路径下的 DeskCue.exe 再构建、重启用 canonical Debug 路径；测试必须 `dotnet test .\tests\DeskCue.Tests\DeskCue.Tests.csproj --no-restore --verbosity:minimal -p:Platform=x64`（AnyCPU 会被 MSIX 拒）；提交只带 `Simon <1047078635@qq.com>` 身份。
+2. **并行会话协议**：工作区可能同时有别的 agent（当前就有）。测试挂了/构建挂了，**先查文件 mtime 归因**再动手；绝不 stash/reset 别人的改动；等对面写完再验证。记忆 `deskcue-parallel-agent-collision`。
+3. **12 语言契约**：新增/修改文案 key 必须 `src/DeskCue/Strings/*.json` 12 个全同步；Format 参数个数变更也是全量同步；改完 `JSON.parse` 校验一遍（node 一行）。新增 JsonSerializer 调用另有基线+8 个阶段守卫（见记忆 `deskcue-json-frozen-count-trap`）。
 4. **manifest ratchet**：`ModuleBoundaryContractTests.DestructiveFileOperations`（文件突变操作计数）和 `SettingsSliceOwnershipContractTests.FacadePassthroughAccess`（slice 访问计数）变了会挂——升级计数必须在 manifest 处留注释说明原因，这是"有意识扩展"契约。
 5. **FileService 传输内核别乱动**：单 handle 跨 copy-to-commit、manifest 删源、保守合并回滚都是事故教训换来的（lnk-incident、TOCTOU）；改动前读 `ManagedStorageMigrationSafetyTests` 全部注释与 FileSafety 域文档。
 6. **XamlCompiler 红字连锁**：`SettingsWindow.xaml` 新 x:Name 必须在 SectionElements.cs 手写属性（CS0103 是唯一真错）；AOT 下别绑 `IReadOnlyList<T> => [...]`（用 WrapOptions）。

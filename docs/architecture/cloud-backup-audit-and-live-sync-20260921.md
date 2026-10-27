@@ -23,7 +23,7 @@
 | 凭据 | PasswordVault（非打包可用）；key = `provider:user@scheme://host[:port]/basepath`，换端点/账号不会串密；保存时清理同 provider 陈旧 key | `PasswordVaultCredentialStore.cs`、`CloudBackupSettingsPolicy.CredentialKey` |
 | 并发 | `_gate` 串行化；定时路径 `WaitAsync(0)` 跳过重入；pending-restore marker 存在时禁上传；endpoint generation 丢弃过期异步结果 | `CloudBackupService.cs` |
 | 命名 | `…-<utc秒>-<device8>.zip` 双设备不互覆；旧格式解析兼容 | `BuildRemoteSnapshotName`/`ParseSnapshotTimestamp` |
-| 还原安全 | 下载只接受安全 basename；暂存区校验条目必须落在 manifest 声明域内；pre-restore 快照兜底；重启后 apply 失败保留 marker 下次重试 | `DeskBoxDataBackupService.cs` |
+| 还原安全 | 下载只接受安全 basename；暂存区校验条目必须落在 manifest 声明域内；pre-restore 快照兜底；重启后 apply 失败保留 marker 下次重试 | `DeskCueDataBackupService.cs` |
 
 ## 2. 审计：遗留问题清单
 
@@ -57,9 +57,9 @@
 
 **通道布局**：与备份快照分离，每设备一份稳定文档：
 ```
-DeskBox/sync/<device8>/todo-data.<collectionKey>.json
-DeskBox/sync/<device8>/quick-capture.json
-DeskBox/sync/<device8>/widget-style.json
+DeskCue/sync/<device8>/todo-data.<collectionKey>.json
+DeskCue/sync/<device8>/quick-capture.json
+DeskCue/sync/<device8>/widget-style.json
 ```
 不覆盖、不竞争；拉取时合并所有 `<device8>` 目录下文档（跳过本机）。
 

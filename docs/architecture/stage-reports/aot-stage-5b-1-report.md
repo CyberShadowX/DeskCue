@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-1 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-1 完成与复盘报告
 
 - 报告日期：2026-08-21
 - 阶段范围：x64 Native AOT 进程中的 shortcut AOT → Rust 真实边界冒烟
@@ -17,19 +17,19 @@
 - 有效目标保持、缺失目标取消后保留、同卷移动后自动修复、确认后删除；
 - AOT 运行时动态代码关闭、Rust 后端已选中、模块已加载、ABI/能力和非零模块句柄；
 - AOT EXE 与 Rust DLL 的路径和 SHA-256 均与同次 profile 30 审计一致；
-- 每个场景使用独立 preview 根，正式 `%LOCALAPPDATA%\DeskBox` 在场景前后保持相同元数据指纹。
+- 每个场景使用独立 preview 根，正式 `%LOCALAPPDATA%\DeskCue` 在场景前后保持相同元数据指纹。
 
-普通 JIT 行为没有改变。冒烟入口只在 `DESKBOX_NATIVE_AOT` 编译中存在，并且必须同时显式设置 shortcut 场景与 AOT preview 数据根。
+普通 JIT 行为没有改变。冒烟入口只在 `DESKCUE_NATIVE_AOT` 编译中存在，并且必须同时显式设置 shortcut 场景与 AOT preview 数据根。
 
 ## 2. 实现边界
 
 ### 2.1 AOT 进程内的窄入口
 
-`App.AotShortcutSmoke.cs` 新增显式 opt-in 环境变量 `DESKBOX_AOT_SHORTCUT_SMOKE`。入口只在 `OnLaunched completed successfully` 之后调度，并在执行前要求：
+`App.AotShortcutSmoke.cs` 新增显式 opt-in 环境变量 `DESKCUE_AOT_SHORTCUT_SMOKE`。入口只在 `OnLaunched completed successfully` 之后调度，并在执行前要求：
 
 1. 当前构建是 NativeAOT；
-2. `DeskBoxDataPathService.Current` 正在使用开发/预览根；
-3. 显式 `DESKBOX_AOT_PREVIEW_DATA_ROOT` 与当前数据根完全相同；
+2. `DeskCueDataPathService.Current` 正在使用开发/预览根；
+3. 显式 `DESKCUE_AOT_PREVIEW_DATA_ROOT` 与当前数据根完全相同；
 4. 测试夹具只能位于 `<preview-root>\aot-shortcut-smoke\<scenario>`；
 5. 只重建当前固定场景目录，不删除整个 preview 根。
 
@@ -49,14 +49,14 @@ Core 场景复用 `DragDropPermissionService` 和 `ShortcutHelper` 的产品写�
 - 重新计算正式数据根指纹；
 - 将每个成功场景写入 `.artifacts\aot-shortcut-smoke\win-x64\<scenario>\session.json`；
 - 除非显式 `-KeepRunning`，无论成功、失败还是超时，都只按受审计 EXE 的完整路径清理 AOT 进程；
-- 在调用结束后恢复 `DESKBOX_AOT_SHORTCUT_SMOKE` 环境变量。
+- 在调用结束后恢复 `DESKCUE_AOT_SHORTCUT_SMOKE` 环境变量。
 
 ## 3. 真实 AOT 场景矩阵
 
 所有最终场景均使用同一批审计产物：
 
-- `DeskBox.exe`：`9B381D16B13C9EB2BD8AD7DE16F06E9FDC528FE502C260FF0F83C8DAE6BDDDD3`
-- `deskbox_native.dll`：`4367D50F05DA301F9F6C2BDD827D005247196A411C8A6602D9F3F5347DE0B72F`
+- `DeskCue.exe`：`9B381D16B13C9EB2BD8AD7DE16F06E9FDC528FE502C260FF0F83C8DAE6BDDDD3`
+- `deskcue_native.dll`：`4367D50F05DA301F9F6C2BDD827D005247196A411C8A6602D9F3F5347DE0B72F`
 - Rust：ABI 2、能力 255、实际加载状态 `Loaded`
 
 | 场景 | AOT PID | 关键结果 | owner / 窗口证据 |
@@ -80,7 +80,7 @@ UiRepair 的含义需要明确：冻结的产品 flags 是 `SLR_UPDATE | SLR_NOS
 | x64 全量测试 | 2141/2141 通过 |
 | PowerShell 语法 | Windows PowerShell 5.1 与 PowerShell 7 均通过 |
 | `git diff --check` | 通过；仅报告仓库既有 LF/CRLF 提示 |
-| 失败清理负向探测 | UiCancel 故意等待 10 秒超时；脚本返回失败后仓库内 AOT/Debug `DeskBox.exe` 数量为 0 |
+| 失败清理负向探测 | UiCancel 故意等待 10 秒超时；脚本返回失败后仓库内 AOT/Debug `DeskCue.exe` 数量为 0 |
 
 全量测试最初为 2140/2141：JSON 固定清单发现新增 evidence context 尚未登记。清单现已从 16 个文件、49 处调用、14 个 context 所有者更新为 17 个文件、50 处调用、15 个 context 所有者。第 50 处只编入 NativeAOT、只写隔离冒烟证据；50/50 仍全部使用 source-generated `JsonTypeInfo`，默认反射没有重新开放。
 
@@ -104,9 +104,9 @@ UiRepair 的含义需要明确：冻结的产品 flags 是 `SLR_UPDATE | SLR_NOS
 
 | 文件 | 大小 | SHA-256 |
 | --- | ---: | --- |
-| `DeskBox.exe` | 39,433,728 | `9B381D16B13C9EB2BD8AD7DE16F06E9FDC528FE502C260FF0F83C8DAE6BDDDD3` |
-| `DeskBox.Updater.exe` | 2,020,352 | `2917056076606E571B994156685F4924C264352028FEB019DEEA4D8B3C259074` |
-| `deskbox_native.dll` | 146,944 | `4367D50F05DA301F9F6C2BDD827D005247196A411C8A6602D9F3F5347DE0B72F` |
+| `DeskCue.exe` | 39,433,728 | `9B381D16B13C9EB2BD8AD7DE16F06E9FDC528FE502C260FF0F83C8DAE6BDDDD3` |
+| `DeskCue.Updater.exe` | 2,020,352 | `2917056076606E571B994156685F4924C264352028FEB019DEEA4D8B3C259074` |
+| `deskcue_native.dll` | 146,944 | `4367D50F05DA301F9F6C2BDD827D005247196A411C8A6602D9F3F5347DE0B72F` |
 
 ## 6. 正式数据与隔离边界
 

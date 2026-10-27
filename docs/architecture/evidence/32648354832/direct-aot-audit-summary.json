@@ -19,13 +19,13 @@
   "jsonSerializer": {
     "reflectionEnabledByDefault": false
   },
-  "buildArtifactsDirectory": "D:\\a\\DeskBox\\DeskBox\\.artifacts\\aot-audit\\win-x64\\build",
-  "rustIntermediateDirectory": "D:\\a\\DeskBox\\DeskBox\\.artifacts\\aot-audit\\win-x64\\rust-staging",
-  "rustCargoTargetDirectory": "D:\\a\\DeskBox\\DeskBox\\.artifacts\\aot-audit\\win-x64\\rust-target",
-  "searchCoreIntermediateDirectory": "D:\\a\\DeskBox\\DeskBox\\.artifacts\\aot-audit\\win-x64\\search-core-staging",
-  "searchCoreCargoTargetDirectory": "D:\\a\\DeskBox\\DeskBox\\.artifacts\\aot-audit\\win-x64\\search-core-target",
-  "publishDirectory": "D:\\a\\DeskBox\\DeskBox\\.artifacts\\aot-audit\\win-x64\\publish",
-  "symbolsDirectory": "D:\\a\\DeskBox\\DeskBox\\.artifacts\\aot-audit\\win-x64\\symbols",
+  "buildArtifactsDirectory": "D:\\a\\DeskCue\\DeskCue\\.artifacts\\aot-audit\\win-x64\\build",
+  "rustIntermediateDirectory": "D:\\a\\DeskCue\\DeskCue\\.artifacts\\aot-audit\\win-x64\\rust-staging",
+  "rustCargoTargetDirectory": "D:\\a\\DeskCue\\DeskCue\\.artifacts\\aot-audit\\win-x64\\rust-target",
+  "searchCoreIntermediateDirectory": "D:\\a\\DeskCue\\DeskCue\\.artifacts\\aot-audit\\win-x64\\search-core-staging",
+  "searchCoreCargoTargetDirectory": "D:\\a\\DeskCue\\DeskCue\\.artifacts\\aot-audit\\win-x64\\search-core-target",
+  "publishDirectory": "D:\\a\\DeskCue\\DeskCue\\.artifacts\\aot-audit\\win-x64\\publish",
+  "symbolsDirectory": "D:\\a\\DeskCue\\DeskCue\\.artifacts\\aot-audit\\win-x64\\symbols",
   "publishFileCount": 40,
   "publishBytes": 93727020.0,
   "symbolFileCount": 4,
@@ -73,13 +73,13 @@
     ],
     "stage4D1BWarningMessages": [],
     "stage4D2RemovedSourceFiles": [
-      "src\\DeskBox\\Helpers\\FileOperationHelper.cs"
+      "src\\DeskCue\\Helpers\\FileOperationHelper.cs"
     ],
     "stage4D2UnexpectedExistingSourceFiles": [],
     "stage4D2FileOperationWarningMessages": [],
     "stage4D3ASourceFiles": [
-      "src\\DeskBox\\Helpers\\NativeDropTarget.cs",
-      "src\\DeskBox\\Helpers\\NativeDropComDataReader.cs"
+      "src\\DeskCue\\Helpers\\NativeDropTarget.cs",
+      "src\\DeskCue\\Helpers\\NativeDropComDataReader.cs"
     ],
     "stage4D3ALegacyRcwPatterns": [
       "COMIDataObject",
@@ -93,8 +93,8 @@
     "stage4D3ARemainingDropTargetWarningMessages": [],
     "stage4D3AUnexpectedDropTargetWarningMessages": [],
     "stage4D3BSourceFiles": [
-      "src\\DeskBox\\Helpers\\NativeDropTarget.cs",
-      "src\\DeskBox\\Helpers\\NativeDropTargetComInterop.cs"
+      "src\\DeskCue\\Helpers\\NativeDropTarget.cs",
+      "src\\DeskCue\\Helpers\\NativeDropTargetComInterop.cs"
     ],
     "stage4D3BLegacyRegistrationPatterns": [
       "[ComImport",
@@ -120,17 +120,17 @@
     "stage4D3BWarningMessages": [],
     "stage4D3BIl2050WarningMessages": [],
     "stage4D4ASourceFiles": [
-      "src\\DeskBox\\Helpers\\ExplorerShellLaunchService.cs",
-      "src\\DeskBox\\Helpers\\ExplorerShellLaunchNativeBackend.cs"
+      "src\\DeskCue\\Helpers\\ExplorerShellLaunchService.cs",
+      "src\\DeskCue\\Helpers\\ExplorerShellLaunchNativeBackend.cs"
     ],
     "stage4D4AWarningMessages": [],
     "stage4D4BSourceFiles": [
-      "src\\DeskBox\\Helpers\\ExplorerQuickAccessHelper.cs",
-      "src\\DeskBox\\Helpers\\QuickAccessNativeBackend.cs"
+      "src\\DeskCue\\Helpers\\ExplorerQuickAccessHelper.cs",
+      "src\\DeskCue\\Helpers\\QuickAccessNativeBackend.cs"
     ],
     "stage4D4BWarningMessages": [],
     "stage4D5SourceFiles": [
-      "src\\DeskBox\\App.Tray.cs"
+      "src\\DeskCue\\App.Tray.cs"
     ],
     "stage4D5LegacyReflectionPatterns": [
       "System.Reflection.BindingFlags",
@@ -151,9 +151,9 @@
     "stage4D5MissingPublicPatterns": [],
     "stage4D5WarningMessages": [],
     "stage4E0SourceFiles": [
-      "src\\DeskBox\\Controls\\WidgetContents\\SearchWidgetContent.xaml",
-      "src\\DeskBox\\Controls\\WidgetContents\\SearchWidgetContent.xaml.cs",
-      "src\\DeskBox\\Models\\SearchModels.cs"
+      "src\\DeskCue\\Controls\\WidgetContents\\SearchWidgetContent.xaml",
+      "src\\DeskCue\\Controls\\WidgetContents\\SearchWidgetContent.xaml.cs",
+      "src\\DeskCue\\Models\\SearchModels.cs"
     ],
     "stage4E0LegacyOneWayPatterns": [
       "{x:Bind Query, Mode=OneWay}",
@@ -173,19 +173,19 @@
     "stage4E0MissingOneTimeBindings": [],
     "stage4E0RequiredBehaviorPatterns": [
       {
-        "sourceFile": "src\\DeskBox\\Models\\SearchModels.cs",
+        "sourceFile": "src\\DeskCue\\Models\\SearchModels.cs",
         "pattern": "public required string Query { get; init; }"
       },
       {
-        "sourceFile": "src\\DeskBox\\Models\\SearchModels.cs",
+        "sourceFile": "src\\DeskCue\\Models\\SearchModels.cs",
         "pattern": "public required string DeleteLabel { get; init; }"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetContents\\SearchWidgetContent.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetContents\\SearchWidgetContent.xaml.cs",
         "pattern": "_recentQueries.Clear();"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetContents\\SearchWidgetContent.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetContents\\SearchWidgetContent.xaml.cs",
         "pattern": "_recentQueries.Add(new SearchHistoryEntry"
       }
     ],
@@ -193,70 +193,70 @@
     "stage4E0Wmc1506WarningMessages": [],
     "stage4E0SourceWarningMessages": [],
     "stage4E1SourceFiles": [
-      "src\\DeskBox\\Controls\\PinStateIcon.xaml",
-      "src\\DeskBox\\Controls\\PinStateIcon.xaml.cs",
-      "src\\DeskBox\\Controls\\MarkdownSourceEditor.xaml",
-      "src\\DeskBox\\Controls\\MarkdownSourceEditor.xaml.cs",
-      "src\\DeskBox\\Controls\\DesktopOrganizationTaskView.xaml",
-      "src\\DeskBox\\Controls\\DesktopOrganizationTaskView.xaml.cs",
-      "src\\DeskBox\\Views\\SettingsSections\\DesktopOrganizationSettingsSection.xaml",
-      "src\\DeskBox\\Views\\SettingsSections\\DesktopOrganizationSettingsSection.xaml.cs"
+      "src\\DeskCue\\Controls\\PinStateIcon.xaml",
+      "src\\DeskCue\\Controls\\PinStateIcon.xaml.cs",
+      "src\\DeskCue\\Controls\\MarkdownSourceEditor.xaml",
+      "src\\DeskCue\\Controls\\MarkdownSourceEditor.xaml.cs",
+      "src\\DeskCue\\Controls\\DesktopOrganizationTaskView.xaml",
+      "src\\DeskCue\\Controls\\DesktopOrganizationTaskView.xaml.cs",
+      "src\\DeskCue\\Views\\SettingsSections\\DesktopOrganizationSettingsSection.xaml",
+      "src\\DeskCue\\Views\\SettingsSections\\DesktopOrganizationSettingsSection.xaml.cs"
     ],
     "stage4E1LegacyBindingContracts": [
       {
-        "sourceFile": "src\\DeskBox\\Controls\\PinStateIcon.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\PinStateIcon.xaml",
         "pattern": "{Binding Foreground, ElementName=Root}"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\MarkdownSourceEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\MarkdownSourceEditor.xaml",
         "pattern": "{Binding EditorFontSize, ElementName=Root}"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\MarkdownSourceEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\MarkdownSourceEditor.xaml",
         "pattern": "{Binding IsReadOnly, ElementName=Root}"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\MarkdownSourceEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\MarkdownSourceEditor.xaml",
         "pattern": "{Binding PlaceholderText, ElementName=Root}"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\DesktopOrganizationTaskView.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\DesktopOrganizationTaskView.xaml",
         "pattern": "ToolTipService.ToolTip=\"{Binding Text, RelativeSource={RelativeSource Self}}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\DesktopOrganizationSettingsSection.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\DesktopOrganizationSettingsSection.xaml",
         "pattern": "ToolTipService.ToolTip=\"{Binding Text, RelativeSource={RelativeSource Self}}\""
       }
     ],
     "stage4E1LegacyBindingSourceMatches": [],
     "stage4E1RequiredCompiledBindings": [
       {
-        "sourceFile": "src\\DeskBox\\Controls\\PinStateIcon.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\PinStateIcon.xaml",
         "pattern": "{x:Bind Foreground, Mode=OneWay}",
         "expectedCount": 2
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\MarkdownSourceEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\MarkdownSourceEditor.xaml",
         "pattern": "{x:Bind EditorFontSize, Mode=OneWay}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\MarkdownSourceEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\MarkdownSourceEditor.xaml",
         "pattern": "{x:Bind IsReadOnly, Mode=OneWay}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\MarkdownSourceEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\MarkdownSourceEditor.xaml",
         "pattern": "{x:Bind PlaceholderText, Mode=OneWay}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\DesktopOrganizationTaskView.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\DesktopOrganizationTaskView.xaml",
         "pattern": "ToolTipService.ToolTip=\"{x:Bind StoragePathText.Text, Mode=OneWay}\"",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\DesktopOrganizationSettingsSection.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\DesktopOrganizationSettingsSection.xaml",
         "pattern": "ToolTipService.ToolTip=\"{x:Bind RuleDetailPath.Text, Mode=OneWay}\"",
         "expectedCount": 1
       }
@@ -264,42 +264,42 @@
     "stage4E1MissingCompiledBindings": [],
     "stage4E1RequiredBehaviorPatterns": [
       {
-        "sourceFile": "src\\DeskBox\\Controls\\PinStateIcon.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\PinStateIcon.xaml.cs",
         "pattern": "IsPinnedProperty"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\MarkdownSourceEditor.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\MarkdownSourceEditor.xaml.cs",
         "pattern": "EditorFontSizeProperty"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\MarkdownSourceEditor.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\MarkdownSourceEditor.xaml.cs",
         "pattern": "IsReadOnlyProperty"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\MarkdownSourceEditor.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\MarkdownSourceEditor.xaml.cs",
         "pattern": "PlaceholderTextProperty"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\DesktopOrganizationTaskView.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\DesktopOrganizationTaskView.xaml.cs",
         "pattern": "StoragePathText.Text ="
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\DesktopOrganizationSettingsSection.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\DesktopOrganizationSettingsSection.xaml.cs",
         "pattern": "RuleDetailPath.Text ="
       }
     ],
     "stage4E1MissingBehaviorPatterns": [],
     "stage4E1DeferredBindingContracts": [
       {
-        "sourceFile": "src\\DeskBox\\App.xaml",
+        "sourceFile": "src\\DeskCue\\App.xaml",
         "pattern": "Value=\"{Binding SegmentHeight}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\App.xaml",
+        "sourceFile": "src\\DeskCue\\App.xaml",
         "pattern": "Value=\"{Binding SegmentTextSize}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\ContentWidgetWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\ContentWidgetWindow.xaml",
         "pattern": "OverlayTitle=\"{Binding DisplayName}\""
       }
     ],
@@ -308,84 +308,84 @@
     "stage4E1MaximumWmc1510Count": 1258,
     "stage4E1ActualWmc1510Count": 1211,
     "stage4E2SourceFiles": [
-      "src\\DeskBox\\Controls\\WidgetContents\\MusicTransportIcon.xaml",
-      "src\\DeskBox\\Controls\\WidgetContents\\MusicTransportIcon.xaml.cs",
-      "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml",
-      "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml.cs"
+      "src\\DeskCue\\Controls\\WidgetContents\\MusicTransportIcon.xaml",
+      "src\\DeskCue\\Controls\\WidgetContents\\MusicTransportIcon.xaml.cs",
+      "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml",
+      "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml.cs"
     ],
     "stage4E2LegacyBindingContracts": [
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetContents\\MusicTransportIcon.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetContents\\MusicTransportIcon.xaml",
         "pattern": "{Binding Foreground, ElementName=Root}"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml",
         "pattern": "{Binding TitleFontSize, ElementName=InlineEditorRoot}"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml",
         "pattern": "{Binding Title, ElementName=InlineEditorRoot}"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml",
         "pattern": "{Binding EditorFontSize, ElementName=InlineEditorRoot}"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml",
         "pattern": "{Binding Text, ElementName=InlineEditorRoot, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml",
         "pattern": "{Binding CancelText, ElementName=InlineEditorRoot}"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml",
         "pattern": "{Binding CommandFontSize, ElementName=InlineEditorRoot}"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml",
         "pattern": "{Binding SaveText, ElementName=InlineEditorRoot}"
       }
     ],
     "stage4E2LegacyBindingSourceMatches": [],
     "stage4E2RequiredCompiledBindings": [
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetContents\\MusicTransportIcon.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetContents\\MusicTransportIcon.xaml",
         "pattern": "{x:Bind Foreground, Mode=OneWay}",
         "expectedCount": 7
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml",
         "pattern": "{x:Bind TitleFontSize, Mode=OneWay}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml",
         "pattern": "{x:Bind Title, Mode=OneWay}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml",
         "pattern": "{x:Bind EditorFontSize, Mode=OneWay}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml",
         "pattern": "{x:Bind Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml",
         "pattern": "{x:Bind CancelText, Mode=OneWay}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml",
         "pattern": "{x:Bind CommandFontSize, Mode=OneWay}",
         "expectedCount": 2
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml",
         "pattern": "{x:Bind SaveText, Mode=OneWay}",
         "expectedCount": 1
       }
@@ -393,50 +393,50 @@
     "stage4E2MissingCompiledBindings": [],
     "stage4E2RequiredBehaviorPatterns": [
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetContents\\MusicTransportIcon.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetContents\\MusicTransportIcon.xaml.cs",
         "pattern": "KindProperty"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetContents\\MusicTransportIcon.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetContents\\MusicTransportIcon.xaml.cs",
         "pattern": "OnKindChanged"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetContents\\MusicTransportIcon.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetContents\\MusicTransportIcon.xaml.cs",
         "pattern": "ApplyKind();"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml.cs",
         "pattern": "TextProperty"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml.cs",
         "pattern": "SaveRequested?.Invoke(this, e);"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml.cs",
         "pattern": "CancelRequested?.Invoke(this, e);"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml.cs",
         "pattern": "EditorKeyDown?.Invoke(this, e);"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\WidgetInlineEditor.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\WidgetInlineEditor.xaml.cs",
         "pattern": "PreviewKeyDownEvent"
       }
     ],
     "stage4E2MissingBehaviorPatterns": [],
     "stage4E2DeferredBindingContracts": [
       {
-        "sourceFile": "src\\DeskBox\\App.xaml",
+        "sourceFile": "src\\DeskCue\\App.xaml",
         "pattern": "Value=\"{Binding SegmentHeight}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\App.xaml",
+        "sourceFile": "src\\DeskCue\\App.xaml",
         "pattern": "Value=\"{Binding SegmentTextSize}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\ContentWidgetWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\ContentWidgetWindow.xaml",
         "pattern": "OverlayTitle=\"{Binding DisplayName}\""
       }
     ],
@@ -445,121 +445,121 @@
     "stage4E2MaximumWmc1510Count": 1243,
     "stage4E2ActualWmc1510Count": 1211,
     "stage4E3SourceFiles": [
-      "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml",
-      "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml.cs",
-      "src\\DeskBox\\ViewModels\\TodoAttachmentViewModel.cs",
-      "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
-      "src\\DeskBox\\Views\\SearchPopupWindow.xaml.cs",
-      "src\\DeskBox\\Models\\SearchModels.cs"
+      "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml",
+      "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml.cs",
+      "src\\DeskCue\\ViewModels\\TodoAttachmentViewModel.cs",
+      "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
+      "src\\DeskCue\\Views\\SearchPopupWindow.xaml.cs",
+      "src\\DeskCue\\Models\\SearchModels.cs"
     ],
     "stage4E3LegacyBindingContracts": [
       {
-        "sourceFile": "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml",
         "pattern": "AutomationProperties.Name=\"{Binding DisplayName}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml",
         "pattern": "ToolTipService.ToolTip=\"{Binding DisplayName}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml",
         "pattern": "Glyph=\"{Binding Glyph}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml",
         "pattern": "Visibility=\"{Binding FileIconVisibility}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml",
         "pattern": "Source=\"{Binding Thumbnail}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml",
         "pattern": "Visibility=\"{Binding ThumbnailVisibility}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml",
         "pattern": "Text=\"{Binding DisplayName}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
         "pattern": "Glyph=\"{Binding Glyph}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
         "pattern": "Text=\"{Binding DisplayName}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
         "pattern": "Text=\"{Binding Count}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
         "pattern": "Source=\"{Binding Icon}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
         "pattern": "Text=\"{Binding AppDisplayName}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
         "pattern": "Text=\"{Binding Title}\""
       }
     ],
     "stage4E3LegacyBindingSourceMatches": [],
     "stage4E3RequiredCompiledBindings": [
       {
-        "sourceFile": "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml",
         "pattern": "{x:Bind DisplayName, Mode=OneWay}",
         "expectedCount": 3
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml",
         "pattern": "{x:Bind Glyph, Mode=OneWay}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml",
         "pattern": "{x:Bind FileIconVisibility, Mode=OneWay}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml",
         "pattern": "{x:Bind Thumbnail, Mode=OneWay}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml",
         "pattern": "{x:Bind ThumbnailVisibility, Mode=OneWay}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
         "pattern": "{x:Bind Glyph, Mode=OneTime}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
         "pattern": "{x:Bind DisplayName, Mode=OneTime}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
         "pattern": "{x:Bind Count, Mode=OneWay}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
         "pattern": "{x:Bind Icon, Mode=OneTime}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
         "pattern": "{x:Bind AppDisplayName, Mode=OneTime}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
         "pattern": "{x:Bind Title, Mode=OneTime}",
         "expectedCount": 2
       }
@@ -567,22 +567,22 @@
     "stage4E3MissingCompiledBindings": [],
     "stage4E3RequiredDataTypes": [
       {
-        "sourceFile": "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml",
         "pattern": "x:DataType=\"viewModels:TodoAttachmentViewModel\"",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
         "pattern": "x:DataType=\"models:SearchTabItem\"",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
         "pattern": "x:DataType=\"models:SearchResultItem\"",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
         "pattern": "x:DataType=\"models:SearchRecommendationItem\"",
         "expectedCount": 2
       }
@@ -590,66 +590,66 @@
     "stage4E3MissingDataTypes": [],
     "stage4E3RequiredBehaviorPatterns": [
       {
-        "sourceFile": "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml.cs",
         "pattern": "await EnsureThumbnailAsync(args.NewValue);"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml.cs",
         "pattern": "OpenRequested?.Invoke(this, new AttachmentTileEventArgs(attachment));"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\AttachmentTileStrip.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\AttachmentTileStrip.xaml.cs",
         "pattern": "RemoveRequested?.Invoke(this, new AttachmentTileEventArgs(attachment));"
       },
       {
-        "sourceFile": "src\\DeskBox\\ViewModels\\TodoAttachmentViewModel.cs",
+        "sourceFile": "src\\DeskCue\\ViewModels\\TodoAttachmentViewModel.cs",
         "pattern": "public sealed class TodoAttachmentViewModel : ObservableObject"
       },
       {
-        "sourceFile": "src\\DeskBox\\ViewModels\\TodoAttachmentViewModel.cs",
+        "sourceFile": "src\\DeskCue\\ViewModels\\TodoAttachmentViewModel.cs",
         "pattern": "OnPropertyChanged(nameof(ThumbnailVisibility));"
       },
       {
-        "sourceFile": "src\\DeskBox\\ViewModels\\TodoAttachmentViewModel.cs",
+        "sourceFile": "src\\DeskCue\\ViewModels\\TodoAttachmentViewModel.cs",
         "pattern": "OnPropertyChanged(nameof(FileIconVisibility));"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml.cs",
         "pattern": "RecommendedAppsRepeater.ElementPrepared += OnRecommendedAppsElementPrepared;"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml.cs",
         "pattern": "private void RefreshRecommendedAppIcons()"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml.cs",
         "pattern": "image.Source = item.Icon;"
       },
       {
-        "sourceFile": "src\\DeskBox\\Models\\SearchModels.cs",
+        "sourceFile": "src\\DeskCue\\Models\\SearchModels.cs",
         "pattern": "public sealed class SearchTabItem : INotifyPropertyChanged"
       },
       {
-        "sourceFile": "src\\DeskBox\\Models\\SearchModels.cs",
+        "sourceFile": "src\\DeskCue\\Models\\SearchModels.cs",
         "pattern": "PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));"
       },
       {
-        "sourceFile": "src\\DeskBox\\Models\\SearchModels.cs",
+        "sourceFile": "src\\DeskCue\\Models\\SearchModels.cs",
         "pattern": "public ImageSource? Icon { get; set; }"
       }
     ],
     "stage4E3MissingBehaviorPatterns": [],
     "stage4E3DeferredBindingContracts": [
       {
-        "sourceFile": "src\\DeskBox\\App.xaml",
+        "sourceFile": "src\\DeskCue\\App.xaml",
         "pattern": "Value=\"{Binding SegmentHeight}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\App.xaml",
+        "sourceFile": "src\\DeskCue\\App.xaml",
         "pattern": "Value=\"{Binding SegmentTextSize}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\ContentWidgetWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\ContentWidgetWindow.xaml",
         "pattern": "OverlayTitle=\"{Binding DisplayName}\""
       }
     ],
@@ -658,60 +658,60 @@
     "stage4E3MaximumWmc1510Count": 1229,
     "stage4E3ActualWmc1510Count": 1211,
     "stage4E4SourceFiles": [
-      "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
-      "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
-      "src\\DeskBox\\Views\\SettingsWindow.xaml.cs",
-      "src\\DeskBox\\ViewModels\\SettingsViewModel.FileStackOptions.cs",
-      "src\\DeskBox\\ViewModels\\SettingsViewModel.FeatureOptions.cs",
-      "src\\DeskBox\\ViewModels\\SettingsViewModel.SelectionOptions.cs",
-      "src\\DeskBox\\Controls\\SettingsComboBox.cs"
+      "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
+      "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
+      "src\\DeskCue\\Views\\SettingsWindow.xaml.cs",
+      "src\\DeskCue\\ViewModels\\SettingsViewModel.FileStackOptions.cs",
+      "src\\DeskCue\\ViewModels\\SettingsViewModel.FeatureOptions.cs",
+      "src\\DeskCue\\ViewModels\\SettingsViewModel.SelectionOptions.cs",
+      "src\\DeskCue\\Controls\\SettingsComboBox.cs"
     ],
     "stage4E4LegacyBindingContracts": [
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
         "pattern": "Text=\"{Binding FileStackSettingsSummaryText}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
         "pattern": "ItemsSource=\"{Binding AvailableFileStackModeOptions}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
         "pattern": "controls:SettingsComboBox.Value=\"{Binding SelectedFileStackMode, Mode=TwoWay}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
         "pattern": "ItemsSource=\"{Binding AvailableFileWidgetFolderOpenBehaviorOptions}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
         "pattern": "controls:SettingsComboBox.Value=\"{Binding SelectedFileWidgetFolderOpenBehavior, Mode=TwoWay}\""
       }
     ],
     "stage4E4LegacyBindingSourceMatches": [],
     "stage4E4RequiredCompiledBindings": [
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
         "pattern": "{x:Bind ViewModel.FileStackSettingsSummaryText, Mode=OneWay}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
         "pattern": "{x:Bind ViewModel.AvailableFileStackModeOptionItems, Mode=OneWay}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
         "pattern": "{x:Bind ViewModel.SelectedFileStackMode, Mode=TwoWay}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
         "pattern": "{x:Bind ViewModel.AvailableFileWidgetFolderOpenBehaviorOptionItems, Mode=OneWay}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml",
         "pattern": "{x:Bind ViewModel.SelectedFileWidgetFolderOpenBehavior, Mode=TwoWay}",
         "expectedCount": 1
       }
@@ -719,51 +719,51 @@
     "stage4E4MissingCompiledBindings": [],
     "stage4E4RequiredViewModelBridgePatterns": [
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
         "pattern": "public static readonly DependencyProperty ViewModelProperty"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
         "pattern": "DependencyProperty.Register("
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
         "pattern": "nameof(ViewModel)"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
         "pattern": "typeof(SettingsViewModel)"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
         "pattern": "new PropertyMetadata(null)"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
         "pattern": "public SettingsViewModel? ViewModel"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
         "pattern": "get => (SettingsViewModel?)GetValue(ViewModelProperty);"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsSections\\FileWidgetSettingsSection.xaml.cs",
         "pattern": "set => SetValue(ViewModelProperty, value);"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsWindow.xaml.cs",
         "pattern": "SettingsRoot.DataContext = ViewModel;"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsWindow.xaml.cs",
         "pattern": "AppearanceDetailSection.ViewModel = ViewModel;"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsWindow.xaml.cs",
         "pattern": "AppearanceDetailSection.ViewModel = null;"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SettingsWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SettingsWindow.xaml.cs",
         "pattern": "ViewModel.Dispose();"
       }
     ],
@@ -772,58 +772,58 @@
     "stage4E4UnexpectedManualBridgePatterns": [],
     "stage4E4RequiredBehaviorPatterns": [
       {
-        "sourceFile": "src\\DeskBox\\ViewModels\\SettingsViewModel.FileStackOptions.cs",
+        "sourceFile": "src\\DeskCue\\ViewModels\\SettingsViewModel.FileStackOptions.cs",
         "pattern": "OnPropertyChanged(nameof(FileStackSettingsSummaryText));"
       },
       {
-        "sourceFile": "src\\DeskBox\\ViewModels\\SettingsViewModel.FileStackOptions.cs",
+        "sourceFile": "src\\DeskCue\\ViewModels\\SettingsViewModel.FileStackOptions.cs",
         "pattern": "OnPropertyChanged(nameof(SelectedFileStackMode));"
       },
       {
-        "sourceFile": "src\\DeskBox\\ViewModels\\SettingsViewModel.FileStackOptions.cs",
+        "sourceFile": "src\\DeskCue\\ViewModels\\SettingsViewModel.FileStackOptions.cs",
         "pattern": "OnPropertyChanged(nameof(AvailableFileStackModeOptions));"
       },
       {
-        "sourceFile": "src\\DeskBox\\ViewModels\\SettingsViewModel.FeatureOptions.cs",
+        "sourceFile": "src\\DeskCue\\ViewModels\\SettingsViewModel.FeatureOptions.cs",
         "pattern": "public string SelectedFileWidgetFolderOpenBehavior"
       },
       {
-        "sourceFile": "src\\DeskBox\\ViewModels\\SettingsViewModel.FeatureOptions.cs",
+        "sourceFile": "src\\DeskCue\\ViewModels\\SettingsViewModel.FeatureOptions.cs",
         "pattern": "_settingsService.Settings.FileWidgetFolderOpenBehavior = normalized;"
       },
       {
-        "sourceFile": "src\\DeskBox\\ViewModels\\SettingsViewModel.SelectionOptions.cs",
+        "sourceFile": "src\\DeskCue\\ViewModels\\SettingsViewModel.SelectionOptions.cs",
         "pattern": "OnPropertyChanged(nameof(AvailableFileWidgetFolderOpenBehaviorOptions));"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SettingsComboBox.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\SettingsComboBox.cs",
         "pattern": "ItemsControl.ItemsSourceProperty"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SettingsComboBox.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\SettingsComboBox.cs",
         "pattern": "_comboBox.SelectionChanged += OnSelectionChanged;"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SettingsComboBox.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\SettingsComboBox.cs",
         "pattern": "SetValue(_comboBox, option.Value);"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SettingsComboBox.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\SettingsComboBox.cs",
         "pattern": "ApplyValueToSelection();"
       }
     ],
     "stage4E4MissingBehaviorPatterns": [],
     "stage4E4DeferredBindingContracts": [
       {
-        "sourceFile": "src\\DeskBox\\App.xaml",
+        "sourceFile": "src\\DeskCue\\App.xaml",
         "pattern": "Value=\"{Binding SegmentHeight}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\App.xaml",
+        "sourceFile": "src\\DeskCue\\App.xaml",
         "pattern": "Value=\"{Binding SegmentTextSize}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\ContentWidgetWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\ContentWidgetWindow.xaml",
         "pattern": "OverlayTitle=\"{Binding DisplayName}\""
       }
     ],
@@ -832,82 +832,82 @@
     "stage4E4MaximumWmc1510Count": 1224,
     "stage4E4ActualWmc1510Count": 1211,
     "stage4E5SourceFiles": [
-      "src\\DeskBox\\Controls\\SearchResultRowControl.xaml",
-      "src\\DeskBox\\Controls\\SearchResultRowControl.xaml.cs",
-      "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
-      "src\\DeskBox\\Views\\SearchPopupWindow.xaml.cs",
-      "src\\DeskBox\\Models\\SearchModels.cs",
-      "src\\DeskBox\\ViewModels\\SearchPopupViewModel.cs",
-      "src\\DeskBox\\Services\\FileMetaService.cs"
+      "src\\DeskCue\\Controls\\SearchResultRowControl.xaml",
+      "src\\DeskCue\\Controls\\SearchResultRowControl.xaml.cs",
+      "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
+      "src\\DeskCue\\Views\\SearchPopupWindow.xaml.cs",
+      "src\\DeskCue\\Models\\SearchModels.cs",
+      "src\\DeskCue\\ViewModels\\SearchPopupViewModel.cs",
+      "src\\DeskCue\\Services\\FileMetaService.cs"
     ],
     "stage4E5LegacyBindingContracts": [
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml",
         "pattern": "AutomationProperties.Name=\"{Binding Title}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml",
         "pattern": "Glyph=\"{Binding DisplayGlyph}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml",
         "pattern": "Source=\"{Binding Icon}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml",
         "pattern": "Text=\"{Binding Title}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml",
         "pattern": "Text=\"{Binding Subtitle}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml",
         "pattern": "Text=\"{Binding TypeDisplay}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml",
         "pattern": "Text=\"{Binding SizeDisplay}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml",
         "pattern": "Text=\"{Binding DateDisplay}\""
       }
     ],
     "stage4E5LegacyBindingSourceMatches": [],
     "stage4E5RequiredCompiledBindings": [
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml",
         "pattern": "{x:Bind Item.Title, Mode=OneTime}",
         "expectedCount": 2
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml",
         "pattern": "{x:Bind Item.DisplayGlyph, Mode=OneTime}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml",
         "pattern": "{x:Bind Item.Icon, Mode=OneTime}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml",
         "pattern": "{x:Bind Item.Subtitle, Mode=OneTime}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml",
         "pattern": "{x:Bind Item.TypeDisplay, Mode=OneTime}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml",
         "pattern": "{x:Bind Item.SizeDisplay, Mode=OneTime}",
         "expectedCount": 1
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml",
         "pattern": "{x:Bind Item.DateDisplay, Mode=OneTime}",
         "expectedCount": 1
       }
@@ -915,31 +915,31 @@
     "stage4E5MissingCompiledBindings": [],
     "stage4E5RequiredItemBridgePatterns": [
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml",
         "pattern": "<controls:SearchResultRowControl/>"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml.cs",
         "pattern": "internal SearchResultItem? Item { get; private set; }"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml.cs",
         "pattern": "internal void PrepareItem(SearchResultItem? item)"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml.cs",
         "pattern": "Item = item;"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml.cs",
         "pattern": "Bindings.Update();"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml.cs",
         "pattern": "? _viewModel.CurrentResults[args.Index]"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml.cs",
         "pattern": "row.PrepareItem(preparedItem);"
       }
     ],
@@ -948,79 +948,79 @@
     "stage4E5ItemRefreshOrderValid": true,
     "stage4E5RequiredBehaviorPatterns": [
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml.cs",
         "pattern": "public void RefreshIconVisuals()"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml.cs",
         "pattern": "FileIcon.Source = item?.Icon;"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml.cs",
         "pattern": "GlyphBlock.Visibility = hasIcon"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml.cs",
         "pattern": "SizeText.Text = item?.SizeDisplay;"
       },
       {
-        "sourceFile": "src\\DeskBox\\Controls\\SearchResultRowControl.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Controls\\SearchResultRowControl.xaml.cs",
         "pattern": "DateText.Text = item?.DateDisplay;"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml.cs",
         "pattern": "ResultsRepeater.ElementPrepared += OnResultsElementPrepared;"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml.cs",
         "pattern": "row.Item is { IconResolved: false } item"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml.cs",
         "pattern": "await _viewModel.EnsureResultMetadataAsync(item);"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml.cs",
         "pattern": "if (ReferenceEquals(row.Item, item))"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml.cs",
         "pattern": "ReferenceEquals(row.Item, selected)"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml.cs",
         "pattern": "row.IsMultiSelected = row.Item is { } rowItem"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml.cs",
         "pattern": "FindRowByDataContext(ResultsRepeater, selected)"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml.cs",
         "pattern": "ResultsRepeater.ElementPrepared -= OnResultsElementPrepared;"
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\SearchPopupWindow.xaml.cs",
+        "sourceFile": "src\\DeskCue\\Views\\SearchPopupWindow.xaml.cs",
         "pattern": "ResultsRepeater.ItemsSource = null;"
       },
       {
-        "sourceFile": "src\\DeskBox\\ViewModels\\SearchPopupViewModel.cs",
+        "sourceFile": "src\\DeskCue\\ViewModels\\SearchPopupViewModel.cs",
         "pattern": "item.TypeDisplay = GetTypeDisplay(item);"
       },
       {
-        "sourceFile": "src\\DeskBox\\ViewModels\\SearchPopupViewModel.cs",
+        "sourceFile": "src\\DeskCue\\ViewModels\\SearchPopupViewModel.cs",
         "pattern": "public Task EnsureResultMetadataAsync(SearchResultItem item)"
       },
       {
-        "sourceFile": "src\\DeskBox\\Services\\FileMetaService.cs",
+        "sourceFile": "src\\DeskCue\\Services\\FileMetaService.cs",
         "pattern": "item.IconResolved = true;"
       },
       {
-        "sourceFile": "src\\DeskBox\\Services\\FileMetaService.cs",
+        "sourceFile": "src\\DeskCue\\Services\\FileMetaService.cs",
         "pattern": "item.SizeDisplay = FormatSize(fileInfo.Length);"
       },
       {
-        "sourceFile": "src\\DeskBox\\Services\\FileMetaService.cs",
+        "sourceFile": "src\\DeskCue\\Services\\FileMetaService.cs",
         "pattern": "item.DateDisplay = FormatDate(fileInfo.CreationTime);"
       }
     ],
@@ -1031,15 +1031,15 @@
     "stage4E5LifecycleOrderValid": true,
     "stage4E5DeferredBindingContracts": [
       {
-        "sourceFile": "src\\DeskBox\\App.xaml",
+        "sourceFile": "src\\DeskCue\\App.xaml",
         "pattern": "Value=\"{Binding SegmentHeight}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\App.xaml",
+        "sourceFile": "src\\DeskCue\\App.xaml",
         "pattern": "Value=\"{Binding SegmentTextSize}\""
       },
       {
-        "sourceFile": "src\\DeskBox\\Views\\ContentWidgetWindow.xaml",
+        "sourceFile": "src\\DeskCue\\Views\\ContentWidgetWindow.xaml",
         "pattern": "OverlayTitle=\"{Binding DisplayName}\""
       }
     ],
@@ -1048,15 +1048,15 @@
     "stage4E5ExpectedWmc1510Count": 1211,
     "stage4E5ActualWmc1510Count": 1211,
     "stage5ASourceFiles": [
-      "src/DeskBox/Services/DeskBoxDataPathService.cs",
+      "src/DeskCue/Services/DeskCueDataPathService.cs",
       "scripts/start-aot-preview.ps1"
     ],
     "stage5ARequiredDataPathPatterns": [
-      "AotPreviewRootEnvironmentVariable = \"DESKBOX_AOT_PREVIEW_DATA_ROOT\"",
+      "AotPreviewRootEnvironmentVariable = \"DESKCUE_AOT_PREVIEW_DATA_ROOT\"",
       "Current { get; } = new(ResolveConfiguredRoot())",
       "#if DEBUG",
       "Environment.GetEnvironmentVariable(DevelopmentRootEnvironmentVariable)",
-      "#elif DESKBOX_NATIVE_AOT",
+      "#elif DESKCUE_NATIVE_AOT",
       "Environment.GetEnvironmentVariable(AotPreviewRootEnvironmentVariable)",
       "#else",
       "return null;"
@@ -1069,8 +1069,8 @@
       "Get-DirectoryStateFingerprint",
       "Get-AotPreviewProcesses",
       "Refusing to start Native AOT preview with the production data root",
-      "DESKBOX_AOT_PREVIEW_DATA_ROOT",
-      "DESKBOX_DEV_DATA_ROOT",
+      "DESKCUE_AOT_PREVIEW_DATA_ROOT",
+      "DESKCUE_DEV_DATA_ROOT",
       "sourceStableDuringAudit",
       "rustNative.publishSha256",
       "rustNative.publishMatchesStaging",
@@ -1087,14 +1087,14 @@
     "stage5AExpectedWmc1510Count": 1211,
     "stage5AActualWmc1510Count": 1211,
     "stage5B1SourceFiles": [
-      "src/DeskBox/App.AotShortcutSmoke.cs",
-      "src/DeskBox/App.xaml.cs",
+      "src/DeskCue/App.AotShortcutSmoke.cs",
+      "src/DeskCue/App.xaml.cs",
       "scripts/run-aot-shortcut-smoke.ps1"
     ],
     "stage5B1RequiredRunnerPatterns": [
-      "#if DESKBOX_NATIVE_AOT",
-      "DESKBOX_AOT_SHORTCUT_SMOKE",
-      "DeskBoxDataPathService.AotPreviewRootEnvironmentVariable",
+      "#if DESKCUE_NATIVE_AOT",
+      "DESKCUE_AOT_SHORTCUT_SMOKE",
+      "DeskCueDataPathService.AotPreviewRootEnvironmentVariable",
       "IsDevelopmentRoot",
       "RefusedNonPreviewRoot",
       "aot-shortcut-smoke",
@@ -1120,10 +1120,10 @@
     "stage5B1MissingLaunchPatterns": [],
     "stage5B1LaunchOrderValid": true,
     "stage5B1RequiredSmokeScriptPatterns": [
-      "DESKBOX_AOT_SHORTCUT_SMOKE",
-      "DESKBOX_AOT_SHELL_SMOKE",
-      "DESKBOX_AOT_QUICK_ACCESS_MUTATION_SMOKE",
-      "DESKBOX_AOT_MUSIC_VOLUME_READ_SMOKE",
+      "DESKCUE_AOT_SHORTCUT_SMOKE",
+      "DESKCUE_AOT_SHELL_SMOKE",
+      "DESKCUE_AOT_QUICK_ACCESS_MUTATION_SMOKE",
+      "DESKCUE_AOT_MUSIC_VOLUME_READ_SMOKE",
       "previousShortcutSmoke",
       "previousShellSmoke",
       "previousMutationSmoke",
@@ -1147,17 +1147,17 @@
     "stage5B1ExpectedWmc1510Count": 1211,
     "stage5B1ActualWmc1510Count": 1211,
     "stage5B2ASourceFiles": [
-      "src/DeskBox/App.AotShellSmoke.cs",
-      "src/DeskBox/App.xaml.cs",
-      "src/DeskBox/Helpers/ExplorerShellLaunchService.cs",
-      "src/DeskBox/Helpers/ExplorerQuickAccessHelper.cs",
+      "src/DeskCue/App.AotShellSmoke.cs",
+      "src/DeskCue/App.xaml.cs",
+      "src/DeskCue/Helpers/ExplorerShellLaunchService.cs",
+      "src/DeskCue/Helpers/ExplorerQuickAccessHelper.cs",
       "scripts/run-aot-shell-smoke.ps1"
     ],
     "stage5B2ARequiredRunnerPatterns": [
-      "#if DESKBOX_NATIVE_AOT",
-      "DESKBOX_AOT_SHELL_SMOKE",
+      "#if DESKCUE_NATIVE_AOT",
+      "DESKCUE_AOT_SHELL_SMOKE",
       "ExplorerQuickAccessReadOnly",
-      "DeskBoxDataPathService.AotPreviewRootEnvironmentVariable",
+      "DeskCueDataPathService.AotPreviewRootEnvironmentVariable",
       "IsDevelopmentRoot",
       "RefusedNonPreviewRoot",
       "aot-shell-smoke",
@@ -1190,10 +1190,10 @@
     ],
     "stage5B2AMissingQuickAccessPatterns": [],
     "stage5B2ARequiredSmokeScriptPatterns": [
-      "DESKBOX_AOT_SHELL_SMOKE",
-      "DESKBOX_AOT_SHORTCUT_SMOKE",
-      "DESKBOX_AOT_QUICK_ACCESS_MUTATION_SMOKE",
-      "DESKBOX_AOT_MUSIC_VOLUME_READ_SMOKE",
+      "DESKCUE_AOT_SHELL_SMOKE",
+      "DESKCUE_AOT_SHORTCUT_SMOKE",
+      "DESKCUE_AOT_QUICK_ACCESS_MUTATION_SMOKE",
+      "DESKCUE_AOT_MUSIC_VOLUME_READ_SMOKE",
       "previousShellSmoke",
       "previousShortcutSmoke",
       "previousMutationSmoke",
@@ -1221,19 +1221,19 @@
     "stage5B2AExpectedWmc1510Count": 1211,
     "stage5B2AActualWmc1510Count": 1211,
     "stage5B2BSourceFiles": [
-      "src/DeskBox/App.AotQuickAccessMutationSmoke.cs",
-      "src/DeskBox/App.xaml.cs",
-      "src/DeskBox/Helpers/ExplorerQuickAccessHelper.cs",
+      "src/DeskCue/App.AotQuickAccessMutationSmoke.cs",
+      "src/DeskCue/App.xaml.cs",
+      "src/DeskCue/Helpers/ExplorerQuickAccessHelper.cs",
       "scripts/run-aot-quick-access-mutation-smoke.ps1"
     ],
     "stage5B2BRequiredRunnerPatterns": [
-      "#if DESKBOX_NATIVE_AOT",
-      "DESKBOX_AOT_QUICK_ACCESS_MUTATION_SMOKE",
+      "#if DESKCUE_NATIVE_AOT",
+      "DESKCUE_AOT_QUICK_ACCESS_MUTATION_SMOKE",
       "AotQuickAccessMutationScenario.PinUnpin",
       "AotQuickAccessMutationScenario.PinThenFail",
       "AotQuickAccessMutationScenario.PinThenAwaitExternalCompensation",
       "AotQuickAccessMutationScenario.CompensateUnpin",
-      "DeskBoxDataPathService.AotPreviewRootEnvironmentVariable",
+      "DeskCueDataPathService.AotPreviewRootEnvironmentVariable",
       "IsDevelopmentRoot",
       "RefusedNonPreviewRoot",
       "aot-quick-access-mutation-smoke",
@@ -1274,10 +1274,10 @@
     ],
     "stage5B2BMissingQuickAccessPatterns": [],
     "stage5B2BRequiredSmokeScriptPatterns": [
-      "DESKBOX_AOT_QUICK_ACCESS_MUTATION_SMOKE",
-      "DESKBOX_AOT_SHORTCUT_SMOKE",
-      "DESKBOX_AOT_SHELL_SMOKE",
-      "DESKBOX_AOT_MUSIC_VOLUME_READ_SMOKE",
+      "DESKCUE_AOT_QUICK_ACCESS_MUTATION_SMOKE",
+      "DESKCUE_AOT_SHORTCUT_SMOKE",
+      "DESKCUE_AOT_SHELL_SMOKE",
+      "DESKCUE_AOT_MUSIC_VOLUME_READ_SMOKE",
       "previousMutationSmoke",
       "previousShortcutSmoke",
       "previousShellSmoke",
@@ -1315,17 +1315,17 @@
     "stage5B2BExpectedWmc1510Count": 1211,
     "stage5B2BActualWmc1510Count": 1211,
     "stage5B3ASourceFiles": [
-      "src/DeskBox/App.AotMusicVolumeReadSmoke.cs",
-      "src/DeskBox/App.xaml.cs",
-      "src/DeskBox/Services/MusicVolumeService.cs",
-      "src/DeskBox/Helpers/MusicVolumeNativeBackend.cs",
+      "src/DeskCue/App.AotMusicVolumeReadSmoke.cs",
+      "src/DeskCue/App.xaml.cs",
+      "src/DeskCue/Services/MusicVolumeService.cs",
+      "src/DeskCue/Helpers/MusicVolumeNativeBackend.cs",
       "scripts/run-aot-music-volume-read-smoke.ps1"
     ],
     "stage5B3ARequiredRunnerPatterns": [
-      "#if DESKBOX_NATIVE_AOT",
-      "DESKBOX_AOT_MUSIC_VOLUME_READ_SMOKE",
+      "#if DESKCUE_NATIVE_AOT",
+      "DESKCUE_AOT_MUSIC_VOLUME_READ_SMOKE",
       "AotMusicVolumeReadSmokeScenario.SystemAndSnapshotReadOnly",
-      "DeskBoxDataPathService.AotPreviewRootEnvironmentVariable",
+      "DeskCueDataPathService.AotPreviewRootEnvironmentVariable",
       "IsDevelopmentRoot",
       "RefusedNonPreviewRoot",
       "aot-music-volume-read-smoke",
@@ -1366,11 +1366,11 @@
     ],
     "stage5B3AMissingProductPatterns": [],
     "stage5B3ARequiredSmokeScriptPatterns": [
-      "DESKBOX_AOT_MUSIC_VOLUME_READ_SMOKE",
-      "DESKBOX_AOT_SHORTCUT_SMOKE",
-      "DESKBOX_AOT_SHELL_SMOKE",
-      "DESKBOX_AOT_QUICK_ACCESS_MUTATION_SMOKE",
-      "DESKBOX_MUSIC_VOLUME_BACKEND",
+      "DESKCUE_AOT_MUSIC_VOLUME_READ_SMOKE",
+      "DESKCUE_AOT_SHORTCUT_SMOKE",
+      "DESKCUE_AOT_SHELL_SMOKE",
+      "DESKCUE_AOT_QUICK_ACCESS_MUTATION_SMOKE",
+      "DESKCUE_MUSIC_VOLUME_BACKEND",
       "previousMusicReadSmoke",
       "previousShortcutSmoke",
       "previousShellSmoke",
@@ -1395,20 +1395,20 @@
     "stage5B3AExpectedWmc1510Count": 1211,
     "stage5B3AActualWmc1510Count": 1211,
     "stage5B3BSourceFiles": [
-      "src/DeskBox/App.AotMusicVolumeMutationSmoke.cs",
-      "src/DeskBox/App.xaml.cs",
-      "src/DeskBox/Services/MusicVolumeService.cs",
-      "src/DeskBox/Helpers/MusicVolumeNativeBackend.cs",
+      "src/DeskCue/App.AotMusicVolumeMutationSmoke.cs",
+      "src/DeskCue/App.xaml.cs",
+      "src/DeskCue/Services/MusicVolumeService.cs",
+      "src/DeskCue/Helpers/MusicVolumeNativeBackend.cs",
       "scripts/run-aot-music-volume-mutation-smoke.ps1"
     ],
     "stage5B3BRequiredRunnerPatterns": [
-      "#if DESKBOX_NATIVE_AOT",
-      "DESKBOX_AOT_MUSIC_VOLUME_MUTATION_SMOKE",
+      "#if DESKCUE_NATIVE_AOT",
+      "DESKCUE_AOT_MUSIC_VOLUME_MUTATION_SMOKE",
       "AotMusicVolumeMutationSmokeScenario.ChangeRestore",
       "AotMusicVolumeMutationSmokeScenario.ChangeThenFail",
       "AotMusicVolumeMutationSmokeScenario.ChangeThenAwaitExternalRecovery",
       "AotMusicVolumeMutationSmokeScenario.RecoverOriginal",
-      "DeskBoxDataPathService.AotPreviewRootEnvironmentVariable",
+      "DeskCueDataPathService.AotPreviewRootEnvironmentVariable",
       "IsDevelopmentRoot",
       "RefusedNonPreviewRoot",
       "aot-music-volume-mutation-smoke",
@@ -1447,12 +1447,12 @@
     ],
     "stage5B3BMissingProductPatterns": [],
     "stage5B3BRequiredSmokeScriptPatterns": [
-      "DESKBOX_AOT_MUSIC_VOLUME_MUTATION_SMOKE",
-      "DESKBOX_AOT_MUSIC_VOLUME_READ_SMOKE",
-      "DESKBOX_AOT_SHORTCUT_SMOKE",
-      "DESKBOX_AOT_SHELL_SMOKE",
-      "DESKBOX_AOT_QUICK_ACCESS_MUTATION_SMOKE",
-      "DESKBOX_MUSIC_VOLUME_BACKEND",
+      "DESKCUE_AOT_MUSIC_VOLUME_MUTATION_SMOKE",
+      "DESKCUE_AOT_MUSIC_VOLUME_READ_SMOKE",
+      "DESKCUE_AOT_SHORTCUT_SMOKE",
+      "DESKCUE_AOT_SHELL_SMOKE",
+      "DESKCUE_AOT_QUICK_ACCESS_MUTATION_SMOKE",
+      "DESKCUE_MUSIC_VOLUME_BACKEND",
       "previousMusicMutationSmoke",
       "previousMusicReadSmoke",
       "previousShortcutSmoke",
@@ -1486,26 +1486,26 @@
     "stage5B3BExpectedWmc1510Count": 1211,
     "stage5B3BActualWmc1510Count": 1211,
     "stage5B3CSourceFiles": [
-      "src/DeskBox/App.AotMusicVolumeSessionMutationSmoke.cs",
-      "src/DeskBox/App.xaml.cs",
-      "src/DeskBox/Services/MusicVolumeService.cs",
-      "src/DeskBox/Helpers/MusicVolumeNativeBackend.cs",
+      "src/DeskCue/App.AotMusicVolumeSessionMutationSmoke.cs",
+      "src/DeskCue/App.xaml.cs",
+      "src/DeskCue/Services/MusicVolumeService.cs",
+      "src/DeskCue/Helpers/MusicVolumeNativeBackend.cs",
       "scripts/run-aot-music-volume-session-mutation-smoke.ps1",
-      "native/deskbox-audio-session-fixture/src/main.rs",
-      "native/deskbox-audio-session-fixture/Cargo.toml"
+      "native/deskcue-audio-session-fixture/src/main.rs",
+      "native/deskcue-audio-session-fixture/Cargo.toml"
     ],
     "stage5B3CRequiredRunnerPatterns": [
-      "#if DESKBOX_NATIVE_AOT",
-      "DESKBOX_AOT_MUSIC_VOLUME_SESSION_MUTATION_SMOKE",
-      "DESKBOX_AOT_MUSIC_VOLUME_SESSION_FIXTURE_PID",
-      "deskbox-audio-session-fixture",
+      "#if DESKCUE_NATIVE_AOT",
+      "DESKCUE_AOT_MUSIC_VOLUME_SESSION_MUTATION_SMOKE",
+      "DESKCUE_AOT_MUSIC_VOLUME_SESSION_FIXTURE_PID",
+      "deskcue-audio-session-fixture",
       "RefusedUntrustedFixture",
       "AotMusicVolumeSessionMutationSmokeScenario.ReadMatchedSession",
       "AotMusicVolumeSessionMutationSmokeScenario.ChangeRestore",
       "AotMusicVolumeSessionMutationSmokeScenario.ChangeThenFail",
       "AotMusicVolumeSessionMutationSmokeScenario.ChangeThenAwaitExternalRecovery",
       "AotMusicVolumeSessionMutationSmokeScenario.RecoverOriginal",
-      "DeskBoxDataPathService.AotPreviewRootEnvironmentVariable",
+      "DeskCueDataPathService.AotPreviewRootEnvironmentVariable",
       "RefusedNonPreviewRoot",
       "aot-music-volume-session-mutation-smoke",
       "session-recovery-intent.json",
@@ -1549,7 +1549,7 @@
     ],
     "stage5B3CMissingProductPatterns": [],
     "stage5B3CRequiredFixturePatterns": [
-      "deskbox-audio-session-fixture",
+      "deskcue-audio-session-fixture",
       "PlaySoundW",
       "SND_ASYNC",
       "SND_LOOP",
@@ -1564,20 +1564,20 @@
     ],
     "stage5B3CMissingFixturePatterns": [],
     "stage5B3CRequiredSmokeScriptPatterns": [
-      "DESKBOX_AOT_MUSIC_VOLUME_SESSION_MUTATION_SMOKE",
-      "DESKBOX_AOT_MUSIC_VOLUME_MUTATION_SMOKE",
-      "DESKBOX_AOT_MUSIC_VOLUME_READ_SMOKE",
-      "DESKBOX_AOT_SHORTCUT_SMOKE",
-      "DESKBOX_AOT_SHELL_SMOKE",
-      "DESKBOX_AOT_QUICK_ACCESS_MUTATION_SMOKE",
+      "DESKCUE_AOT_MUSIC_VOLUME_SESSION_MUTATION_SMOKE",
+      "DESKCUE_AOT_MUSIC_VOLUME_MUTATION_SMOKE",
+      "DESKCUE_AOT_MUSIC_VOLUME_READ_SMOKE",
+      "DESKCUE_AOT_SHORTCUT_SMOKE",
+      "DESKCUE_AOT_SHELL_SMOKE",
+      "DESKCUE_AOT_QUICK_ACCESS_MUTATION_SMOKE",
       "previousMusicSessionMutationSmoke",
       "previousMusicMutationSmoke",
       "previousMusicReadSmoke",
       "previousShortcutSmoke",
       "previousShellSmoke",
       "previousMutationSmoke",
-      "deskbox-audio-session-fixture.exe",
-      "--package deskbox-audio-session-fixture",
+      "deskcue-audio-session-fixture.exe",
+      "--package deskcue-audio-session-fixture",
       "-WindowStyle Hidden",
       "fixtureProcess.Id",
       "ReadMatchedSession",
@@ -1610,20 +1610,20 @@
     "stage5B3CExpectedWmc1510Count": 1211,
     "stage5B3CActualWmc1510Count": 1211,
     "stage5B4ASourceFiles": [
-      "src/DeskBox/App.AotManagedUiSmoke.cs",
-      "src/DeskBox/App.xaml.cs",
-      "src/DeskBox/Views/SettingsWindow.AotSmoke.cs",
-      "src/DeskBox/Views/SearchPopupWindow.AotSmoke.cs",
-      "src/DeskBox/Services/LocalizationService.cs",
+      "src/DeskCue/App.AotManagedUiSmoke.cs",
+      "src/DeskCue/App.xaml.cs",
+      "src/DeskCue/Views/SettingsWindow.AotSmoke.cs",
+      "src/DeskCue/Views/SearchPopupWindow.AotSmoke.cs",
+      "src/DeskCue/Services/LocalizationService.cs",
       "scripts/run-aot-managed-ui-smoke.ps1",
       "scripts/start-aot-preview.ps1",
-      "src/DeskBox/Views/SettingsWindow.Navigation.cs"
+      "src/DeskCue/Views/SettingsWindow.Navigation.cs"
     ],
     "stage5B4ARequiredRunnerPatterns": [
-      "#if DESKBOX_NATIVE_AOT",
-      "DESKBOX_AOT_MANAGED_UI_SMOKE",
+      "#if DESKCUE_NATIVE_AOT",
+      "DESKCUE_AOT_MANAGED_UI_SMOKE",
       "BasicReadOnly",
-      "DeskBoxDataPathService.AotPreviewRootEnvironmentVariable",
+      "DeskCueDataPathService.AotPreviewRootEnvironmentVariable",
       "RefusedNonPreviewRoot",
       "aot-managed-ui-smoke",
       "aot-5b4a-file",
@@ -1651,7 +1651,7 @@
     "stage5B4AMissingLaunchPatterns": [],
     "stage5B4ALaunchOrderValid": true,
     "stage5B4ARequiredSettingsPatterns": [
-      "#if DESKBOX_NATIVE_AOT",
+      "#if DESKCUE_NATIVE_AOT",
       "WindowNative.GetWindowHandle(this)",
       "_appWindow.IsVisible",
       "SettingsRoot.XamlRoot",
@@ -1673,7 +1673,7 @@
       "\"Apps\"",
       "\"Images\"",
       "\"Documents\"",
-      "\"DeskBox\"",
+      "\"DeskCue\"",
       "ResultFilterBar.Visibility",
       "SortHeaderRow.Visibility",
       "ActionId == \"open-settings\""
@@ -1699,7 +1699,7 @@
     ],
     "stage5B4AMissingLocalePatterns": [],
     "stage5B4ARequiredSmokeScriptPatterns": [
-      "DESKBOX_AOT_MANAGED_UI_SMOKE",
+      "DESKCUE_AOT_MANAGED_UI_SMOKE",
       "BasicReadOnly",
       "aot-5b4a-file",
       "aot-5b4a-search",
@@ -1713,7 +1713,7 @@
       "filterTransitions",
       "sortTransitions",
       "session.json",
-      ".deskbox-aot-managed-ui-owned.json"
+      ".deskcue-aot-managed-ui-owned.json"
     ],
     "stage5B4AMissingSmokeScriptPatterns": [],
     "stage5B4ASmokeScriptFiles": [
@@ -1733,28 +1733,28 @@
     "stage5B4AExpectedWmc1510Count": 1211,
     "stage5B4AActualWmc1510Count": 1211,
     "stage5B4B1SourceFiles": [
-      "src/DeskBox/App.AotManagedUiSmoke.cs",
-      "src/DeskBox/Views/SettingsWindow.AotDeepSmoke.cs",
-      "src/DeskBox/Views/SettingsWindow.Navigation.cs",
+      "src/DeskCue/App.AotManagedUiSmoke.cs",
+      "src/DeskCue/Views/SettingsWindow.AotDeepSmoke.cs",
+      "src/DeskCue/Views/SettingsWindow.Navigation.cs",
       "scripts/run-aot-managed-ui-smoke.ps1",
       "scripts/start-aot-preview.ps1",
-      "src/DeskBox/Views/SettingsWindow.xaml.cs",
-      "src/DeskBox/Views/SettingsWindow.Maintenance.cs",
-      "src/DeskBox/ViewModels/FileStackCustomRuleEditor.cs",
-      "src/DeskBox/Views/SettingsWindow.xaml",
-      "src/DeskBox/ViewModels/SettingsViewModel.AotBindableProperties.cs",
-      "src/DeskBox/Views/SettingsSections/CapsuleModeSettingsSection.xaml",
-      "src/DeskBox/Views/SettingsSections/CapsuleModeSettingsSection.xaml.cs",
-      "src/DeskBox/Models/SettingsOption.cs",
-      "src/DeskBox/ViewModels/SettingsViewModel.CapsuleOptions.cs",
-      "src/DeskBox/ViewModels/SettingsViewModel.GroupNavigation.cs",
-      "src/DeskBox/Models/WeatherData.cs",
-      "src/DeskBox/Views/SettingsSections/FileWidgetSettingsSection.xaml",
-      "src/DeskBox/ViewModels/SettingsViewModel.FileStackOptions.cs",
-      "src/DeskBox/ViewModels/SettingsViewModel.FeatureOptions.cs",
-      "src/DeskBox/ViewModels/SettingsViewModel.SelectionOptions.cs",
-      "src/DeskBox/ViewModels/SettingsViewModel.WeatherOptions.cs",
-      "src/DeskBox/Views/SettingsWindow.HotkeyAndAppearance.cs"
+      "src/DeskCue/Views/SettingsWindow.xaml.cs",
+      "src/DeskCue/Views/SettingsWindow.Maintenance.cs",
+      "src/DeskCue/ViewModels/FileStackCustomRuleEditor.cs",
+      "src/DeskCue/Views/SettingsWindow.xaml",
+      "src/DeskCue/ViewModels/SettingsViewModel.AotBindableProperties.cs",
+      "src/DeskCue/Views/SettingsSections/CapsuleModeSettingsSection.xaml",
+      "src/DeskCue/Views/SettingsSections/CapsuleModeSettingsSection.xaml.cs",
+      "src/DeskCue/Models/SettingsOption.cs",
+      "src/DeskCue/ViewModels/SettingsViewModel.CapsuleOptions.cs",
+      "src/DeskCue/ViewModels/SettingsViewModel.GroupNavigation.cs",
+      "src/DeskCue/Models/WeatherData.cs",
+      "src/DeskCue/Views/SettingsSections/FileWidgetSettingsSection.xaml",
+      "src/DeskCue/ViewModels/SettingsViewModel.FileStackOptions.cs",
+      "src/DeskCue/ViewModels/SettingsViewModel.FeatureOptions.cs",
+      "src/DeskCue/ViewModels/SettingsViewModel.SelectionOptions.cs",
+      "src/DeskCue/ViewModels/SettingsViewModel.WeatherOptions.cs",
+      "src/DeskCue/Views/SettingsWindow.HotkeyAndAppearance.cs"
     ],
     "stage5B4B1RequiredRunnerPatterns": [
       "DeepSettingsReadOnly",
@@ -1811,37 +1811,37 @@
     "stage5B4B1MissingInventoryPatterns": [],
     "stage5B4B1RequiredBindableTypePatterns": [
       {
-        "file": "src/DeskBox/ViewModels/FileStackCustomRuleEditor.cs",
+        "file": "src/DeskCue/ViewModels/FileStackCustomRuleEditor.cs",
         "patterns": [
           "[WinRT.GeneratedBindableCustomProperty]",
           "public partial class FileStackCustomRuleEditor"
         ]
       },
       {
-        "file": "src/DeskBox/ViewModels/SettingsViewModel.AotBindableProperties.cs",
+        "file": "src/DeskCue/ViewModels/SettingsViewModel.AotBindableProperties.cs",
         "patterns": [
-          "#if DESKBOX_NATIVE_AOT",
+          "#if DESKCUE_NATIVE_AOT",
           "[WinRT.GeneratedBindableCustomProperty([",
           "nameof(SelectedWidgetCapsuleBarPlacement)",
           "public partial class SettingsViewModel"
         ]
       },
       {
-        "file": "src/DeskBox/Models/SettingsOption.cs",
+        "file": "src/DeskCue/Models/SettingsOption.cs",
         "patterns": [
           "[WinRT.GeneratedBindableCustomProperty]",
           "public sealed partial class SettingsOption"
         ]
       },
       {
-        "file": "src/DeskBox/ViewModels/SettingsViewModel.CapsuleOptions.cs",
+        "file": "src/DeskCue/ViewModels/SettingsViewModel.CapsuleOptions.cs",
         "patterns": [
           "[WinRT.GeneratedBindableCustomProperty]",
           "public sealed partial record CapsuleOverrideSettingsItem"
         ]
       },
       {
-        "file": "src/DeskBox/ViewModels/SettingsViewModel.GroupNavigation.cs",
+        "file": "src/DeskCue/ViewModels/SettingsViewModel.GroupNavigation.cs",
         "patterns": [
           "[WinRT.GeneratedBindableCustomProperty]",
           "public sealed partial record WidgetGroupSettingsItem",
@@ -1849,7 +1849,7 @@
         ]
       },
       {
-        "file": "src/DeskBox/Models/WeatherData.cs",
+        "file": "src/DeskCue/Models/WeatherData.cs",
         "patterns": [
           "[WinRT.GeneratedBindableCustomProperty]",
           "public sealed partial class WeatherCitySearchResult"
@@ -1866,14 +1866,14 @@
     "stage5B4B1MissingFileStackXamlPatterns": [],
     "stage5B4B1RequiredFileWidgetProjectionPatterns": [
       {
-        "file": "src/DeskBox/Views/SettingsSections/FileWidgetSettingsSection.xaml",
+        "file": "src/DeskCue/Views/SettingsSections/FileWidgetSettingsSection.xaml",
         "patterns": [
           "ItemsSource=\"{x:Bind ViewModel.AvailableFileStackModeOptionItems, Mode=OneWay}\"",
           "ItemsSource=\"{x:Bind ViewModel.AvailableFileWidgetFolderOpenBehaviorOptionItems, Mode=OneWay}\""
         ]
       },
       {
-        "file": "src/DeskBox/ViewModels/SettingsViewModel.FileStackOptions.cs",
+        "file": "src/DeskCue/ViewModels/SettingsViewModel.FileStackOptions.cs",
         "patterns": [
           "public object[] AvailableFileStackModeOptionItems",
           "AvailableFileStackModeOptions.Cast<object>().ToArray()",
@@ -1881,14 +1881,14 @@
         ]
       },
       {
-        "file": "src/DeskBox/ViewModels/SettingsViewModel.FeatureOptions.cs",
+        "file": "src/DeskCue/ViewModels/SettingsViewModel.FeatureOptions.cs",
         "patterns": [
           "public object[] AvailableFileWidgetFolderOpenBehaviorOptionItems",
           "AvailableFileWidgetFolderOpenBehaviorOptions.Cast<object>().ToArray()"
         ]
       },
       {
-        "file": "src/DeskBox/ViewModels/SettingsViewModel.SelectionOptions.cs",
+        "file": "src/DeskCue/ViewModels/SettingsViewModel.SelectionOptions.cs",
         "patterns": [
           "OnPropertyChanged(nameof(AvailableFileStackModeOptionItems))",
           "OnPropertyChanged(nameof(AvailableFileWidgetFolderOpenBehaviorOptionItems))"
@@ -1898,7 +1898,7 @@
     "stage5B4B1MissingFileWidgetProjectionPatterns": [],
     "stage5B4B1RequiredWeatherProjectionPatterns": [
       {
-        "file": "src/DeskBox/ViewModels/SettingsViewModel.WeatherOptions.cs",
+        "file": "src/DeskCue/ViewModels/SettingsViewModel.WeatherOptions.cs",
         "patterns": [
           "ObservableCollection<WeatherCitySearchResult> WeatherCitySuggestions",
           "public object[] WeatherCitySuggestionItems",
@@ -1908,13 +1908,13 @@
         ]
       },
       {
-        "file": "src/DeskBox/Views/SettingsWindow.HotkeyAndAppearance.cs",
+        "file": "src/DeskCue/Views/SettingsWindow.HotkeyAndAppearance.cs",
         "patterns": [
           "WeatherCitySuggestions[0]"
         ]
       },
       {
-        "file": "src/DeskBox/Views/SettingsWindow.xaml",
+        "file": "src/DeskCue/Views/SettingsWindow.xaml",
         "patterns": [
           "ItemsSource=\"{Binding WeatherCitySuggestionItems}\""
         ]
@@ -1969,7 +1969,7 @@
       "deep-settings-read-only",
       "productionDataFingerprintBefore",
       "Stop-ExactPreviewProcess",
-      ".deskbox-aot-managed-ui-owned.json",
+      ".deskcue-aot-managed-ui-owned.json",
       "deepSettings",
       "pageTransitions",
       "searchSuggestions",
@@ -1989,20 +1989,20 @@
     "stage5B4B1ExpectedWmc1510Count": 1211,
     "stage5B4B1ActualWmc1510Count": 1211,
     "stage5B4B2ASourceFiles": [
-      "src/DeskBox/App.AotManagedUiSmoke.cs",
-      "src/DeskBox/Services/WidgetManager.AotPersistenceSmoke.cs",
-      "src/DeskBox/Views/WidgetWindowBase.AotPersistenceSmoke.cs",
+      "src/DeskCue/App.AotManagedUiSmoke.cs",
+      "src/DeskCue/Services/WidgetManager.AotPersistenceSmoke.cs",
+      "src/DeskCue/Views/WidgetWindowBase.AotPersistenceSmoke.cs",
       "scripts/run-aot-managed-ui-smoke.ps1",
       "scripts/start-aot-preview.ps1",
-      "src/DeskBox/ViewModels/SettingsViewModel.AppearanceOptions.cs",
-      "src/DeskBox/ViewModels/SettingsViewModel.AppearanceCallbacks.cs",
-      "src/DeskBox/ViewModels/SettingsViewModel.PreferenceCallbacks.cs",
-      "src/DeskBox/ViewModels/WidgetViewModel.Operations.cs",
-      "src/DeskBox/Services/SettingsService.cs"
+      "src/DeskCue/ViewModels/SettingsViewModel.AppearanceOptions.cs",
+      "src/DeskCue/ViewModels/SettingsViewModel.AppearanceCallbacks.cs",
+      "src/DeskCue/ViewModels/SettingsViewModel.PreferenceCallbacks.cs",
+      "src/DeskCue/ViewModels/WidgetViewModel.Operations.cs",
+      "src/DeskCue/Services/SettingsService.cs"
     ],
     "stage5B4B2ARequiredRunnerPatterns": [
       "SettingsWidgetPersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_PERSISTENCE_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_PERSISTENCE_PHASE",
       "AotManagedUiPersistenceMutatePhase",
       "AotManagedUiPersistenceVerifyRestorePhase",
       "AotManagedUiPersistencePostflightPhase",
@@ -2048,7 +2048,7 @@
     "stage5B4B2AMissingBoundsPatterns": [],
     "stage5B4B2ARequiredSmokeScriptPatterns": [
       "\"SettingsWidgetPersistenceRestart\",",
-      "DESKBOX_AOT_MANAGED_UI_PERSISTENCE_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_PERSISTENCE_PHASE",
       "Invoke-PersistencePhase",
       "Wait-NaturalPreviewExit",
       "Assert-PersistenceStateEqual",
@@ -2064,7 +2064,7 @@
       "Unhandled exception:",
       "archivedPersistenceSessionPath",
       "sessionPath = $archivedPersistenceSessionPath",
-      ".deskbox-aot-managed-ui-owned.json"
+      ".deskcue-aot-managed-ui-owned.json"
     ],
     "stage5B4B2AMissingSmokeScriptPatterns": [],
     "stage5B4B2ARequiredLauncherPatterns": [
@@ -2079,26 +2079,26 @@
     "stage5B4B2AExpectedWmc1510Count": 1211,
     "stage5B4B2AActualWmc1510Count": 1211,
     "stage5B4B2B1SourceFiles": [
-      "src/DeskBox/App.AotManagedUiSmoke.cs",
-      "src/DeskBox/App.AotQuickCapturePersistenceSmoke.cs",
-      "src/DeskBox/Controls/WidgetContents/QuickCaptureSurfaceContent.AotPersistenceSmoke.cs",
-      "src/DeskBox/Services/WidgetManager.AotQuickCapturePersistenceSmoke.cs",
+      "src/DeskCue/App.AotManagedUiSmoke.cs",
+      "src/DeskCue/App.AotQuickCapturePersistenceSmoke.cs",
+      "src/DeskCue/Controls/WidgetContents/QuickCaptureSurfaceContent.AotPersistenceSmoke.cs",
+      "src/DeskCue/Services/WidgetManager.AotQuickCapturePersistenceSmoke.cs",
       "scripts/run-aot-managed-ui-smoke.ps1",
-      "src/DeskBox/Controls/WidgetContents/QuickCaptureSurfaceContent.xaml.cs",
-      "src/DeskBox/ViewModels/QuickCaptureWidgetViewModel.Operations.cs",
-      "src/DeskBox/Services/QuickCaptureService.cs",
-      "src/DeskBox/Services/QuickCaptureStore.cs",
-      "src/DeskBox/Services/AttachmentStorageService.cs"
+      "src/DeskCue/Controls/WidgetContents/QuickCaptureSurfaceContent.xaml.cs",
+      "src/DeskCue/ViewModels/QuickCaptureWidgetViewModel.Operations.cs",
+      "src/DeskCue/Services/QuickCaptureService.cs",
+      "src/DeskCue/Services/QuickCaptureStore.cs",
+      "src/DeskCue/Services/AttachmentStorageService.cs"
     ],
     "stage5B4B2B1RequiredRunnerPatterns": [
       "QuickCapturePersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_QUICK_CAPTURE_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_QUICK_CAPTURE_PHASE",
       "AotManagedUiQuickCaptureMutatePhase",
       "AotManagedUiQuickCaptureVerifyDeletePhase",
       "AotManagedUiQuickCapturePostflightPhase",
       "quick-capture-persistence-restart",
       "CaptureAotManagedUiQuickCapturePersistenceAsync",
-      "DeskBoxDataPathService.Current",
+      "DeskCueDataPathService.Current",
       "AotManagedUiQuickCapturePersistenceEvidence",
       "AotManagedUiQuickCaptureStateEvidence",
       "AotManagedUiQuickCaptureItemEvidence",
@@ -2149,7 +2149,7 @@
     "stage5B4B2B1MissingManagerPatterns": [],
     "stage5B4B2B1RequiredSmokeScriptPatterns": [
       "QuickCapturePersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_QUICK_CAPTURE_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_QUICK_CAPTURE_PHASE",
       "Invoke-QuickCapturePersistencePhase",
       "Mutate",
       "VerifyDelete",
@@ -2173,7 +2173,7 @@
       "archivedQuickCaptureSessionPath",
       "sessionPath = $archivedQuickCaptureSessionPath",
       "Stop-ExactPreviewProcess",
-      ".deskbox-aot-managed-ui-owned.json"
+      ".deskcue-aot-managed-ui-owned.json"
     ],
     "stage5B4B2B1MissingSmokeScriptPatterns": [],
     "stage5B4B2B1ForbiddenScopePatterns": [],
@@ -2182,29 +2182,29 @@
     "stage5B4B2B1ExpectedWmc1510Count": 1211,
     "stage5B4B2B1ActualWmc1510Count": 1211,
     "stage5B4B2B2ASourceFiles": [
-      "src/DeskBox/App.AotManagedUiSmoke.cs",
-      "src/DeskBox/App.AotTodoPersistenceSmoke.cs",
-      "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.AotPersistenceSmoke.cs",
-      "src/DeskBox/Services/WidgetManager.AotTodoPersistenceSmoke.cs",
+      "src/DeskCue/App.AotManagedUiSmoke.cs",
+      "src/DeskCue/App.AotTodoPersistenceSmoke.cs",
+      "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.AotPersistenceSmoke.cs",
+      "src/DeskCue/Services/WidgetManager.AotTodoPersistenceSmoke.cs",
       "scripts/run-aot-managed-ui-smoke.ps1",
-      "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.DetailNotesAndSteps.cs",
-      "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.xaml.cs",
-      "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.EditingAndUndo.cs",
-      "src/DeskBox/ViewModels/TodoWidgetViewModel.ItemOperations.cs",
-      "src/DeskBox/ViewModels/TodoWidgetViewModel.DetailAndAttachments.cs",
-      "src/DeskBox/ViewModels/TodoWidgetViewModel.EditingAndUndo.cs",
-      "src/DeskBox/ViewModels/TodoViewModels.AotBindableProperties.cs",
-      "src/DeskBox/Services/TodoWidgetStore.cs"
+      "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.DetailNotesAndSteps.cs",
+      "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml.cs",
+      "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.EditingAndUndo.cs",
+      "src/DeskCue/ViewModels/TodoWidgetViewModel.ItemOperations.cs",
+      "src/DeskCue/ViewModels/TodoWidgetViewModel.DetailAndAttachments.cs",
+      "src/DeskCue/ViewModels/TodoWidgetViewModel.EditingAndUndo.cs",
+      "src/DeskCue/ViewModels/TodoViewModels.AotBindableProperties.cs",
+      "src/DeskCue/Services/TodoWidgetStore.cs"
     ],
     "stage5B4B2B2ARequiredRunnerPatterns": [
       "TodoPersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_TODO_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_TODO_PHASE",
       "AotManagedUiTodoMutatePhase",
       "AotManagedUiTodoVerifyDeletePhase",
       "AotManagedUiTodoPostflightPhase",
       "todo-persistence-restart",
       "CaptureAotManagedUiTodoPersistenceAsync",
-      "DeskBoxDataPathService.Current",
+      "DeskCueDataPathService.Current",
       "AotManagedUiTodoPersistenceEvidence",
       "AotManagedUiTodoStateEvidence",
       "AotManagedUiTodoItemEvidence",
@@ -2269,7 +2269,7 @@
     "stage5B4B2B2AMissingManagerPatterns": [],
     "stage5B4B2B2ARequiredSmokeScriptPatterns": [
       "TodoPersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_TODO_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_TODO_PHASE",
       "Invoke-TodoPersistencePhase",
       "Mutate",
       "VerifyDelete",
@@ -2292,7 +2292,7 @@
       "archivedTodoSessionPath",
       "sessionPath = $archivedTodoSessionPath",
       "Stop-ExactPreviewProcess",
-      ".deskbox-aot-managed-ui-owned.json"
+      ".deskcue-aot-managed-ui-owned.json"
     ],
     "stage5B4B2B2AMissingSmokeScriptPatterns": [],
     "stage5B4B2B2AForbiddenScopePatterns": [],
@@ -2301,24 +2301,24 @@
     "stage5B4B2B2AExpectedWmc1510Count": 1211,
     "stage5B4B2B2AActualWmc1510Count": 1211,
     "stage5B4B2B2B1SourceFiles": [
-      "src/DeskBox/App.AotManagedUiSmoke.cs",
-      "src/DeskBox/App.AotTodoStepsPersistenceSmoke.cs",
-      "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.AotStepsPersistenceSmoke.cs",
-      "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.DetailNotesAndSteps.cs",
-      "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.xaml",
-      "src/DeskBox/ViewModels/TodoWidgetViewModel.DetailAndAttachments.cs",
-      "src/DeskBox/ViewModels/TodoStepViewModel.cs",
-      "src/DeskBox/ViewModels/TodoViewModels.AotBindableProperties.cs",
-      "src/DeskBox/Services/WidgetManager.AotTodoPersistenceSmoke.cs",
+      "src/DeskCue/App.AotManagedUiSmoke.cs",
+      "src/DeskCue/App.AotTodoStepsPersistenceSmoke.cs",
+      "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.AotStepsPersistenceSmoke.cs",
+      "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.DetailNotesAndSteps.cs",
+      "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml",
+      "src/DeskCue/ViewModels/TodoWidgetViewModel.DetailAndAttachments.cs",
+      "src/DeskCue/ViewModels/TodoStepViewModel.cs",
+      "src/DeskCue/ViewModels/TodoViewModels.AotBindableProperties.cs",
+      "src/DeskCue/Services/WidgetManager.AotTodoPersistenceSmoke.cs",
       "scripts/run-aot-managed-ui-smoke.ps1",
-      "src/DeskBox/App.AotTodoPersistenceSmoke.cs",
-      "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.AotPersistenceSmoke.cs",
-      "src/DeskBox/Services/TodoWidgetStore.cs",
-      "src/DeskBox/ViewModels/TodoItemViewModel.cs"
+      "src/DeskCue/App.AotTodoPersistenceSmoke.cs",
+      "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.AotPersistenceSmoke.cs",
+      "src/DeskCue/Services/TodoWidgetStore.cs",
+      "src/DeskCue/ViewModels/TodoItemViewModel.cs"
     ],
     "stage5B4B2B2B1RequiredRunnerPatterns": [
       "TodoStepsPersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_TODO_STEPS_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_TODO_STEPS_PHASE",
       "AotManagedUiTodoStepsMutatePhase",
       "AotManagedUiTodoStepsVerifyDeletePhase",
       "AotManagedUiTodoStepsPostflightPhase",
@@ -2399,7 +2399,7 @@
     "stage5B4B2B2B1MissingManagerPatterns": [],
     "stage5B4B2B2B1RequiredSmokeScriptPatterns": [
       "TodoStepsPersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_TODO_STEPS_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_TODO_STEPS_PHASE",
       "Invoke-TodoStepsPersistencePhase",
       "$mutate.todoStepsPersistence.after",
       "$verifyDelete.todoStepsPersistence.before",
@@ -2418,7 +2418,7 @@
       "Unhandled exception:",
       "previewRootCleaned",
       "Stop-ExactPreviewProcess",
-      ".deskbox-aot-managed-ui-owned.json"
+      ".deskcue-aot-managed-ui-owned.json"
     ],
     "stage5B4B2B2B1MissingSmokeScriptPatterns": [],
     "stage5B4B2B2B1ForbiddenScopePatterns": [],
@@ -2427,28 +2427,28 @@
     "stage5B4B2B2B1ExpectedWmc1510Count": 1211,
     "stage5B4B2B2B1ActualWmc1510Count": 1211,
     "stage5B4B2B2B2SourceFiles": [
-      "src/DeskBox/App.AotManagedUiSmoke.cs",
-      "src/DeskBox/App.AotTodoAttachmentsPersistenceSmoke.cs",
-      "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.AotAttachmentsPersistenceSmoke.cs",
-      "src/DeskBox/Controls/AttachmentTileStrip.AotSmoke.cs",
-      "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.Attachments.cs",
-      "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.xaml",
-      "src/DeskBox/ViewModels/TodoWidgetViewModel.DetailAndAttachments.cs",
-      "src/DeskBox/ViewModels/TodoItemViewModel.cs",
-      "src/DeskBox/Services/AttachmentStorageService.cs",
-      "src/DeskBox/ViewModels/TodoAttachmentViewModel.cs",
-      "src/DeskBox/Controls/AttachmentTileStrip.xaml",
-      "src/DeskBox/ViewModels/TodoViewModels.AotBindableProperties.cs",
-      "src/DeskBox/Services/WidgetManager.AotTodoPersistenceSmoke.cs",
+      "src/DeskCue/App.AotManagedUiSmoke.cs",
+      "src/DeskCue/App.AotTodoAttachmentsPersistenceSmoke.cs",
+      "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.AotAttachmentsPersistenceSmoke.cs",
+      "src/DeskCue/Controls/AttachmentTileStrip.AotSmoke.cs",
+      "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.Attachments.cs",
+      "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml",
+      "src/DeskCue/ViewModels/TodoWidgetViewModel.DetailAndAttachments.cs",
+      "src/DeskCue/ViewModels/TodoItemViewModel.cs",
+      "src/DeskCue/Services/AttachmentStorageService.cs",
+      "src/DeskCue/ViewModels/TodoAttachmentViewModel.cs",
+      "src/DeskCue/Controls/AttachmentTileStrip.xaml",
+      "src/DeskCue/ViewModels/TodoViewModels.AotBindableProperties.cs",
+      "src/DeskCue/Services/WidgetManager.AotTodoPersistenceSmoke.cs",
       "scripts/run-aot-managed-ui-smoke.ps1",
-      "src/DeskBox/App.AotTodoPersistenceSmoke.cs",
-      "src/DeskBox/Controls/WidgetContents/TodoWidgetContent.AotPersistenceSmoke.cs",
-      "src/DeskBox/Services/TodoWidgetStore.cs",
-      "src/DeskBox/Models/TodoAttachment.cs"
+      "src/DeskCue/App.AotTodoPersistenceSmoke.cs",
+      "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.AotPersistenceSmoke.cs",
+      "src/DeskCue/Services/TodoWidgetStore.cs",
+      "src/DeskCue/Models/TodoAttachment.cs"
     ],
     "stage5B4B2B2B2RequiredRunnerPatterns": [
       "TodoAttachmentsPersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_TODO_ATTACHMENTS_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_TODO_ATTACHMENTS_PHASE",
       "AotManagedUiTodoAttachmentsMutatePhase",
       "AotManagedUiTodoAttachmentsVerifyDeletePhase",
       "AotManagedUiTodoAttachmentsPostflightPhase",
@@ -2543,7 +2543,7 @@
     "stage5B4B2B2B2MissingManagerPatterns": [],
     "stage5B4B2B2B2RequiredSmokeScriptPatterns": [
       "TodoAttachmentsPersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_TODO_ATTACHMENTS_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_TODO_ATTACHMENTS_PHASE",
       "Invoke-TodoAttachmentsPersistencePhase",
       "$mutate.todoAttachmentsPersistence.after",
       "$verifyDelete.todoAttachmentsPersistence.before",
@@ -2568,7 +2568,7 @@
       "Unhandled exception:",
       "previewRootCleaned",
       "Stop-ExactPreviewProcess",
-      ".deskbox-aot-managed-ui-owned.json"
+      ".deskcue-aot-managed-ui-owned.json"
     ],
     "stage5B4B2B2B2MissingSmokeScriptPatterns": [],
     "stage5B4B2B2B2ForbiddenScopePatterns": [],
@@ -2577,26 +2577,26 @@
     "stage5B4B2B2B2ExpectedWmc1510Count": 1211,
     "stage5B4B2B2B2ActualWmc1510Count": 1211,
     "stage5B4B2C1SourceFiles": [
-      "src/DeskBox/App.AotManagedUiSmoke.cs",
-      "src/DeskBox/App.AotGlancePersistenceSmoke.cs",
-      "src/DeskBox/Controls/WidgetContents/GlanceWidgetContent.AotPersistenceSmoke.cs",
-      "src/DeskBox/Controls/WidgetContents/GlanceWidgetContent.xaml",
-      "src/DeskBox/Controls/WidgetContents/GlanceWidgetContent.xaml.cs",
-      "src/DeskBox/ViewModels/GlanceWidgetViewModel.cs",
-      "src/DeskBox/ViewModels/GlanceWidgetViewModel.AotBindableProperties.cs",
-      "src/DeskBox/ViewModels/GlanceWidgetViewModel.AotPersistenceSmoke.cs",
-      "src/DeskBox/Services/GlanceWidgetSettingsPolicy.cs",
-      "src/DeskBox/Views/SettingsSections/GlanceWidgetSettingsSection.xaml.cs",
-      "src/DeskBox/Services/GlanceWidgetStore.cs",
-      "src/DeskBox/Services/GlanceImageService.cs",
-      "src/DeskBox/Services/WidgetManager.AotGlancePersistenceSmoke.cs",
+      "src/DeskCue/App.AotManagedUiSmoke.cs",
+      "src/DeskCue/App.AotGlancePersistenceSmoke.cs",
+      "src/DeskCue/Controls/WidgetContents/GlanceWidgetContent.AotPersistenceSmoke.cs",
+      "src/DeskCue/Controls/WidgetContents/GlanceWidgetContent.xaml",
+      "src/DeskCue/Controls/WidgetContents/GlanceWidgetContent.xaml.cs",
+      "src/DeskCue/ViewModels/GlanceWidgetViewModel.cs",
+      "src/DeskCue/ViewModels/GlanceWidgetViewModel.AotBindableProperties.cs",
+      "src/DeskCue/ViewModels/GlanceWidgetViewModel.AotPersistenceSmoke.cs",
+      "src/DeskCue/Services/GlanceWidgetSettingsPolicy.cs",
+      "src/DeskCue/Views/SettingsSections/GlanceWidgetSettingsSection.xaml.cs",
+      "src/DeskCue/Services/GlanceWidgetStore.cs",
+      "src/DeskCue/Services/GlanceImageService.cs",
+      "src/DeskCue/Services/WidgetManager.AotGlancePersistenceSmoke.cs",
       "scripts/run-aot-managed-ui-smoke.ps1",
-      "src/DeskBox/Models/GlanceWidgetData.cs"
+      "src/DeskCue/Models/GlanceWidgetData.cs"
     ],
     "stage5B4B2C1RequiredRunnerPatterns": [
       "GlancePersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_GLANCE_PHASE",
-      "DESKBOX_AOT_MANAGED_UI_GLANCE_FIXTURE",
+      "DESKCUE_AOT_MANAGED_UI_GLANCE_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_GLANCE_FIXTURE",
       "AotManagedUiGlanceMutatePhase",
       "AotManagedUiGlanceVerifyRestorePhase",
       "AotManagedUiGlancePostflightPhase",
@@ -2682,8 +2682,8 @@
     "stage5B4B2C1MissingManagerPatterns": [],
     "stage5B4B2C1RequiredSmokeScriptPatterns": [
       "GlancePersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_GLANCE_PHASE",
-      "DESKBOX_AOT_MANAGED_UI_GLANCE_FIXTURE",
+      "DESKCUE_AOT_MANAGED_UI_GLANCE_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_GLANCE_FIXTURE",
       "Invoke-GlancePersistencePhase",
       "glance-local.png",
       "[System.IO.File]::WriteAllBytes",
@@ -2711,7 +2711,7 @@
       "Image decode failed",
       "previewRootCleaned",
       "Stop-ExactPreviewProcess",
-      ".deskbox-aot-managed-ui-owned.json"
+      ".deskcue-aot-managed-ui-owned.json"
     ],
     "stage5B4B2C1MissingSmokeScriptPatterns": [],
     "stage5B4B2C1ForbiddenScopePatterns": [],
@@ -2720,18 +2720,18 @@
     "stage5B4B2C1ExpectedWmc1510Count": 1211,
     "stage5B4B2C1ActualWmc1510Count": 1211,
     "stage5B4B2C2ASourceFiles": [
-      "src/DeskBox/App.AotManagedUiSmoke.cs",
-      "src/DeskBox/App.AotWeatherSettingsPersistenceSmoke.cs",
-      "src/DeskBox/Services/WeatherSettingsPolicy.cs",
-      "src/DeskBox/ViewModels/SettingsViewModel.WeatherOptions.cs",
-      "src/DeskBox/Services/WeatherWidgetViewModeSettings.cs",
-      "src/DeskBox/Services/WidgetManager.AotWeatherSettingsPersistenceSmoke.cs",
-      "src/DeskBox/ViewModels/WeatherWidgetViewModel.RefreshAndLayout.cs",
+      "src/DeskCue/App.AotManagedUiSmoke.cs",
+      "src/DeskCue/App.AotWeatherSettingsPersistenceSmoke.cs",
+      "src/DeskCue/Services/WeatherSettingsPolicy.cs",
+      "src/DeskCue/ViewModels/SettingsViewModel.WeatherOptions.cs",
+      "src/DeskCue/Services/WeatherWidgetViewModeSettings.cs",
+      "src/DeskCue/Services/WidgetManager.AotWeatherSettingsPersistenceSmoke.cs",
+      "src/DeskCue/ViewModels/WeatherWidgetViewModel.RefreshAndLayout.cs",
       "scripts/run-aot-managed-ui-smoke.ps1"
     ],
     "stage5B4B2C2ARequiredRunnerPatterns": [
       "WeatherSettingsPersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_WEATHER_SETTINGS_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_WEATHER_SETTINGS_PHASE",
       "AotManagedUiWeatherSettingsMutatePhase",
       "AotManagedUiWeatherSettingsVerifyRestorePhase",
       "AotManagedUiWeatherSettingsPostflightPhase",
@@ -2790,7 +2790,7 @@
     "stage5B4B2C2AMissingManagerPatterns": [],
     "stage5B4B2C2ARequiredSmokeScriptPatterns": [
       "WeatherSettingsPersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_WEATHER_SETTINGS_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_WEATHER_SETTINGS_PHASE",
       "Invoke-WeatherSettingsPersistencePhase",
       "Assert-WeatherSettingsStateEqual",
       "Assert-WeatherSettingsEvidenceState",
@@ -2811,7 +2811,7 @@
       "weatherSettingsPreviewProcessesAfter",
       "previewRootCleaned",
       "Stop-ExactPreviewProcess",
-      ".deskbox-aot-managed-ui-owned.json"
+      ".deskcue-aot-managed-ui-owned.json"
     ],
     "stage5B4B2C2AMissingSmokeScriptPatterns": [],
     "stage5B4B2C2AForbiddenScopePatterns": [],
@@ -2820,26 +2820,26 @@
     "stage5B4B2C2AExpectedWmc1510Count": 1211,
     "stage5B4B2C2AActualWmc1510Count": 1211,
     "stage5B4B2C2BSourceFiles": [
-      "src/DeskBox/App.AotManagedUiSmoke.cs",
-      "src/DeskBox/App.AotWeatherSurfacePersistenceSmoke.cs",
-      "src/DeskBox/Services/AotWeatherSurfaceFixture.cs",
-      "src/DeskBox/Services/WeatherService.cs",
-      "src/DeskBox/Services/WeatherWidgetContentProvider.cs",
-      "src/DeskBox/Controls/WidgetContents/WeatherWidgetContentAdapter.cs",
-      "src/DeskBox/ViewModels/WeatherWidgetViewModel.cs",
-      "src/DeskBox/ViewModels/WeatherWidgetViewModel.DataProcessing.cs",
-      "src/DeskBox/ViewModels/WeatherViewModels.AotBindableProperties.cs",
-      "src/DeskBox/Controls/WidgetContents/WeatherWidgetContent.xaml",
-      "src/DeskBox/Controls/WidgetContents/WeatherWidgetContent.xaml.cs",
-      "src/DeskBox/Controls/WidgetContents/WeatherWidgetContent.AotSurfaceSmoke.cs",
-      "src/DeskBox/Services/WidgetManager.AotWeatherSurfaceSmoke.cs",
-      "src/DeskBox/Services/WeatherWidgetViewModeSettings.cs",
-      "src/DeskBox/Services/WeatherSettingsPolicy.cs",
+      "src/DeskCue/App.AotManagedUiSmoke.cs",
+      "src/DeskCue/App.AotWeatherSurfacePersistenceSmoke.cs",
+      "src/DeskCue/Services/AotWeatherSurfaceFixture.cs",
+      "src/DeskCue/Services/WeatherService.cs",
+      "src/DeskCue/Services/WeatherWidgetContentProvider.cs",
+      "src/DeskCue/Controls/WidgetContents/WeatherWidgetContentAdapter.cs",
+      "src/DeskCue/ViewModels/WeatherWidgetViewModel.cs",
+      "src/DeskCue/ViewModels/WeatherWidgetViewModel.DataProcessing.cs",
+      "src/DeskCue/ViewModels/WeatherViewModels.AotBindableProperties.cs",
+      "src/DeskCue/Controls/WidgetContents/WeatherWidgetContent.xaml",
+      "src/DeskCue/Controls/WidgetContents/WeatherWidgetContent.xaml.cs",
+      "src/DeskCue/Controls/WidgetContents/WeatherWidgetContent.AotSurfaceSmoke.cs",
+      "src/DeskCue/Services/WidgetManager.AotWeatherSurfaceSmoke.cs",
+      "src/DeskCue/Services/WeatherWidgetViewModeSettings.cs",
+      "src/DeskCue/Services/WeatherSettingsPolicy.cs",
       "scripts/run-aot-managed-ui-smoke.ps1"
     ],
     "stage5B4B2C2BRequiredRunnerPatterns": [
       "WeatherSurfacePersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_WEATHER_SURFACE_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_WEATHER_SURFACE_PHASE",
       "AotManagedUiWeatherSurfaceMutatePhase",
       "AotManagedUiWeatherSurfaceVerifyRestorePhase",
       "AotManagedUiWeatherSurfacePostflightPhase",
@@ -2859,10 +2859,10 @@
     ],
     "stage5B4B2C2BMissingRunnerPatterns": [],
     "stage5B4B2C2BRequiredFixturePatterns": [
-      "#if DESKBOX_NATIVE_AOT",
+      "#if DESKCUE_NATIVE_AOT",
       "WeatherSurfacePersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_SMOKE",
-      "DESKBOX_AOT_MANAGED_UI_WEATHER_SURFACE_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_SMOKE",
+      "DESKCUE_AOT_MANAGED_UI_WEATHER_SURFACE_PHASE",
       "aot-5b4b2c2b-weather",
       "Shanghai AOT Surface",
       "TryCreateService",
@@ -2929,7 +2929,7 @@
     "stage5B4B2C2BMissingManagerPatterns": [],
     "stage5B4B2C2BRequiredSmokeScriptPatterns": [
       "WeatherSurfacePersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_WEATHER_SURFACE_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_WEATHER_SURFACE_PHASE",
       "Invoke-WeatherSurfacePersistencePhase",
       "Assert-WeatherSurfaceStateEqual",
       "Assert-WeatherSurfaceEvidenceState",
@@ -2955,7 +2955,7 @@
       "weatherSurfacePreviewProcessesAfter",
       "previewRootCleaned",
       "Stop-ExactPreviewProcess",
-      ".deskbox-aot-managed-ui-owned.json"
+      ".deskcue-aot-managed-ui-owned.json"
     ],
     "stage5B4B2C2BMissingSmokeScriptPatterns": [],
     "stage5B4B2C2BForbiddenScopePatterns": [],
@@ -2964,19 +2964,19 @@
     "stage5B4B2C2BExpectedWmc1510Count": 1211,
     "stage5B4B2C2BActualWmc1510Count": 1211,
     "stage5B4C1ASourceFiles": [
-      "src/DeskBox/App.AotManagedUiSmoke.cs",
-      "src/DeskBox/App.AotLocalFilePersistenceSmoke.cs",
-      "src/DeskBox/Services/AotLocalFileSurfaceFixture.cs",
-      "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.AotLocalFileSmoke.cs",
-      "src/DeskBox/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
-      "src/DeskBox/Controls/FileItemSurface.AotBindableProperties.cs",
-      "src/DeskBox/Models/WidgetItem.AotBindableProperties.cs",
-      "src/DeskBox/ViewModels/WidgetViewModel.AotBindableProperties.cs",
+      "src/DeskCue/App.AotManagedUiSmoke.cs",
+      "src/DeskCue/App.AotLocalFilePersistenceSmoke.cs",
+      "src/DeskCue/Services/AotLocalFileSurfaceFixture.cs",
+      "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.AotLocalFileSmoke.cs",
+      "src/DeskCue/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
+      "src/DeskCue/Controls/FileItemSurface.AotBindableProperties.cs",
+      "src/DeskCue/Models/WidgetItem.AotBindableProperties.cs",
+      "src/DeskCue/ViewModels/WidgetViewModel.AotBindableProperties.cs",
       "scripts/run-aot-managed-ui-smoke.ps1"
     ],
     "stage5B4C1ARequiredRunnerPatterns": [
       "LocalFileSurfacePersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_LOCAL_FILE_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_LOCAL_FILE_PHASE",
       "AotManagedUiLocalFileMutatePhase",
       "AotManagedUiLocalFileVerifyRestorePhase",
       "AotManagedUiLocalFilePostflightPhase",
@@ -2996,9 +2996,9 @@
     ],
     "stage5B4C1AMissingRunnerPatterns": [],
     "stage5B4C1ARequiredFixturePatterns": [
-      "#if DESKBOX_NATIVE_AOT",
+      "#if DESKCUE_NATIVE_AOT",
       "LocalFileSurfacePersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_LOCAL_FILE_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_LOCAL_FILE_PHASE",
       "aot-5b4c1a-file",
       "local-file-surface",
       "widget-root",
@@ -3067,7 +3067,7 @@
     "stage5B4C1AMissingBindablePatterns": [],
     "stage5B4C1ARequiredSmokeScriptPatterns": [
       "LocalFileSurfacePersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_LOCAL_FILE_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_LOCAL_FILE_PHASE",
       "Invoke-LocalFilePersistencePhase",
       "Get-LocalFileFixtureState",
       "Assert-LocalFileDiskState",
@@ -3091,7 +3091,7 @@
       "localFilePreviewProcessesAfter",
       "previewRootCleaned",
       "Stop-ExactPreviewProcess",
-      ".deskbox-aot-managed-ui-owned.json"
+      ".deskcue-aot-managed-ui-owned.json"
     ],
     "stage5B4C1AMissingSmokeScriptPatterns": [],
     "stage5B4C1AForbiddenScopePatterns": [],
@@ -3100,26 +3100,26 @@
     "stage5B4C1AExpectedWmc1510Count": 1211,
     "stage5B4C1AActualWmc1510Count": 1211,
     "stage5B4C1B1SourceFiles": [
-      "src/DeskBox/App.AotManagedUiSmoke.cs",
-      "src/DeskBox/App.AotRecycleBinSmoke.cs",
-      "src/DeskBox/Services/AotRecycleBinFixture.cs",
-      "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.AotRecycleBinSmoke.cs",
-      "src/DeskBox/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
-      "src/DeskBox/Helpers/RecycleBinNativeBackend.cs",
-      "src/DeskBox/Controls/FileItemMenuBuilder.cs",
-      "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.SelectionAndMenus.cs",
-      "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.xaml.cs",
-      "src/DeskBox/ViewModels/WidgetViewModel.Operations.cs",
-      "src/DeskBox/Services/FileService.cs",
-      "native/deskbox-native/src/lib.rs",
-      "native/deskbox-native/src/recycle_bin.rs",
-      "native/include/deskbox_native.h",
+      "src/DeskCue/App.AotManagedUiSmoke.cs",
+      "src/DeskCue/App.AotRecycleBinSmoke.cs",
+      "src/DeskCue/Services/AotRecycleBinFixture.cs",
+      "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.AotRecycleBinSmoke.cs",
+      "src/DeskCue/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
+      "src/DeskCue/Helpers/RecycleBinNativeBackend.cs",
+      "src/DeskCue/Controls/FileItemMenuBuilder.cs",
+      "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.SelectionAndMenus.cs",
+      "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.xaml.cs",
+      "src/DeskCue/ViewModels/WidgetViewModel.Operations.cs",
+      "src/DeskCue/Services/FileService.cs",
+      "native/deskcue-native/src/lib.rs",
+      "native/deskcue-native/src/recycle_bin.rs",
+      "native/include/deskcue_native.h",
       "scripts/build-rust-native.ps1",
       "scripts/run-aot-managed-ui-smoke.ps1"
     ],
     "stage5B4C1B1RequiredRunnerPatterns": [
       "RecycleBinMenuPersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_RECYCLE_BIN_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_RECYCLE_BIN_PHASE",
       "AotManagedUiRecycleBinMutatePhase",
       "AotManagedUiRecycleBinVerifyRestorePhase",
       "AotManagedUiRecycleBinPostflightPhase",
@@ -3133,10 +3133,10 @@
     ],
     "stage5B4C1B1MissingRunnerPatterns": [],
     "stage5B4C1B1RequiredFixturePatterns": [
-      "#if DESKBOX_NATIVE_AOT",
+      "#if DESKCUE_NATIVE_AOT",
       "RecycleBinMenuPersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_RECYCLE_BIN_PHASE",
-      "DESKBOX_AOT_MANAGED_UI_RECYCLE_BIN_RUN_ID",
+      "DESKCUE_AOT_MANAGED_UI_RECYCLE_BIN_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_RECYCLE_BIN_RUN_ID",
       "aot-5b4c1b1-file",
       "recycle-bin-menu",
       "widget-root",
@@ -3177,11 +3177,11 @@
     ],
     "stage5B4C1B1MissingMenuPatterns": [],
     "stage5B4C1B1RequiredNativePatterns": [
-      "DESKBOX_NATIVE_CAPABILITY_RECYCLE_BIN_V1",
-      "DESKBOX_RECYCLE_BIN_REQUEST_V1_SIZE_64",
-      "DESKBOX_RECYCLE_BIN_RESULT_V1_SIZE_64",
-      "deskbox_recycle_bin_v1",
-      "assert_eq!(deskbox_native_capabilities(), 511);",
+      "DESKCUE_NATIVE_CAPABILITY_RECYCLE_BIN_V1",
+      "DESKCUE_RECYCLE_BIN_REQUEST_V1_SIZE_64",
+      "DESKCUE_RECYCLE_BIN_RESULT_V1_SIZE_64",
+      "deskcue_recycle_bin_v1",
+      "assert_eq!(deskcue_native_capabilities(), 511);",
       "RecycleBinCapability = 1UL << 8",
       "NativeLibrary.TryGetExport",
       "result.Reserved5 != 0",
@@ -3253,24 +3253,24 @@
     "stage5B4C1B1ExpectedWmc1510Count": 1211,
     "stage5B4C1B1ActualWmc1510Count": 1211,
     "stage5B4C1B2ASourceFiles": [
-      "src/DeskBox/App.AotManagedUiSmoke.cs",
-      "src/DeskBox/App.AotShellMoveSmoke.cs",
-      "src/DeskBox/Services/AotShellMoveFixture.cs",
-      "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.AotShellMoveSmoke.cs",
-      "src/DeskBox/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
-      "src/DeskBox/Controls/FileItemMenuBuilder.cs",
-      "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.SelectionAndMenus.cs",
-      "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.xaml.cs",
-      "src/DeskBox/ViewModels/WidgetViewModel.Operations.cs",
-      "src/DeskBox/Services/OrganizerService.cs",
-      "src/DeskBox/Services/FileService.cs",
+      "src/DeskCue/App.AotManagedUiSmoke.cs",
+      "src/DeskCue/App.AotShellMoveSmoke.cs",
+      "src/DeskCue/Services/AotShellMoveFixture.cs",
+      "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.AotShellMoveSmoke.cs",
+      "src/DeskCue/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
+      "src/DeskCue/Controls/FileItemMenuBuilder.cs",
+      "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.SelectionAndMenus.cs",
+      "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.xaml.cs",
+      "src/DeskCue/ViewModels/WidgetViewModel.Operations.cs",
+      "src/DeskCue/Services/OrganizerService.cs",
+      "src/DeskCue/Services/FileService.cs",
       "scripts/run-aot-managed-ui-smoke.ps1",
       "scripts/run-aot-shell-move-persistence-smoke.ps1",
-      "native/deskbox-native/src/lib.rs"
+      "native/deskcue-native/src/lib.rs"
     ],
     "stage5B4C1B2ARequiredRunnerPatterns": [
       "ShellMovePersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_SHELL_MOVE_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_SHELL_MOVE_PHASE",
       "AotManagedUiShellMoveMutatePhase",
       "AotManagedUiShellMoveVerifyRestorePhase",
       "AotManagedUiShellMovePostflightPhase",
@@ -3284,10 +3284,10 @@
     ],
     "stage5B4C1B2AMissingRunnerPatterns": [],
     "stage5B4C1B2ARequiredFixturePatterns": [
-      "#if DESKBOX_NATIVE_AOT",
+      "#if DESKCUE_NATIVE_AOT",
       "ShellMovePersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_SHELL_MOVE_PHASE",
-      "DESKBOX_AOT_MANAGED_UI_SHELL_MOVE_RUN_ID",
+      "DESKCUE_AOT_MANAGED_UI_SHELL_MOVE_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_SHELL_MOVE_RUN_ID",
       "aot-5b4c1b2a-file",
       "widget-root",
       "desktop-root",
@@ -3393,18 +3393,18 @@
     "stage5B4C1B2AExpectedWmc1510Count": 1211,
     "stage5B4C1B2AActualWmc1510Count": 1211,
     "stage5B4C1B2BSourceFiles": [
-      "src/DeskBox/App.AotManagedUiSmoke.cs",
-      "src/DeskBox/App.AotFilePropertiesSmoke.cs",
-      "src/DeskBox/Services/AotFilePropertiesFixture.cs",
-      "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.AotFilePropertiesSmoke.cs",
-      "src/DeskBox/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
-      "src/DeskBox/Controls/FileItemMenuBuilder.cs",
-      "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.SelectionAndMenus.cs",
-      "src/DeskBox/Helpers/ShellContextMenuHelper.cs",
-      "src/DeskBox/Helpers/Win32Helper.cs",
+      "src/DeskCue/App.AotManagedUiSmoke.cs",
+      "src/DeskCue/App.AotFilePropertiesSmoke.cs",
+      "src/DeskCue/Services/AotFilePropertiesFixture.cs",
+      "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.AotFilePropertiesSmoke.cs",
+      "src/DeskCue/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
+      "src/DeskCue/Controls/FileItemMenuBuilder.cs",
+      "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.SelectionAndMenus.cs",
+      "src/DeskCue/Helpers/ShellContextMenuHelper.cs",
+      "src/DeskCue/Helpers/Win32Helper.cs",
       "scripts/run-aot-managed-ui-smoke.ps1",
       "scripts/run-aot-file-properties-smoke.ps1",
-      "native/deskbox-native/src/lib.rs"
+      "native/deskcue-native/src/lib.rs"
     ],
     "stage5B4C1B2BRequiredRunnerPatterns": [
       "FilePropertiesReadOnly",
@@ -3419,9 +3419,9 @@
     ],
     "stage5B4C1B2BMissingRunnerPatterns": [],
     "stage5B4C1B2BRequiredFixturePatterns": [
-      "#if DESKBOX_NATIVE_AOT",
+      "#if DESKCUE_NATIVE_AOT",
       "FilePropertiesReadOnly",
-      "DESKBOX_AOT_MANAGED_UI_FILE_PROPERTIES_RUN_ID",
+      "DESKCUE_AOT_MANAGED_UI_FILE_PROPERTIES_RUN_ID",
       "aot-5b4c1b2b-file",
       "file-properties",
       "widget-root",
@@ -3523,24 +3523,24 @@
     "stage5B4C1B2BExpectedWmc1510Count": 1211,
     "stage5B4C1B2BActualWmc1510Count": 1211,
     "stage5B4C1C1SourceFiles": [
-      "src/DeskBox/App.AotManagedUiSmoke.cs",
-      "src/DeskBox/App.AotPickerClipboardSmoke.cs",
-      "src/DeskBox/Services/AotPickerClipboardFixture.cs",
-      "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.AotPickerClipboardSmoke.cs",
-      "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.xaml.cs",
-      "src/DeskBox/Services/FileOpenPickerService.cs",
-      "src/DeskBox/Services/FileService.cs",
-      "src/DeskBox/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
-      "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.AotLocalFileSmoke.cs",
+      "src/DeskCue/App.AotManagedUiSmoke.cs",
+      "src/DeskCue/App.AotPickerClipboardSmoke.cs",
+      "src/DeskCue/Services/AotPickerClipboardFixture.cs",
+      "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.AotPickerClipboardSmoke.cs",
+      "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.xaml.cs",
+      "src/DeskCue/Services/FileOpenPickerService.cs",
+      "src/DeskCue/Services/FileService.cs",
+      "src/DeskCue/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
+      "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.AotLocalFileSmoke.cs",
       "scripts/run-aot-managed-ui-smoke.ps1",
       "scripts/run-aot-picker-clipboard-smoke.ps1",
-      "native/deskbox-native/src/lib.rs"
+      "native/deskcue-native/src/lib.rs"
     ],
     "stage5B4C1C1RequiredRunnerPatterns": [
       "PickerClipboardStorageItemsPersistenceRestart",
       "picker-clipboard-storage-items-persistence-restart",
       "aot-5b4c1c1-file",
-      "DESKBOX_AOT_MANAGED_UI_PICKER_CLIPBOARD_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_PICKER_CLIPBOARD_PHASE",
       "CaptureAotManagedUiPickerClipboardAsync",
       "PickerClipboard = pickerClipboardPhase is null",
       "NormalShutdownRequested = true",
@@ -3562,9 +3562,9 @@
     ],
     "stage5B4C1C1MissingProductPatterns": [],
     "stage5B4C1C1RequiredFixturePatterns": [
-      "#if DESKBOX_NATIVE_AOT",
+      "#if DESKCUE_NATIVE_AOT",
       "PickerClipboardStorageItemsPersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_PICKER_CLIPBOARD_RUN_ID",
+      "DESKCUE_AOT_MANAGED_UI_PICKER_CLIPBOARD_RUN_ID",
       "aot-5b4c1c1-file",
       "runId is not { Length: 32 }",
       "character is not (>= '0' and <= '9')",
@@ -3650,27 +3650,27 @@
     "stage5B4C1C1ExpectedWmc1510Count": 1211,
     "stage5B4C1C1ActualWmc1510Count": 1211,
     "stage5B4C1C2ASourceFiles": [
-      "src/DeskBox/App.AotManagedUiSmoke.cs",
-      "src/DeskBox/App.AotNativeDropSmoke.cs",
-      "src/DeskBox/Services/AotNativeDropFixture.cs",
-      "src/DeskBox/Views/ContentWidgetWindow.AotNativeDropSmoke.cs",
-      "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.AotNativeDropSmoke.cs",
-      "src/DeskBox/Views/ContentWidgetWindow.NativeDragDrop.cs",
-      "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.xaml.cs",
-      "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.xaml",
-      "src/DeskBox/Controls/WidgetContents/FileSurfaceContent.ImportProgress.cs",
-      "src/DeskBox/Helpers/NativeDropTarget.cs",
-      "src/DeskBox/Helpers/NativeDropComDataReader.cs",
-      "src/DeskBox/Helpers/NativeDropTargetComInterop.cs",
-      "src/DeskBox/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
+      "src/DeskCue/App.AotManagedUiSmoke.cs",
+      "src/DeskCue/App.AotNativeDropSmoke.cs",
+      "src/DeskCue/Services/AotNativeDropFixture.cs",
+      "src/DeskCue/Views/ContentWidgetWindow.AotNativeDropSmoke.cs",
+      "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.AotNativeDropSmoke.cs",
+      "src/DeskCue/Views/ContentWidgetWindow.NativeDragDrop.cs",
+      "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.xaml.cs",
+      "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.xaml",
+      "src/DeskCue/Controls/WidgetContents/FileSurfaceContent.ImportProgress.cs",
+      "src/DeskCue/Helpers/NativeDropTarget.cs",
+      "src/DeskCue/Helpers/NativeDropComDataReader.cs",
+      "src/DeskCue/Helpers/NativeDropTargetComInterop.cs",
+      "src/DeskCue/Services/WidgetManager.AotLocalFileSurfaceSmoke.cs",
       "scripts/run-aot-managed-ui-smoke.ps1",
       "scripts/run-aot-native-drop-smoke.ps1",
-      "native/deskbox-native/src/lib.rs"
+      "native/deskcue-native/src/lib.rs"
     ],
     "stage5B4C1C2ARequiredRunnerPatterns": [
       "NativeDropPersistenceRestart",
       "native-drop-persistence-restart",
-      "DESKBOX_AOT_MANAGED_UI_NATIVE_DROP_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_NATIVE_DROP_PHASE",
       "AotManagedUiNativeDropWidgetId",
       "bool isNativeDrop",
       "? AotManagedUiNativeDropWidgetId",
@@ -3702,10 +3702,10 @@
     ],
     "stage5B4C1C2AMissingProductPatterns": [],
     "stage5B4C1C2ARequiredFixturePatterns": [
-      "#if DESKBOX_NATIVE_AOT",
+      "#if DESKCUE_NATIVE_AOT",
       "NativeDropPersistenceRestart",
-      "DESKBOX_AOT_MANAGED_UI_NATIVE_DROP_PHASE",
-      "DESKBOX_AOT_MANAGED_UI_NATIVE_DROP_RUN_ID",
+      "DESKCUE_AOT_MANAGED_UI_NATIVE_DROP_PHASE",
+      "DESKCUE_AOT_MANAGED_UI_NATIVE_DROP_RUN_ID",
       "aot-5b4c1c2a-file",
       "runId is not { Length: 32 }",
       "character is not (>= '0' and <= '9')",
@@ -3793,21 +3793,21 @@
     "stage5B4C1C2AExpectedWmc1510Count": 1211,
     "stage5B4C1C2AActualWmc1510Count": 1211,
     "stage5B4C2ASourceFiles": [
-      "src/DeskBox/App.AotHotkeySmoke.cs",
-      "src/DeskBox/Helpers/Win32Helper.AotHotkeySmoke.cs",
-      "src/DeskBox/Services/GlobalHotkeyService.cs",
-      "src/DeskBox/Services/SearchHotkeyService.cs",
-      "src/DeskBox/Services/ReservedHotkeyHookService.cs",
-      "src/DeskBox/Services/WinSpaceHotkeyStateMachine.cs",
-      "src/DeskBox/App.xaml.cs",
+      "src/DeskCue/App.AotHotkeySmoke.cs",
+      "src/DeskCue/Helpers/Win32Helper.AotHotkeySmoke.cs",
+      "src/DeskCue/Services/GlobalHotkeyService.cs",
+      "src/DeskCue/Services/SearchHotkeyService.cs",
+      "src/DeskCue/Services/ReservedHotkeyHookService.cs",
+      "src/DeskCue/Services/WinSpaceHotkeyStateMachine.cs",
+      "src/DeskCue/App.xaml.cs",
       "scripts/run-aot-hotkey-smoke.ps1",
-      "native/deskbox-native/src/lib.rs"
+      "native/deskcue-native/src/lib.rs"
     ],
     "stage5B4C2ARequiredScenarioPatterns": [
-      "#if DESKBOX_NATIVE_AOT",
-      "DESKBOX_AOT_HOTKEY_SMOKE",
-      "DESKBOX_AOT_HOTKEY_PHASE",
-      "DESKBOX_AOT_HOTKEY_RUN_ID",
+      "#if DESKCUE_NATIVE_AOT",
+      "DESKCUE_AOT_HOTKEY_SMOKE",
+      "DESKCUE_AOT_HOTKEY_PHASE",
+      "DESKCUE_AOT_HOTKEY_RUN_ID",
       "RegistrationLifecycle",
       "Guid.TryParseExact(runId, \"N\"",
       "dataPaths.IsDevelopmentRoot",
@@ -3878,26 +3878,26 @@
     "stage5B4C2AExpectedWmc1510Count": 1211,
     "stage5B4C2AActualWmc1510Count": 1211,
     "stage5B4C3ASourceFiles": [
-      "src/DeskBox/App.AotTodoRecurrenceReminderSmoke.cs",
-      "src/DeskBox/App.xaml.cs",
-      "src/DeskBox/Services/TodoReminderService.cs",
-      "src/DeskBox/Services/TodoRecurrenceService.cs",
-      "src/DeskBox/Services/TodoWidgetStore.cs",
-      "src/DeskBox/Services/SettingsService.cs",
-      "src/DeskBox/Services/LocalizationService.cs",
-      "src/DeskBox/Models/TodoItem.cs",
-      "src/DeskBox/Models/TodoRecurrence.cs",
-      "src/DeskBox/Models/TodoReminderOptions.cs",
-      "src/DeskBox/Models/TodoWidgetData.cs",
+      "src/DeskCue/App.AotTodoRecurrenceReminderSmoke.cs",
+      "src/DeskCue/App.xaml.cs",
+      "src/DeskCue/Services/TodoReminderService.cs",
+      "src/DeskCue/Services/TodoRecurrenceService.cs",
+      "src/DeskCue/Services/TodoWidgetStore.cs",
+      "src/DeskCue/Services/SettingsService.cs",
+      "src/DeskCue/Services/LocalizationService.cs",
+      "src/DeskCue/Models/TodoItem.cs",
+      "src/DeskCue/Models/TodoRecurrence.cs",
+      "src/DeskCue/Models/TodoReminderOptions.cs",
+      "src/DeskCue/Models/TodoWidgetData.cs",
       "scripts/run-aot-todo-recurrence-reminder-smoke.ps1",
       "scripts/run-aot-managed-ui-smoke.ps1",
-      "native/deskbox-native/src/lib.rs"
+      "native/deskcue-native/src/lib.rs"
     ],
     "stage5B4C3ARequiredScenarioPatterns": [
-      "#if DESKBOX_NATIVE_AOT",
-      "DESKBOX_AOT_TODO_RECURRENCE_REMINDER_SMOKE",
-      "DESKBOX_AOT_TODO_RECURRENCE_REMINDER_PHASE",
-      "DESKBOX_AOT_TODO_RECURRENCE_REMINDER_RUN_ID",
+      "#if DESKCUE_NATIVE_AOT",
+      "DESKCUE_AOT_TODO_RECURRENCE_REMINDER_SMOKE",
+      "DESKCUE_AOT_TODO_RECURRENCE_REMINDER_PHASE",
+      "DESKCUE_AOT_TODO_RECURRENCE_REMINDER_RUN_ID",
       "DeterministicStateMatrix",
       "Guid.TryParseExact(runId, \"N\"",
       "dataPaths.IsDevelopmentRoot",
@@ -3975,20 +3975,20 @@
     "stage5B4C3AExpectedWmc1510Count": 1211,
     "stage5B4C3AActualWmc1510Count": 1211,
     "stage5B4C3B1SourceFiles": [
-      "src/DeskBox/App.AotTodoNotificationLifecycleSmoke.cs",
-      "src/DeskBox/App.xaml.cs",
-      "src/DeskBox/Services/NativeAppNotificationService.cs",
-      "src/DeskBox/Package.appxmanifest",
+      "src/DeskCue/App.AotTodoNotificationLifecycleSmoke.cs",
+      "src/DeskCue/App.xaml.cs",
+      "src/DeskCue/Services/NativeAppNotificationService.cs",
+      "src/DeskCue/Package.appxmanifest",
       "scripts/run-aot-todo-notification-smoke.ps1",
       "scripts/run-aot-managed-ui-smoke.ps1",
-      "native/deskbox-native/src/lib.rs",
-      "src/DeskBox/DeskBox.csproj"
+      "native/deskcue-native/src/lib.rs",
+      "src/DeskCue/DeskCue.csproj"
     ],
     "stage5B4C3B1RequiredScenarioPatterns": [
-      "#if DESKBOX_NATIVE_AOT",
-      "DESKBOX_AOT_TODO_NOTIFICATION_SMOKE",
-      "DESKBOX_AOT_TODO_NOTIFICATION_PHASE",
-      "DESKBOX_AOT_TODO_NOTIFICATION_RUN_ID",
+      "#if DESKCUE_NATIVE_AOT",
+      "DESKCUE_AOT_TODO_NOTIFICATION_SMOKE",
+      "DESKCUE_AOT_TODO_NOTIFICATION_PHASE",
+      "DESKCUE_AOT_TODO_NOTIFICATION_RUN_ID",
       "RealDisplayAndCleanup",
       "Guid.TryParseExact(runId, \"N\"",
       "dataPaths.IsDevelopmentRoot",
@@ -4070,21 +4070,21 @@
     "stage5B4C3B1ExpectedWmc1510Count": 1211,
     "stage5B4C3B1ActualWmc1510Count": 1211,
     "stage5B4C3B2ASourceFiles": [
-      "src\\DeskBox\\App.AotTodoNotificationActivationSmoke.cs",
-      "src\\DeskBox\\App.xaml.cs",
-      "src\\DeskBox\\Services\\TodoNotificationActivationRouter.cs",
-      "src\\DeskBox\\Services\\TodoReminderService.cs",
-      "src\\DeskBox\\Services\\TodoWidgetStore.cs",
+      "src\\DeskCue\\App.AotTodoNotificationActivationSmoke.cs",
+      "src\\DeskCue\\App.xaml.cs",
+      "src\\DeskCue\\Services\\TodoNotificationActivationRouter.cs",
+      "src\\DeskCue\\Services\\TodoReminderService.cs",
+      "src\\DeskCue\\Services\\TodoWidgetStore.cs",
       "scripts\\run-aot-todo-notification-activation-smoke.ps1",
       "scripts\\run-aot-managed-ui-smoke.ps1",
-      "native\\deskbox-native\\src\\lib.rs",
-      "src\\DeskBox\\DeskBox.csproj"
+      "native\\deskcue-native\\src\\lib.rs",
+      "src\\DeskCue\\DeskCue.csproj"
     ],
     "stage5B4C3B2ARequiredScenarioPatterns": [
-      "#if DESKBOX_NATIVE_AOT",
-      "DESKBOX_AOT_TODO_NOTIFICATION_ACTIVATION_SMOKE",
-      "DESKBOX_AOT_TODO_NOTIFICATION_ACTIVATION_PHASE",
-      "DESKBOX_AOT_TODO_NOTIFICATION_ACTIVATION_RUN_ID",
+      "#if DESKCUE_NATIVE_AOT",
+      "DESKCUE_AOT_TODO_NOTIFICATION_ACTIVATION_SMOKE",
+      "DESKCUE_AOT_TODO_NOTIFICATION_ACTIVATION_PHASE",
+      "DESKCUE_AOT_TODO_NOTIFICATION_ACTIVATION_RUN_ID",
       "DeterministicActionRouting",
       "Guid.TryParseExact(runId, \"N\"",
       "dataPaths.IsDevelopmentRoot",
@@ -4167,23 +4167,23 @@
     "stage5B4C3B2AExpectedWmc1510Count": 1211,
     "stage5B4C3B2AActualWmc1510Count": 1211,
     "stage5B4C3B2B1SourceFiles": [
-      "src\\DeskBox\\App.AotTodoNotificationForwardingSmoke.cs",
-      "src\\DeskBox\\App.xaml.cs",
-      "src\\DeskBox\\Services\\NativeNotificationActivationEnvelopeStore.cs",
-      "src\\DeskBox\\Services\\NativeAppNotificationService.cs",
-      "src\\DeskBox\\Services\\TodoNotificationActivationRouter.cs",
-      "src\\DeskBox\\Services\\TodoReminderService.cs",
+      "src\\DeskCue\\App.AotTodoNotificationForwardingSmoke.cs",
+      "src\\DeskCue\\App.xaml.cs",
+      "src\\DeskCue\\Services\\NativeNotificationActivationEnvelopeStore.cs",
+      "src\\DeskCue\\Services\\NativeAppNotificationService.cs",
+      "src\\DeskCue\\Services\\TodoNotificationActivationRouter.cs",
+      "src\\DeskCue\\Services\\TodoReminderService.cs",
       "scripts\\run-aot-todo-notification-forwarding-smoke.ps1",
       "scripts\\run-aot-managed-ui-smoke.ps1",
       "scripts\\start-aot-preview.ps1",
-      "native\\deskbox-native\\src\\lib.rs",
-      "src\\DeskBox\\DeskBox.csproj"
+      "native\\deskcue-native\\src\\lib.rs",
+      "src\\DeskCue\\DeskCue.csproj"
     ],
     "stage5B4C3B2B1RequiredScenarioPatterns": [
-      "#if DESKBOX_NATIVE_AOT",
-      "DESKBOX_AOT_TODO_NOTIFICATION_FORWARDING_SMOKE",
-      "DESKBOX_AOT_TODO_NOTIFICATION_FORWARDING_PHASE",
-      "DESKBOX_AOT_TODO_NOTIFICATION_FORWARDING_RUN_ID",
+      "#if DESKCUE_NATIVE_AOT",
+      "DESKCUE_AOT_TODO_NOTIFICATION_FORWARDING_SMOKE",
+      "DESKCUE_AOT_TODO_NOTIFICATION_FORWARDING_PHASE",
+      "DESKCUE_AOT_TODO_NOTIFICATION_FORWARDING_RUN_ID",
       "EnvelopeAndSingleInstance",
       "SeedColdStart",
       "ColdStartConsume",
@@ -4270,21 +4270,21 @@
     "stage5B4C3B2B1ExpectedWmc1510Count": 1211,
     "stage5B4C3B2B1ActualWmc1510Count": 1211,
     "stage5B4C3B2B2ASourceFiles": [
-      "src\\DeskBox\\App.AotTodoNotificationSurfaceSmoke.cs",
-      "src\\DeskBox\\App.AotManagedUiSmoke.cs",
-      "src\\DeskBox\\App.xaml.cs",
-      "src\\DeskBox\\Services\\TodoNotificationActivationRouter.cs",
-      "src\\DeskBox\\Services\\WidgetManager.FeatureWidgets.cs",
-      "src\\DeskBox\\Controls\\WidgetContents\\TodoWidgetContent.xaml.cs",
+      "src\\DeskCue\\App.AotTodoNotificationSurfaceSmoke.cs",
+      "src\\DeskCue\\App.AotManagedUiSmoke.cs",
+      "src\\DeskCue\\App.xaml.cs",
+      "src\\DeskCue\\Services\\TodoNotificationActivationRouter.cs",
+      "src\\DeskCue\\Services\\WidgetManager.FeatureWidgets.cs",
+      "src\\DeskCue\\Controls\\WidgetContents\\TodoWidgetContent.xaml.cs",
       "scripts\\run-aot-todo-notification-surface-smoke.ps1",
       "scripts\\run-aot-managed-ui-smoke.ps1",
       "scripts\\start-aot-preview.ps1",
-      "native\\deskbox-native\\src\\lib.rs",
-      "src\\DeskBox\\DeskBox.csproj"
+      "native\\deskcue-native\\src\\lib.rs",
+      "src\\DeskCue\\DeskCue.csproj"
     ],
     "stage5B4C3B2B2ARequiredScenarioPatterns": [
-      "#if DESKBOX_NATIVE_AOT",
-      "DESKBOX_AOT_TODO_NOTIFICATION_SURFACE_SMOKE",
+      "#if DESKCUE_NATIVE_AOT",
+      "DESKCUE_AOT_TODO_NOTIFICATION_SURFACE_SMOKE",
       "TodoNotificationSurfaceRouting",
       "Stage = \"5B-4C3B2B2A\"",
       "RouteTodoNotificationActivationAsync(",
@@ -4343,21 +4343,21 @@
     "stage5B4C3B2B2AExpectedWmc1510Count": 1211,
     "stage5B4C3B2B2AActualWmc1510Count": 1211,
     "stage5B4C3B2B2BSourceFiles": [
-      "src\\DeskBox\\App.AotTodoNotificationUserClickSmoke.cs",
-      "src\\DeskBox\\App.AotManagedUiSmoke.cs",
-      "src\\DeskBox\\App.xaml.cs",
-      "src\\DeskBox\\Services\\NativeAppNotificationService.cs",
-      "src\\DeskBox\\Services\\NativeNotificationActivationEnvelopeStore.cs",
-      "src\\DeskBox\\Services\\TodoNotificationActivationRouter.cs",
-      "src\\DeskBox\\Controls\\WidgetContents\\TodoWidgetContent.xaml.cs",
+      "src\\DeskCue\\App.AotTodoNotificationUserClickSmoke.cs",
+      "src\\DeskCue\\App.AotManagedUiSmoke.cs",
+      "src\\DeskCue\\App.xaml.cs",
+      "src\\DeskCue\\Services\\NativeAppNotificationService.cs",
+      "src\\DeskCue\\Services\\NativeNotificationActivationEnvelopeStore.cs",
+      "src\\DeskCue\\Services\\TodoNotificationActivationRouter.cs",
+      "src\\DeskCue\\Controls\\WidgetContents\\TodoWidgetContent.xaml.cs",
       "scripts\\run-aot-todo-notification-user-click-smoke.ps1",
       "scripts\\start-aot-preview.ps1",
-      "native\\deskbox-native\\src\\lib.rs",
-      "src\\DeskBox\\DeskBox.csproj"
+      "native\\deskcue-native\\src\\lib.rs",
+      "src\\DeskCue\\DeskCue.csproj"
     ],
     "stage5B4C3B2B2BRequiredScenarioPatterns": [
-      "#if DESKBOX_NATIVE_AOT",
-      "DESKBOX_AOT_TODO_NOTIFICATION_USER_CLICK_SMOKE",
+      "#if DESKCUE_NATIVE_AOT",
+      "DESKCUE_AOT_TODO_NOTIFICATION_USER_CLICK_SMOKE",
       "RealWindowsNotificationUserClick",
       "RunningMatrix",
       "ColdSeed",
@@ -4470,7 +4470,7 @@
   ],
   "peImages": [
     {
-      "file": "DeskBox.exe",
+      "file": "DeskCue.exe",
       "machine": "0x8664",
       "bytes": 47725568,
       "sha256": "9B88B1A799D1DB312212B534DD2626081B6F598C24E19BEB4046D39B9A691270",
@@ -4496,7 +4496,7 @@
       ]
     },
     {
-      "file": "DeskBox.Updater.exe",
+      "file": "DeskCue.Updater.exe",
       "machine": "0x8664",
       "bytes": 2020864,
       "sha256": "F8165FB9E39A744FEE9A46F054633C602D7509E52CA80B6F2C3A6B0B767A01AA",
@@ -4516,7 +4516,7 @@
       ]
     },
     {
-      "file": "deskbox_native.dll",
+      "file": "deskcue_native.dll",
       "machine": "0x8664",
       "bytes": 246272,
       "sha256": "B97BC897078B0185C376A9F941269DDBC0FE03B9A3C84DD42DCE9E6FDC9895CF",
@@ -4531,7 +4531,7 @@
       ]
     },
     {
-      "file": "deskbox_search_core.dll",
+      "file": "deskcue_search_core.dll",
       "machine": "0x8664",
       "bytes": 260608,
       "sha256": "D092AFE835EE9FF0604EDD2C2D9DCF7EA293E0EEB595CBF1A0D9AB730CEB276F",
@@ -4549,18 +4549,18 @@
     "abiVersion": 2,
     "capabilities": 511,
     "requiredExports": [
-      "deskbox_native_abi_version",
-      "deskbox_native_capabilities",
-      "deskbox_shortcut_read_v2",
-      "deskbox_shortcut_resolve_no_ui_v2",
-      "deskbox_shortcut_write_v2",
-      "deskbox_shortcut_resolve_with_ui_v2",
-      "deskbox_music_volume_v1",
-      "deskbox_explorer_shell_launch_v1",
-      "deskbox_quick_access_v1",
-      "deskbox_recycle_bin_v1"
+      "deskcue_native_abi_version",
+      "deskcue_native_capabilities",
+      "deskcue_shortcut_read_v2",
+      "deskcue_shortcut_resolve_no_ui_v2",
+      "deskcue_shortcut_write_v2",
+      "deskcue_shortcut_resolve_with_ui_v2",
+      "deskcue_music_volume_v1",
+      "deskcue_explorer_shell_launch_v1",
+      "deskcue_quick_access_v1",
+      "deskcue_recycle_bin_v1"
     ],
-    "dllName": "deskbox_native.dll",
+    "dllName": "deskcue_native.dll",
     "stagingSha256": "B97BC897078B0185C376A9F941269DDBC0FE03B9A3C84DD42DCE9E6FDC9895CF",
     "publishSha256": "B97BC897078B0185C376A9F941269DDBC0FE03B9A3C84DD42DCE9E6FDC9895CF",
     "publishMatchesStaging": true,
@@ -4569,19 +4569,19 @@
     "lockedPackageCount": 18,
     "lockedPackages": [
       {
-        "name": "deskbox-audio-session-fixture",
+        "name": "deskcue-audio-session-fixture",
         "version": "0.1.0",
         "source": null,
         "features": []
       },
       {
-        "name": "deskbox-native",
+        "name": "deskcue-native",
         "version": "0.1.0",
         "source": null,
         "features": []
       },
       {
-        "name": "deskbox-search-core",
+        "name": "deskcue-search-core",
         "version": "0.1.0",
         "source": null,
         "features": []
@@ -4706,38 +4706,38 @@
     ],
     "shortcutBackendPolicy": {
       "jitDefault": "csharp",
-      "explicitOptInEnvironmentVariable": "DESKBOX_SHORTCUT_BACKEND",
+      "explicitOptInEnvironmentVariable": "DESKCUE_SHORTCUT_BACKEND",
       "nativeAot": "rust",
-      "nativeAotCompileTimeDefine": "DESKBOX_NATIVE_AOT",
+      "nativeAotCompileTimeDefine": "DESKCUE_NATIVE_AOT",
       "fallbackOnNativeFailure": false
     },
     "musicVolumeBackendPolicy": {
       "jitDefault": "csharp",
-      "explicitOptInEnvironmentVariable": "DESKBOX_MUSIC_VOLUME_BACKEND",
+      "explicitOptInEnvironmentVariable": "DESKCUE_MUSIC_VOLUME_BACKEND",
       "nativeAot": "rust",
-      "nativeAotCompileTimeDefine": "DESKBOX_NATIVE_AOT",
+      "nativeAotCompileTimeDefine": "DESKCUE_NATIVE_AOT",
       "fallbackOnNativeFailure": false
     },
     "explorerShellBackendPolicy": {
       "jitDefault": "csharp",
-      "explicitOptInEnvironmentVariable": "DESKBOX_EXPLORER_SHELL_BACKEND",
+      "explicitOptInEnvironmentVariable": "DESKCUE_EXPLORER_SHELL_BACKEND",
       "nativeAot": "rust",
-      "nativeAotCompileTimeDefine": "DESKBOX_NATIVE_AOT",
+      "nativeAotCompileTimeDefine": "DESKCUE_NATIVE_AOT",
       "fallbackOnNativeFailure": false,
       "productFallback": "Process.Start/SHOpenWithDialog"
     },
     "quickAccessBackendPolicy": {
       "jitDefault": "csharp",
-      "explicitOptInEnvironmentVariable": "DESKBOX_QUICK_ACCESS_BACKEND",
+      "explicitOptInEnvironmentVariable": "DESKCUE_QUICK_ACCESS_BACKEND",
       "nativeAot": "rust",
-      "nativeAotCompileTimeDefine": "DESKBOX_NATIVE_AOT",
+      "nativeAotCompileTimeDefine": "DESKCUE_NATIVE_AOT",
       "fallbackOnNativeFailure": false,
       "asynchronousApartment": "dedicated STA"
     },
     "recycleBinBackendPolicy": {
       "productDelete": "C# SHFileOperationW",
       "nativeAotExactQueryAndRestore": "rust",
-      "nativeAotCompileTimeDefine": "DESKBOX_NATIVE_AOT",
+      "nativeAotCompileTimeDefine": "DESKCUE_NATIVE_AOT",
       "fallbackOnNativeFailure": false,
       "exactIdentity": "original parent plus item name",
       "restoreRequiresExactlyOneMatch": true
@@ -4747,22 +4747,22 @@
     "enabled": true,
     "abiVersion": 3,
     "requiredExports": [
-      "deskbox_search_core_abi_version",
-      "deskbox_search_core_open_dbix_v1",
-      "deskbox_search_core_create_v1",
-      "deskbox_search_core_add_batch_v1",
-      "deskbox_search_core_seal_v1",
-      "deskbox_search_core_reset_cancel_v1",
-      "deskbox_search_core_cancel_v1",
-      "deskbox_search_core_query_v1",
-      "deskbox_search_core_copy_entries_v1",
-      "deskbox_search_core_mutate_batch_v1",
-      "deskbox_search_core_project_v1",
-      "deskbox_search_core_save_dbix_v1",
-      "deskbox_search_core_stats_v1",
-      "deskbox_search_core_destroy_v1"
+      "deskcue_search_core_abi_version",
+      "deskcue_search_core_open_dbix_v1",
+      "deskcue_search_core_create_v1",
+      "deskcue_search_core_add_batch_v1",
+      "deskcue_search_core_seal_v1",
+      "deskcue_search_core_reset_cancel_v1",
+      "deskcue_search_core_cancel_v1",
+      "deskcue_search_core_query_v1",
+      "deskcue_search_core_copy_entries_v1",
+      "deskcue_search_core_mutate_batch_v1",
+      "deskcue_search_core_project_v1",
+      "deskcue_search_core_save_dbix_v1",
+      "deskcue_search_core_stats_v1",
+      "deskcue_search_core_destroy_v1"
     ],
-    "dllName": "deskbox_search_core.dll",
+    "dllName": "deskcue_search_core.dll",
     "stagingSha256": "D092AFE835EE9FF0604EDD2C2D9DCF7EA293E0EEB595CBF1A0D9AB730CEB276F",
     "publishSha256": "D092AFE835EE9FF0604EDD2C2D9DCF7EA293E0EEB595CBF1A0D9AB730CEB276F",
     "publishMatchesStaging": true,

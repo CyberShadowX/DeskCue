@@ -1,4 +1,4 @@
-# DeskBox AOT 阶段 4D-1B 完成与复盘报告
+# DeskCue AOT 阶段 4D-1B 完成与复盘报告
 
 - 日期：2026-08-21
 - 范围：Quick Capture 固定异常诊断、`Localized` 强类型映射、AOT 零告警门禁

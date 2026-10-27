@@ -1,9 +1,9 @@
-# DeskBox Shortcut Native ABI v2 契约
+# DeskCue Shortcut Native ABI v2 契约
 
 ## 1. 状态与范围
 
 本文记录完成阶段 3C-3 后的 x64 C ABI、只读/Resolve/写入/Windows UI 实现与产品接入。公开定义以
-`native/include/deskbox_native.h` 为准，Rust 结构布局由单元测试再次校验；
+`native/include/deskcue_native.h` 为准，Rust 结构布局由单元测试再次校验；
 既有读取与 Resolve 结构尺寸相对 3B-0 没有变化；3C-1 追加独立的输入字符串、写入
 请求和写入结果结构；3C-2 再追加独立的 UI Resolve 请求/结果结构，仍不修改已经
 发布的结构布局；3C-3 不修改 ABI，只收口 AOT 编译、诊断与打包边界。
@@ -16,13 +16,13 @@ shortcut 收口时的历史值。
 | 项目 | 阶段 3C-3 状态 |
 | --- | --- |
 | ABI 版本 | 2 |
-| DLL | `deskbox_native.dll` |
+| DLL | `deskcue_native.dll` |
 | 能力位 | 31，即两个读取模式、`RESOLVE_NO_UI`、`WRITE` 与 `RESOLVE_WITH_UI` |
 | shortcut read 导出 | 已实现真实 `.lnk` 只读 |
 | no-UI Resolve 导出 | 已实现；不显示 UI，保留原始 HRESULT 后继续读元数据 |
 | shortcut write 导出 | 已实现；完整设置五字段后覆盖保存 `.lnk` |
 | Windows UI Resolve 导出 | 已实现；在调用方线程传递 owner HWND，保留更新、提示和删除语义 |
-| DeskBox 产品接入 | JIT 默认 C#、显式 Rust opt-in；Native AOT 编译期只保留 Rust shortcut 路径 |
+| DeskCue 产品接入 | JIT 默认 C#、显式 Rust opt-in；Native AOT 编译期只保留 Rust shortcut 路径 |
 | 支持架构 | x64；ARM64 结构尺寸已预留为相同的 64 位指针布局，但尚未构建和验收 |
 
 3C-2 在两套既有 `.lnk` 读取语义、无 UI Resolve 和完整写入之外，迁移损坏链接的
@@ -35,13 +35,13 @@ Windows 修复/删除 UI，并把文件组件的真实宿主 HWND 接到既有�
 ABI 2 要求 DLL 同时导出：
 
 ```text
-deskbox_native_abi_version
-deskbox_native_capabilities
-deskbox_shortcut_read_v2
-deskbox_shortcut_resolve_no_ui_v2
-deskbox_shortcut_write_v2
-deskbox_shortcut_resolve_with_ui_v2
-deskbox_music_volume_v1
+deskcue_native_abi_version
+deskcue_native_capabilities
+deskcue_shortcut_read_v2
+deskcue_shortcut_resolve_no_ui_v2
+deskcue_shortcut_write_v2
+deskcue_shortcut_resolve_with_ui_v2
+deskcue_music_volume_v1
 ```
 
 调用方必须先安全加载 DLL 并解析版本探针、能力探针及四个操作导出；任何必需导出
@@ -87,7 +87,7 @@ AOT 模式不得因这些错误回退到不受支持的旧 `ComImport` 路径。
 
 ## 4. UTF-16 输出缓冲区
 
-`DeskBoxNativeUtf16BufferV1` 由调用方拥有：
+`DeskCueNativeUtf16BufferV1` 由调用方拥有：
 
 - `data == null && capacity_chars == 0` 表示只查询结果长度；
 - `data != null && capacity_chars > 0` 表示可写缓冲区，容量包含终止空字符；
@@ -106,7 +106,7 @@ AOT 模式不得因这些错误回退到不受支持的旧 `ComImport` 路径。
 
 ## 5. UTF-16 输入字符串
 
-`DeskBoxNativeUtf16StringV1` 由调用方拥有，长度不含终止空字符：
+`DeskCueNativeUtf16StringV1` 由调用方拥有，长度不含终止空字符：
 
 - `data == null && length_chars == 0` 只表示允许为空的可选字段；
 - 非空字段必须满足 `data != null && length_chars > 0`；shortcut 路径与目标路径不能为空；
@@ -180,7 +180,7 @@ Resolve 在 Load 后无条件记录 `RESOLVE` phase 与原始 `resolve_hresult`�
 
 ## 8. 无 UI Resolve
 
-`deskbox_shortcut_resolve_no_ui_v2` 只接受嵌套读取模式 `STORED_RAW`，语义与
+`deskcue_shortcut_resolve_no_ui_v2` 只接受嵌套读取模式 `STORED_RAW`，语义与
 `ShortcutHelper.Resolve` 对齐：
 
 1. Load `.lnk`；
@@ -200,7 +200,7 @@ Resolve 在 Load 后无条件记录 `RESOLVE` phase 与原始 `resolve_hresult`�
 
 ## 9. 快捷方式写入
 
-`deskbox_shortcut_write_v2` 创建一个新的 Shell Link 对象，不先 Load 旧文件，并按固定
+`deskcue_shortcut_write_v2` 创建一个新的 Shell Link 对象，不先 Load 旧文件，并按固定
 顺序执行以下 setter：
 
 1. `SetPath`；
@@ -224,14 +224,14 @@ setter，空描述、空参数、空工作目录和空图标路径会清除旧�
 方式的 `Path.GetFullPath`、两类写入的父目录创建以及成功后的已存储元数据缓存失效仍
 由 C# 编排层负责。
 
-`DeskBoxShortcutWriteRequestV2` 固定为 144 字节，包含 shortcut 路径、五个元数据字段、
-图标索引以及保留位；`DeskBoxShortcutWriteResultV2` 固定为 96 字节，包含顶层状态、
+`DeskCueShortcutWriteRequestV2` 固定为 144 字节，包含 shortcut 路径、五个元数据字段、
+图标索引以及保留位；`DeskCueShortcutWriteResultV2` 固定为 96 字节，包含顶层状态、
 COM/创建/Save HRESULT、字段掩码和五个 setter HRESULT。写入同步完成，不提供 `.url`
 写入。Windows UI 修复使用下一节的独立结构和导出，不复用写入结果。
 
 ## 10. Windows UI Resolve
 
-`deskbox_shortcut_resolve_with_ui_v2` 使用独立的 64 字节请求与 64 字节结果，不嵌套
+`deskcue_shortcut_resolve_with_ui_v2` 使用独立的 64 字节请求与 64 字节结果，不嵌套
 读取缓冲区。请求包含 `.lnk` 路径和一个按 64 位位模式传递的 `owner_hwnd`；结果包含
 顶层状态、phase、四段 HRESULT 与实际 Resolve flags。调用顺序固定为：
 
@@ -263,14 +263,14 @@ ABI 允许 `owner_hwnd == 0` 以保持 Win32 兼容性，但产品的文件组�
 人工记录位于 `.artifacts/manual-shortcut-3c2/20260820-211241`：
 
 1. 进程来自规范 Debug 输出，首次 `.lnk` 产品调用后确认实际加载同一目录中的
-   `deskbox_native.dll`；
+   `deskcue_native.dll`；
 2. Widget HWND 为 `0x430DBE`，取消对话框 HWND 为 `0x380F62`，其 owner 是该 Widget；
    取消后 `.lnk` 与 Widget 项均保留；
 3. 把目标在同卷移动后重新触发修复，Shell 跟踪把 `.lnk` 更新到新路径；再次打开能
    启动新目标；
 4. 删除对话框 HWND 为 `0x3A0A0A`，owner 是该 Widget；确认删除后磁盘文件与 Widget
    项立即同时消失；
-5. 验收进程结束后不再保留 `DESKBOX_SHORTCUT_BACKEND=rust` 进程级 opt-in，普通 JIT
+5. 验收进程结束后不再保留 `DESKCUE_SHORTCUT_BACKEND=rust` 进程级 opt-in，普通 JIT
    默认后端保持 C#。
 
 Windows 版本可能改变对话框文案或布局，因此验收记录以动作和最终状态为准，不依赖
@@ -294,24 +294,24 @@ Shell Link 对象，所有接口在原调用线程释放，绝不跨调用或跨
 
 ## 12. 托管加载器与后端选择
 
-产品加载器固定从 `AppContext.BaseDirectory/deskbox_native.dll` 加载，不使用当前目录、
+产品加载器固定从 `AppContext.BaseDirectory/deskcue_native.dll` 加载，不使用当前目录、
 `PATH` 或任意 DLL 搜索结果。Windows 加载标志固定为
 `LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32`。基础 shortcut 加载先解析
 六个 ABI/shortcut 导出，再调用探针验证 ABI 2，并在调用前验证所需能力位；音乐音量路径
-在能力位存在时另外解析 `deskbox_music_volume_v1`。构建和发布验证要求当前模块七个导出
+在能力位存在时另外解析 `deskcue_music_volume_v1`。构建和发布验证要求当前模块七个导出
 全部存在；托管调用使用静态非托管函数指针，不依赖动态 delegate 封送。
 
-JIT 默认选择 C#。只有进程启动前设置 `DESKBOX_SHORTCUT_BACKEND=rust` 才显式选择
+JIT 默认选择 C#。只有进程启动前设置 `DESKCUE_SHORTCUT_BACKEND=rust` 才显式选择
 Rust；选择后任何模块、ABI、导出、能力或调用失败都记录诊断并返回失败，不回退 C#。
-`PublishAot=true` 会定义 `DESKBOX_NATIVE_AOT`：后端策略在编译期固定为 Rust，两套
-legacy helper、coclass、接口及其调用引用以 `#if !DESKBOX_NATIVE_AOT` 排除出 AOT
+`PublishAot=true` 会定义 `DESKCUE_NATIVE_AOT`：后端策略在编译期固定为 Rust，两套
+legacy helper、coclass、接口及其调用引用以 `#if !DESKCUE_NATIVE_AOT` 排除出 AOT
 编译单元。`RuntimeFeature.IsDynamicCodeSupported == false` 的运行时判断继续作为第二层
 保护。`.url` 扩展名在访问加载器前仍由 C# 解析。
 
-受支持的 x64 AOT 审计脚本会同时显式设置 `DeskBoxRustNative=true`，因此其发布目录会
+受支持的 x64 AOT 审计脚本会同时显式设置 `DeskCueRustNative=true`，因此其发布目录会
 构建并复制唯一的 x64 原生模块。3C-3-R 新增项目目标
-`ValidateDeskBoxNativeAotConfiguration`：任何 Native AOT 构建都必须同时满足
-`Platform=x64`、`RuntimeIdentifier=win-x64` 和 `DeskBoxRustNative=true`，否则在编译前
+`ValidateDeskCueNativeAotConfiguration`：任何 Native AOT 构建都必须同时满足
+`Platform=x64`、`RuntimeIdentifier=win-x64` 和 `DeskCueRustNative=true`，否则在编译前
 失败；普通 JIT 默认走 C# 的行为不变。审计脚本也只允许 x64，`-Platform ARM64` 会在
 解析工具、采集工作树和触碰产物目录前失败，直到阶段 7 完成 ARM64 Rust 模块与验证。
 
@@ -344,9 +344,9 @@ legacy helper、coclass、接口及其调用引用以 `#if !DESKBOX_NATIVE_AOT` 
 
 2026-08-20 最终结果：Rust 格式化与 Clippy `-D warnings` 通过，33/33 原生单元测试
 通过；3C-3 的 shortcut/AOT 契约定向测试为 85/85，3C-3-R 的 AOT 发布契约测试为
-19/19，显式 Rust 产品入口测试为 3/3，DeskBox x64 全量测试为 1970/1970；规范 Debug
+19/19，显式 Rust 产品入口测试为 3/3，DeskCue x64 全量测试为 1970/1970；规范 Debug
 构建为 0 错误、30 条既有警告。未设置 opt-in
-的新实例精确运行自规范 Debug 输出，启动阶段加载的 `deskbox_native.dll` 数量为 0。
+的新实例精确运行自规范 Debug 输出，启动阶段加载的 `deskcue_native.dll` 数量为 0。
 审计配置 11 / schema 9 的 x64 AOT 发布通过，实际 DLL 为
 ABI 2、能力掩码 31，并包含六个必需导出；发布目录为 39 个文件、约 79.5 MiB，符号
 目录为 3 个 PDB、约 164.9 MiB。隔离 staging 与 publish DLL 的 SHA-256 完全一致，具体值
@@ -355,7 +355,7 @@ shortcut `always-throw` 为 0；在 3C-3-R 完成时，主程序还剩 FolderPic
 
 后续阶段 4A 没有修改 Rust ABI、能力或产品后端策略。FolderPicker 已迁移为 Windows App
 SDK 现代异步 Picker；新增 FolderPicker 契约 4/4、与 AOT 发布契约合并执行 23/23、
-DeskBox x64 全量测试 1974/1974 通过。审计配置 12 / schema 9 保持 39 个发布文件、3 个
+DeskCue x64 全量测试 1974/1974 通过。审计配置 12 / schema 9 保持 39 个发布文件、3 个
 分离 PDB、12 类既有警告、ABI 2、能力 31 和同次 staging/publish 哈希一致；主程序现在
 只剩音乐音量 1 条 `always-throw`，shortcut 仍为 0。AOT 主程序没有启动；AOT shortcut
 运行冒烟留到其他硬阻断清除并具备隔离测试环境后。规范 Debug 的真实 JumpList 转发探针
@@ -376,7 +376,7 @@ ABI 2、能力 31 与同次 staging/publish 哈希一致。当前只开放 4B-3 
 
 2026-08-21，阶段 4B-3A/3B/3C/4 已完成全部 JSON source generation 与默认反射关闭
 审计；阶段 4C 随后在相同 DLL 中增加音乐音量 v1 边界。shortcut ABI 和五类行为没有变化，
-完整模块改为 ABI 2、能力 63、七个发布必需导出。Rust 单元测试增至 42/42，DeskBox x64
+完整模块改为 ABI 2、能力 63、七个发布必需导出。Rust 单元测试增至 42/42，DeskCue x64
 全量测试增至 2006/2006；新增测试覆盖
 音量归一化、session 匹配优先级、系统声音排除和 ABI 输入校验。
 

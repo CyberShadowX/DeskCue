@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-3A 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-3A 完成与复盘报告
 
 - 审计日期：2026-08-22
 - 范围：音乐音量系统主音量 getter、session snapshot 无写入验证
@@ -19,7 +19,7 @@
 
 ## 2. 实现边界
 
-新增 `App.AotMusicVolumeReadSmoke.cs`，只在 `DESKBOX_NATIVE_AOT` 中编译，并且只有显式设置 `DESKBOX_AOT_MUSIC_VOLUME_READ_SMOKE=SystemAndSnapshotReadOnly` 才会运行。入口位于 `OnLaunched completed successfully` 之后，普通 JIT 启动行为没有变化。
+新增 `App.AotMusicVolumeReadSmoke.cs`，只在 `DESKCUE_NATIVE_AOT` 中编译，并且只有显式设置 `DESKCUE_AOT_MUSIC_VOLUME_READ_SMOKE=SystemAndSnapshotReadOnly` 才会运行。入口位于 `OnLaunched completed successfully` 之后，普通 JIT 启动行为没有变化。
 
 runner 依次执行：
 
@@ -34,7 +34,7 @@ runner 源码、契约测试和 AOT 审计都禁止 `TrySetSystemMasterVolumeAsy
 结构化结果只写入显式 preview 根：
 
 ```text
-%LOCALAPPDATA%\DeskBox-AotPreview\wingezi-B073278E-stage5b3a-system-and-snapshot-read-only\
+%LOCALAPPDATA%\DeskCue-AotPreview\wingezi-B073278E-stage5b3a-system-and-snapshot-read-only\
   aot-music-volume-read-smoke\system-and-snapshot-read-only\result.json
 ```
 
@@ -92,18 +92,18 @@ runner 源码、契约测试和 AOT 审计都禁止 `TrySetSystemMasterVolumeAsy
 
 受审计文件哈希：
 
-- `DeskBox.exe`：`EE2D589A4E7A29DB11D8D7EEFAFE37EA7370DEE20028A9E9AF502C728F681B9B`
-- `deskbox_native.dll`：`16777CE343576C449832D61A4F7E6F5A350BCA9AFA43E83EF71F5784782FFD98`
+- `DeskCue.exe`：`EE2D589A4E7A29DB11D8D7EEFAFE37EA7370DEE20028A9E9AF502C728F681B9B`
+- `deskcue_native.dll`：`16777CE343576C449832D61A4F7E6F5A350BCA9AFA43E83EF71F5784782FFD98`
 
 这两个值与第一次审计构建不同；当前没有宣称跨次构建字节级可复现。门禁要求的是每一次审计内部 Rust staging/publish 哈希一致，以及运行时 EXE/Rust 哈希与所选同次 `summary.json` 一致；最终真实运行已绑定到上列最终哈希。
 
-正式 `%LOCALAPPDATA%\DeskBox` 的确定性元数据指纹在场景前后均为：
+正式 `%LOCALAPPDATA%\DeskCue` 的确定性元数据指纹在场景前后均为：
 
 ```text
 EAA4B8C68677573BDFF00A0DF428FB9A363C0F9CB7D1AE80990CA79C0FA7951F
 ```
 
-脚本结束后没有受审计 AOT `DeskBox.exe` 遗留。
+脚本结束后没有受审计 AOT `DeskCue.exe` 遗留。
 
 ## 5. 自动化验证
 

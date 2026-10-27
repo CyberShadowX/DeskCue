@@ -24,19 +24,19 @@
 - 修法：复位前捕获允许集传参 + 提取 `GetDragOutResultHintKey` 纯函数 + 13 例矩阵与 Win10 组合测试（Win10 单比特行为不变有钉）。
 
 **P2-2 `WritePerformedDropEffect` HGLOBAL 分配方式与全库约定不一致**
-- `src/DeskBox/Helpers/NativeDropTarget.cs:600` 用 `AllocHGlobal`（LMEM_FIXED）构造 medium；库内其它 HGLOBAL 生产点（`Win32Helper.cs:688-713`）用 `GlobalAlloc(GMEM_MOVEABLE)`。现代 Windows 两堆合一大概率无害，潜伏 ABI 摩擦，记录备查。置信度：低-中。
+- `src/DeskCue/Helpers/NativeDropTarget.cs:600` 用 `AllocHGlobal`（LMEM_FIXED）构造 medium；库内其它 HGLOBAL 生产点（`Win32Helper.cs:688-713`）用 `GlobalAlloc(GMEM_MOVEABLE)`。现代 Windows 两堆合一大概率无害，潜伏 ABI 摩擦，记录备查。置信度：低-中。
 
 **P2-3 `QuickCaptureClipboardService.Dispose` 无排水 cancel-then-dispose**
-- `src/DeskBox/Services/QuickCaptureClipboardService.cs:88-94`：同步 `Stop()` 后立即 Dispose token，不等待在飞读排空——与 `9d5313da` 修掉的 BackupSettingsViewModel 同类。仅关停路径可触达，异常大概率被读循环吞掉。置信度：中；影响：低。
+- `src/DeskCue/Services/QuickCaptureClipboardService.cs:88-94`：同步 `Stop()` 后立即 Dispose token，不等待在飞读排空——与 `9d5313da` 修掉的 BackupSettingsViewModel 同类。仅关停路径可触达，异常大概率被读循环吞掉。置信度：中；影响：低。
 
 **P2-4 `settings-flush` 关停步骤无 deadline**
-- `src/DeskBox/App.xaml.cs:4675-4679` 用裸 `new ShutdownStep`（非 `Bounded`），`FlushPendingSaveAsync` 挂起则关停链挂起。设计上有意（写一半被杀=settings 撕裂），但与 f9305dab 的主张不完全一致。置信度：低。
+- `src/DeskCue/App.xaml.cs:4675-4679` 用裸 `new ShutdownStep`（非 `Bounded`），`FlushPendingSaveAsync` 挂起则关停链挂起。设计上有意（写一半被杀=settings 撕裂），但与 f9305dab 的主张不完全一致。置信度：低。
 
 **P2-5（纪律观察）自动整理间隔下拉绕过协调器**
-- `src/DeskBox/Views/SettingsSections/DesktopOrganizationSettingsSection.xaml.cs:200-217` 直接写 `service.Settings.DesktopOrganization.<字段>` + `SaveAsync()`，本批其它新设置全走协调器。无功能问题。
+- `src/DeskCue/Views/SettingsSections/DesktopOrganizationSettingsSection.xaml.cs:200-217` 直接写 `service.Settings.DesktopOrganization.<字段>` + `SaveAsync()`，本批其它新设置全走协调器。无功能问题。
 
 **P2-6 拖出设置三卡不在设置搜索目录** ★已二次复核实锤
-- `src/DeskBox/Services/SettingsSearchCatalog.cs` grep "DragOut" = 0。设置搜索搜不到"拖出"。需重跑 `scripts/update-settings-search-catalog.ps1` 或手工补条目（注意目录键名字符串会撞门面访问棘轮正则，清单要 +2）。
+- `src/DeskCue/Services/SettingsSearchCatalog.cs` grep "DragOut" = 0。设置搜索搜不到"拖出"。需重跑 `scripts/update-settings-search-catalog.ps1` 或手工补条目（注意目录键名字符串会撞门面访问棘轮正则，清单要 +2）。
 
 ### 过程性风险（非代码缺陷）
 
@@ -49,7 +49,7 @@
 
 1. **Win10 单比特公告在位**：`FileItemDragPackage.cs:54-70`（Win11→Copy|Move；Win10→单值 Move/Copy）、`ResolveDragOutPreferredOperation` 纯映射（`:35-41`）、宿主 `FileSurfaceContent.xaml.cs:1254-1262` 分写 AllowedOperations/RequestedOperation——与事件文档 §7 一致。
 2. **证伪方案删除干净**：`NativeFileDragOut` / `PreferredDropEffectFilterDataObject` 全库零引用。替代物 `FileDragSourceGuardDataObject`：单值 1/2/4 才应答偏好（`:133-134`），完成回执四格式全吞（`:113-123`），CF_HDROP 自检（`NativeShellFileDragProvider.cs:52-65`）。
-3. **自拖识别迁移完整**：`ActiveDeskBoxDragRegistry`（10 分钟兜底寿命 + cancel/complete 双点 End）在 `ContentWidgetWindow.NativeDragDrop.cs` 三处决策全部接通，无第三方文件误分类窗口。
+3. **自拖识别迁移完整**：`ActiveDeskCueDragRegistry`（10 分钟兜底寿命 + cancel/complete 双点 End）在 `ContentWidgetWindow.NativeDragDrop.cs` 三处决策全部接通，无第三方文件误分类窗口。
 4. **允许集贯通到传输决策**：`NativeDropTarget.OnDrop` 的 sourceCanCopy/Move（`:427-436`）、forced intent 受约束、`GetFileAssociationOperation` 7 个 DragOver 调用点全传参（15 个调用点逐一核对）。内部完成操作仍永不返回 Move。
 5. **Link-only 源不再当可移动**（`FileSurfaceContent.ShortcutDrop.cs:48-60`）+ `ResolveMoveWhenBlocked` 保住显式修饰键语义。
 6. **随记/待办拖出恒单值 Copy**：`TodoWidgetContent.DragDrop.cs:480,502`、`QuickCaptureSurfaceContent.xaml.cs:2235,2434`——关掉附件被"移动"出受管存储的隐患。

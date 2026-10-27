@@ -1,5 +1,5 @@
 {
-  "schema": "deskbox.arm64-stage7b-runtime-evidence.v1",
+  "schema": "deskcue.arm64-stage7b-runtime-evidence.v1",
   "status": "passed",
   "evidenceLevel": "github-hosted-arm64-runtime",
   "startedUtc": "2026-08-23T14:07:41.6646701Z",
@@ -22,7 +22,7 @@
     "architecture": "ARM64",
     "imageOs": "win11-vs2026-arm64",
     "imageVersion": "20260817.130.1",
-    "repository": "Tianyu199509/DeskBox",
+    "repository": "Tianyu199509/DeskCue",
     "workflow": "ARM64 Runtime Gate",
     "runId": "32644378767",
     "runAttempt": "1",
@@ -30,7 +30,7 @@
     "sha": "908bab38c4d8eb64a154f6e7dfe1c0d7955ba176"
   },
   "source": {
-    "repositoryRoot": "C:\\a\\DeskBox\\DeskBox",
+    "repositoryRoot": "C:\\a\\DeskCue\\DeskCue",
     "commit": "908bab38c4d8eb64a154f6e7dfe1c0d7955ba176",
     "dirty": false,
     "statusEntries": []
@@ -50,13 +50,13 @@
     "contractValidation": "runtime-load-plus-static-pe",
     "runtimeProbeExecuted": true,
     "dll": {
-      "path": "C:\\a\\DeskBox\\DeskBox\\.artifacts\\arm64-stage7b-runtime\\native\\deskbox_native.dll",
+      "path": "C:\\a\\DeskCue\\DeskCue\\.artifacts\\arm64-stage7b-runtime\\native\\deskcue_native.dll",
       "exists": true,
       "lengthBytes": 150528,
       "sha256": "970F46E8016AD5B9017D7683C127EEE3B091F6AD8F4FD6B527D2CA1056A75B16"
     },
     "pdb": {
-      "path": "C:\\a\\DeskBox\\DeskBox\\.artifacts\\arm64-stage7b-runtime\\native\\deskbox_native.pdb",
+      "path": "C:\\a\\DeskCue\\DeskCue\\.artifacts\\arm64-stage7b-runtime\\native\\deskcue_native.pdb",
       "exists": true,
       "lengthBytes": 995328,
       "sha256": "2740F9D3477419E2A4B8AD772DBAFFC03B2385726DBD4F27CF5A28CCB0F1B7C8"
@@ -71,13 +71,13 @@
     "contractValidation": "runtime-load-plus-static-pe",
     "runtimeProbeExecuted": true,
     "dll": {
-      "path": "C:\\a\\DeskBox\\DeskBox\\.artifacts\\arm64-stage7b-runtime\\search\\deskbox_search_core.dll",
+      "path": "C:\\a\\DeskCue\\DeskCue\\.artifacts\\arm64-stage7b-runtime\\search\\deskcue_search_core.dll",
       "exists": true,
       "lengthBytes": 161792,
       "sha256": "65C52250522A44ED08AAC64174D80277AC33CC2BA50BFBE26CCF350F4207EBBE"
     },
     "pdb": {
-      "path": "C:\\a\\DeskBox\\DeskBox\\.artifacts\\arm64-stage7b-runtime\\search\\deskbox_search_core.pdb",
+      "path": "C:\\a\\DeskCue\\DeskCue\\.artifacts\\arm64-stage7b-runtime\\search\\deskcue_search_core.pdb",
       "exists": true,
       "lengthBytes": 1282048,
       "sha256": "C4438F2A45B19E5E84BE526BA2FFEBA5753D7A6F921EB9C2BFEB490D2936158B"
@@ -95,7 +95,7 @@
       "aborted": 0
     },
     "trx": {
-      "path": "C:\\a\\DeskBox\\DeskBox\\.artifacts\\arm64-stage7b-runtime\\test-results\\arm64-runtime-gate.trx",
+      "path": "C:\\a\\DeskCue\\DeskCue\\.artifacts\\arm64-stage7b-runtime\\test-results\\arm64-runtime-gate.trx",
       "exists": true,
       "lengthBytes": 17786,
       "sha256": "01C52BF8E004B2CBC686F5DEF422D354B5F14B535CB2560E7D68B5844FDBC522"

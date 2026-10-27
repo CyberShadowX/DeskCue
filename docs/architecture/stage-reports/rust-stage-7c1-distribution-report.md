@@ -1,4 +1,4 @@
-# DeskBox Rust / Native AOT 阶段 7C1 双架构分发报告
+# DeskCue Rust / Native AOT 阶段 7C1 双架构分发报告
 
 - 日期：2026-08-24
 - 范围：Direct/Inno 与 Store/MSIX 的 x64、ARM64 Native AOT 构建及包内容审计
@@ -21,14 +21,14 @@ Actions 扩大解释成“发布验收全部完成”。
 
 ### 2.1 Store Native AOT payload
 
-Windows App SDK 的 Native AOT 打包目标能够选择 AOT `DeskBox.exe`，但自定义 Rust DLL 不会自动进入
-MSIX，同时旧的 `DeskBox.deps.json` 与 `DeskBox.runtimeconfig.json` 仍可能被 package payload 快照。
+Windows App SDK 的 Native AOT 打包目标能够选择 AOT `DeskCue.exe`，但自定义 Rust DLL 不会自动进入
+MSIX，同时旧的 `DeskCue.deps.json` 与 `DeskCue.runtimeconfig.json` 仍可能被 package payload 快照。
 项目现在在 `_ComputeAppxPackagePayload` 前执行专用 target：
 
 - 从 `PackagingOutputs` 移除 deps/runtimeconfig；
-- 明确把静态 CRT `deskbox_native.dll` 加入 Store package payload；
-- 把 `DeskBox.pdb` 与 `deskbox_native.pdb` 放入 `.appxsym`，不放入 MSIX；
-- 保持 Store SearchCore 为 managed，不打包 `deskbox_search_core.dll`；
+- 明确把静态 CRT `deskcue_native.dll` 加入 Store package payload；
+- 把 `DeskCue.pdb` 与 `deskcue_native.pdb` 放入 `.appxsym`，不放入 MSIX；
+- 保持 Store SearchCore 为 managed，不打包 `deskcue_search_core.dll`；
 - 继续排除 Direct Updater 与 Direct 素材。
 
 Store 审计会拆开 MSIX，验证正式 Partner Center identity、处理器架构、
@@ -37,9 +37,9 @@ CRT、publish 与包内哈希一致，以及严格的禁止文件清单。
 
 ### 2.2 Direct Native AOT 安装器
 
-x64 与 ARM64 Inno 脚本新增显式 `DeskBoxNativeAot` 模式。该模式只跳过不再需要的 .NET Desktop
+x64 与 ARM64 Inno 脚本新增显式 `DeskCueNativeAot` 模式。该模式只跳过不再需要的 .NET Desktop
 Runtime 检测，仍保留 Windows App Runtime 2.2 检测与安装。ARM64 安装器在 AOT 模式明确包含
-`deskbox_native.dll`；两种架构均排除 PDB 和 managed runtime 元数据，并保留 Direct SearchCore。
+`deskcue_native.dll`；两种架构均排除 PDB 和 managed runtime 元数据，并保留 Direct SearchCore。
 
 编排脚本从 `.iss` 读取版本和基础文件名，通过 Inno 的输出文件名覆盖参数生成带 `NativeAot` 后缀的
 安装器。GitHub runner 暴露的命令行编译器实际验证了输出名、发布目录和参数绑定；期间发现的三处问题
@@ -61,7 +61,7 @@ Runtime 检测，仍保留 Windows App Runtime 2.2 检测与安装。ARM64 安�
 
 最终提交：`ebbb8ecf341db9068b3bbf71c7101fd9c19ff886`
 
-最终分发运行：[32650821484](https://github.com/Tianyu199509/DeskBox/actions/runs/32650821484)
+最终分发运行：[32650821484](https://github.com/CyberShadowX/DeskCue/actions/runs/32650821484)
 
 | 项目 | x64 | ARM64 |
 | --- | --- | --- |
@@ -87,13 +87,13 @@ Runtime 检测，仍保留 Windows App Runtime 2.2 检测与安装。ARM64 安�
 | MSIXUpload | `1FB2E4228AFF3E3679F9B388EC805C5067356EAA1928128B93AC066E6448D408` | `999CF7968EA252DB3A822221A09BAA1F1BA9021FEF875BA71AE6F19BEEC764B6` |
 
 配套 ARM64 原生 ABI/SearchCore/CRT 回归也在同一主线重复通过：
-[32650821493](https://github.com/Tianyu199509/DeskBox/actions/runs/32650821493)。
+[32650821493](https://github.com/CyberShadowX/DeskCue/actions/runs/32650821493)。
 
 ## 4. 本机回归
 
 - Stage 7A + 7C1 定向契约：12/12；
 - Inno/日期确定性修复定向测试：2/2；
-- DeskBox x64 全量：2535/2535；
+- DeskCue x64 全量：2535/2535；
 - PowerShell 解析与 `git diff --check`：通过；
 - canonical Debug 构建：0 error、24 个既有 warning；已从仓库规范路径重新启动并核对唯一进程；
 - 本机 x64 Store Native AOT 拆包审计：71 个包内文件，AOT EXE 无 CLR header，Rust DLL 10 个导出，

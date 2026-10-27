@@ -23,9 +23,9 @@
 
 ### 0.3 仓库开发约束（来自 `AGENTS.md`，必须遵守）
 
-- 改完应用代码后：先停止本仓库路径下运行中的 `DeskBox.exe`，再构建，再从 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe` 启动新实例，并确认运行的是该路径。
+- 改完应用代码后：先停止本仓库路径下运行中的 `DeskCue.exe`，再构建，再从 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe` 启动新实例，并确认运行的是该路径。
 - 测试命令（**必须带 x64**，不要先用 AnyCPU 跑）：
-  `dotnet test .\tests\DeskBox.Tests\DeskBox.Tests.csproj --no-restore --verbosity:minimal -p:Platform=x64`
+  `dotnet test .\tests\DeskCue.Tests\DeskCue.Tests.csproj --no-restore --verbosity:minimal -p:Platform=x64`
 - 在 Windows 上执行命令请用 PowerShell（本机 bash 为不可用的 WSL）。
 - 提交信息只用 `Simon <1047078635@qq.com>` 身份，**禁止** `Co-Authored-By`、`Generated with` 等任何工具署名（有 commit-msg 钩子与 CI 检查）。新克隆需 `git config core.hooksPath .githooks`。
 - 不要删除/覆盖与本任务无关的用户改动和发布产物。
@@ -131,7 +131,7 @@
 | S11 | {L,E} | DP 显示器休眠被系统当作拔出、数秒后又出现；或切换 KVM / 显示器输入源后很快切回 | 宽限期内恢复 → **格子完全不动**（修 B10）。 |
 | S12 | 任意 | 锁屏或睡眠期间显示器多次重枚举，解锁/唤醒后拓扑与锁屏前相同 | 格子不动；锁屏期间不应用任何中间态。若最终拓扑不同，解锁后一次性应用。 |
 | S13 | 任意 | 全屏独占游戏把分辨率临时改为 1280×720，退出后恢复 | 游戏运行期间不重排、不建档；退出后若拓扑与之前相同，格子不动。 |
-| S14 | 开机时扩展坞/DisplayLink 显示器晚几秒才出现 | 启动 DeskBox | 不出现"先全部挤到 L、再搬回 E"的过程；最多等待约 5 秒后按最终组合摆放。 |
+| S14 | 开机时扩展坞/DisplayLink 显示器晚几秒才出现 | 启动 DeskCue | 不出现"先全部挤到 L、再搬回 E"的过程；最多等待约 5 秒后按最终组合摆放。 |
 | S15 | 任意 | 复制屏模式（Win+P"复制"），投影分辨率为 1024×768 | 视为一个新组合（单逻辑屏），首次按 D4 播种；切回扩展时全部归位。 |
 | S16 | 远程桌面登录 | 在远程会话中拖动格子 | 只写远程会话这个组合的档案；**不改归属屏**；回到本机物理屏时全部归位。 |
 | S17 | 两块同型号显示器 | 交换两根线的接口 | 设备接口路径随接口变化 → 视为交换了身份（与 Windows 一致，可接受）。阶段 5 的 EDID 序列号匹配在序列号唯一时可识别并纠正。 |
@@ -641,7 +641,7 @@ CommitUserPlacement(surface, finalPhysicalBounds, source)
 
 ## 9. 测试
 
-### 9.1 新增单元测试（纯逻辑，`tests/DeskBox.Tests`）
+### 9.1 新增单元测试（纯逻辑，`tests/DeskCue.Tests`）
 
 建议新文件 `DisplayPlacementResolverTests.cs`、`WidgetScreenHomeTests.cs`、`WidgetTopologySeedingTests.cs`，以及扩展 `WidgetTopologyLayoutServiceTests.cs`、`DisplayTopologyTransitionCoordinatorTests.cs`、迁移测试。测试辅助可参照 `WidgetTopologyLayoutServiceTests` 中的 `Monitor(...)` / `CreateWidget()` 与 `WidgetTopologyLayoutService.CreateSnapshotForTest`、`WidgetPositioningService.ResolveBoundsForTestWithScreens`。
 
@@ -762,18 +762,18 @@ CommitUserPlacement(surface, finalPhysicalBounds, source)
 
 | 领域 | 文件 |
 |---|---|
-| 模型 | `src/DeskBox/Models/WidgetConfig.cs`（绑定字段、`WidgetCompactPlacement`、`WidgetScreenBindingMode`）、`WidgetGroupConfig.cs`、`WidgetTopologyLayoutModels.cs`、`WidgetLayoutSettingsSlice.cs`、`AppSettings.cs` |
-| 档案 | `src/DeskBox/Services/WidgetTopologyLayoutService.cs` |
-| 运行时解析 | `src/DeskBox/Services/WidgetPositioningService.cs`、`WidgetCompactBoundsCalculator.cs` |
+| 模型 | `src/DeskCue/Models/WidgetConfig.cs`（绑定字段、`WidgetCompactPlacement`、`WidgetScreenBindingMode`）、`WidgetGroupConfig.cs`、`WidgetTopologyLayoutModels.cs`、`WidgetLayoutSettingsSlice.cs`、`AppSettings.cs` |
+| 档案 | `src/DeskCue/Services/WidgetTopologyLayoutService.cs` |
+| 运行时解析 | `src/DeskCue/Services/WidgetPositioningService.cs`、`WidgetCompactBoundsCalculator.cs` |
 | 协调与信号 | `DisplayTopologyTransitionCoordinator.cs`、`DisplayAreaWatcherService.cs`、`WidgetDisplayChangeWatcher.cs`、`AppLifecycleRecoveryWatcher.cs`、`AppLifecycleRecoverySignalClassifier.cs`、`App.xaml.cs`（约 `:1104-1110` 创建协调器，`:1467`/`:1539` 请求恢复） |
 | 管理器 | `WidgetManager.cs`（`RestoreWidgetPositionsAsync`、`ApplyScreenBindingAsync`、`PinAllWidgetSurfacesToScreenAsync`、`PlacePendingInitialWidgets`、`NormalizeWidgetBounds`、创建入口）、`WidgetManager.FeatureWidgets.cs`、`WidgetManager.Storage.cs`、`WidgetManager.Groups.cs`、`WidgetManager.CapsuleArrangement.cs`、`WidgetManager.CoordinatedMove.cs` |
-| 窗口 | `src/DeskBox/Views/WidgetWindowBase.Bounds.cs`、`WidgetWindowBase.Interaction.cs`、`WidgetWindowBase.CoordinatedMove.cs`、`WidgetWindowBase.Collapse.cs`、`ContentWidgetWindow.Commands.cs` |
+| 窗口 | `src/DeskCue/Views/WidgetWindowBase.Bounds.cs`、`WidgetWindowBase.Interaction.cs`、`WidgetWindowBase.CoordinatedMove.cs`、`WidgetWindowBase.Collapse.cs`、`ContentWidgetWindow.Commands.cs` |
 | 屏幕目录/菜单/设置页 | `WidgetScreenCatalog.cs`、`WidgetScreenMenuBuilder.cs`、`Views/SettingsSections/DisplaySettingsSection.xaml(.cs)`、`Views/DisplayIdentifyOverlayWindow.cs` |
-| 平台 | `src/DeskBox/Platform/Win32Helper.cs`（`GetMonitorWorkAreaInfos`、`ResolveStableMonitorId`、`MonitorWorkAreaInfo`）、`Win32Helper.DisplayTiming.cs`（CCD P/Invoke） |
+| 平台 | `src/DeskCue/Platform/Win32Helper.cs`（`GetMonitorWorkAreaInfos`、`ResolveStableMonitorId`、`MonitorWorkAreaInfo`）、`Win32Helper.DisplayTiming.cs`（CCD P/Invoke） |
 | 设置与迁移 | `SettingsService.cs`（`NormalizeScreenBindings`、`NormalizeWidgetTopologyLayouts`、默认值保留表）、`SettingsMigrationService.cs` |
 | 新建策略 | `InitialFileWidgetPlacementPolicy.cs`、`DesktopOrganizationTransaction.cs` |
-| 文案 | `src/DeskBox/Strings/*.json`（12 语言） |
-| 现有测试 | `tests/DeskBox.Tests/WidgetTopologyLayoutServiceTests.cs`、`WidgetPositioningServiceTests.cs`、`WidgetScreenBindingTests.cs`、`DisplayTopologyRestorationContractTests.cs`、`DisplayTopologyTransitionCoordinatorTests.cs` |
+| 文案 | `src/DeskCue/Strings/*.json`（12 语言） |
+| 现有测试 | `tests/DeskCue.Tests/WidgetTopologyLayoutServiceTests.cs`、`WidgetPositioningServiceTests.cs`、`WidgetScreenBindingTests.cs`、`DisplayTopologyRestorationContractTests.cs`、`DisplayTopologyTransitionCoordinatorTests.cs` |
 
 ## 附录 D：真机验收记录
 

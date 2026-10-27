@@ -5,7 +5,7 @@
 ## 测量协议
 
 - 构建：framework **Release**（x64，managed-jit 运行时）。注意非 AOT：AOT 零售基线绝对值更小（~115MB 级），缓存树增量同量级，10% 裁决方向不受影响（下注）。
-- 工具：现有 `PerformanceLogger` 采样（`DESKBOX_PERF_LOG=1`，30s 节拍），字段直接取 `privateMB` / `cachedGroupContents` / `windows` / `loadedWidgets` / `materializedContentByKind`。
+- 工具：现有 `PerformanceLogger` 采样（`DESKCUE_PERF_LOG=1`，30s 节拍），字段直接取 `privateMB` / `cachedGroupContents` / `windows` / `loadedWidgets` / `materializedContentByKind`。
 - 场景（隔离数据根，9 个真实文件格子，每个 1 文件）：
   - **A 基线**：3 组 × 3 成员，冷启动后不切换 → `cachedGroupContents=0`。
   - **B 切换扫**：同进程逐一切换全部 9 成员（物化后进缓存）→ 采样。
@@ -34,5 +34,5 @@
 
 ## 工艺记录（如实）
 
-- framework Release 构建不认 `DESKBOX_DEV_DATA_ROOT`（`DeskBoxDataPathService.ResolveConfiguredRoot` 为 `#if DEBUG` 门控）。测量用临时解除门控的本地构建完成，**临时改动已全部还原，工作树与 PR #430 一致**；期间一次误判导致短暂怀疑真实 profile 被写——经快照比对确认为虚惊（真实 profile 0 格子、内容一致、仅 mtime 变化），零数据影响。
-- 采样原始日志保留在 `C:/Users/simon/AppData/Local/DeskBox-Dev/residency-p0-20260926-groups/DeskBox.log`。
+- framework Release 构建不认 `DESKCUE_DEV_DATA_ROOT`（`DeskCueDataPathService.ResolveConfiguredRoot` 为 `#if DEBUG` 门控）。测量用临时解除门控的本地构建完成，**临时改动已全部还原，工作树与 PR #430 一致**；期间一次误判导致短暂怀疑真实 profile 被写——经快照比对确认为虚惊（真实 profile 0 格子、内容一致、仅 mtime 变化），零数据影响。
+- 采样原始日志保留在 `C:/Users/simon/AppData/Local/DeskCue-Dev/residency-p0-20260926-groups/DeskCue.log`。

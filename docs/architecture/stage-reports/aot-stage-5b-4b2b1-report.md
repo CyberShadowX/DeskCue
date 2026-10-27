@@ -1,4 +1,4 @@
-# DeskBox Native AOT 阶段 5B-4B2B1 完成与复盘报告
+# DeskCue Native AOT 阶段 5B-4B2B1 完成与复盘报告
 
 - 审计日期：2026-08-22
 - 范围：x64 NativeAOT Quick Capture 内容 store、真实详情保存、托管附件、跨进程重载与删除后复核
@@ -7,7 +7,7 @@
 
 ## 1. 本阶段结论
 
-5B-4B2B1 在现有 managed UI runner 中增加 `QuickCapturePersistenceRestart`，使用同一份受审计 NativeAOT 产物依次启动三个全新的 DeskBox 进程：
+5B-4B2B1 在现有 managed UI runner 中增加 `QuickCapturePersistenceRestart`，使用同一份受审计 NativeAOT 产物依次启动三个全新的 DeskCue 进程：
 
 1. `Mutate` 从空 store 打开真实 Quick Capture 新建详情，完成 pending-save flush、真实 600 ms 自动保存和托管附件导入，然后正常退出；
 2. `VerifyDelete` 在新进程中重载记录、详情和附件，再完成一次显式 pending-save flush，随后经产品路径删除附件和记录并正常退出；
@@ -23,7 +23,7 @@
 - `DeleteAttachmentAsync` 后记录仍存在但附件集合和物理托管文件均归零；`DeleteQuickCaptureItemAsync` 后记录、详情和列表均归零；
 - 第三个进程确认最终 schema 4 store 的 `items` 和 `recentItems` 均为空，托管文件数仍为 0；
 - 三个进程均由应用正常关闭路径退出，没有依靠外层脚本强制结束；
-- 最终 owned preview 根已清理，正式 `%LOCALAPPDATA%\DeskBox` 前后指纹一致，运行日志失败数为 0。
+- 最终 owned preview 根已清理，正式 `%LOCALAPPDATA%\DeskCue` 前后指纹一致，运行日志失败数为 0。
 
 本阶段没有改写或扩展 Rust 产品边界。Quick Capture 的 UI、ViewModel、JSON 内容模型和附件生命周期继续保留在 C#；这部分与 WinUI 状态和用户内容事务紧密耦合，没有迁移 Rust 的收益依据。
 
@@ -38,10 +38,10 @@ scripts/run-aot-managed-ui-smoke.ps1 -Scenario QuickCapturePersistenceRestart
 应用内场景和阶段变量为：
 
 ```text
-DESKBOX_AOT_MANAGED_UI_SMOKE=QuickCapturePersistenceRestart
-DESKBOX_AOT_MANAGED_UI_QUICK_CAPTURE_PHASE=Mutate|VerifyDelete|Postflight
+DESKCUE_AOT_MANAGED_UI_SMOKE=QuickCapturePersistenceRestart
+DESKCUE_AOT_MANAGED_UI_QUICK_CAPTURE_PHASE=Mutate|VerifyDelete|Postflight
 .artifacts/aot-managed-ui-smoke/win-x64/preview-root
-.deskbox-aot-managed-ui-owned.json
+.deskcue-aot-managed-ui-owned.json
 ```
 
 安全边界如下：
@@ -114,7 +114,7 @@ attachments.Cast<object>().ToArray()
 .artifacts/aot-managed-ui-smoke/win-x64/quick-capture-persistence-restart/postflight-result.json
 .artifacts/aot-managed-ui-smoke/win-x64/quick-capture-persistence-restart/final-quick-capture.json
 .artifacts/aot-managed-ui-smoke/win-x64/quick-capture-persistence-restart/quick-capture-attachment.txt
-.artifacts/aot-managed-ui-smoke/win-x64/quick-capture-persistence-restart/DeskBox.log
+.artifacts/aot-managed-ui-smoke/win-x64/quick-capture-persistence-restart/DeskCue.log
 ```
 
 本次实测数据：
@@ -153,7 +153,7 @@ attachments.Cast<object>().ToArray()
 | 审计期间源码稳定 | `true` |
 | Quick Capture 三进程矩阵 | 创建、pending flush、600 ms 自动保存、托管附件、重载、显式 flush、附件删除、记录删除、postflight 全部通过；3/3 正常退出 |
 
-上述 UI 项是实际运行受审计 `DeskBox.exe` 的程序化产品路径证据，不是仅靠源码扫描。它仍不替代用户对物理键鼠输入、视觉层级、焦点、动画、IME 和目标系统差异的人工验收。
+上述 UI 项是实际运行受审计 `DeskCue.exe` 的程序化产品路径证据，不是仅靠源码扫描。它仍不替代用户对物理键鼠输入、视觉层级、焦点、动画、IME 和目标系统差异的人工验收。
 
 ## 8. 复盘与遗漏检查
 

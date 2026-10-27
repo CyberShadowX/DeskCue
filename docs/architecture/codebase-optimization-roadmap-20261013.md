@@ -12,7 +12,7 @@
 1. **架构冻结点五问**（module-boundary-roadmap-20260918.md:323-333）：架构性改动须在 PR 描述回答五问。D、E 批次附答；A、B、C 不动架构。
 2. **体积只作观察指标**（roadmap:156）：全部验收语义化。
 3. **契约测试同步义务**：凡移动被 SliceBetween / Contains / 计数钉住的代码，同批同步改测试（钉清单已逐刀枚举，见批次 D）。
-4. **回归基线**：每批 `dotnet test .\tests\DeskBox.Tests\DeskBox.Tests.csproj --no-restore --verbosity:minimal -p:Platform=x64` 全量绿（2026-10-13 = 5,394）。
+4. **回归基线**：每批 `dotnet test .\tests\DeskCue.Tests\DeskCue.Tests.csproj --no-restore --verbosity:minimal -p:Platform=x64` 全量绿（2026-10-13 = 5,394）。
 5. **AOT 面**：不动 XAML 的 partial 拆分不触 WMC1510（864）；改 `publish-aot-audit.ps1` 的 stage 文件列表时按仓库惯例同步升 auditProfileVersion（`AotStage4E3ContractTests` 钉了 59/55，改列表会被测试强制升级）。
 
 ## 批次总览
@@ -57,7 +57,7 @@
 ## 批次 B：源码卫生契约测试（P3）——已核对定案
 
 - **现状**：TODO/HACK/FIXME 全库 0 但无测试钉住（碰巧为零）。
-- **定案**：`EnumerateProductSources()` 是 private static（AotInteropShapeContractTests.cs:153-170），新测试文件不能直接复用——**最省方案：把 `[Fact]` 直接加进 `AotInteropShapeContractTests` 类内**（该类本就是"源码形状合同"的家，零管道）。断言 `\b(TODO|HACK|FIXME)\b` 词边界零命中（词边界已证不误伤 `DESKBOX_AOT_TODO_*`）。
+- **定案**：`EnumerateProductSources()` 是 private static（AotInteropShapeContractTests.cs:153-170），新测试文件不能直接复用——**最省方案：把 `[Fact]` 直接加进 `AotInteropShapeContractTests` 类内**（该类本就是"源码形状合同"的家，零管道）。断言 `\b(TODO|HACK|FIXME)\b` 词边界零命中（词边界已证不误伤 `DESKCUE_AOT_TODO_*`）。
 - **验收**：绿；本地注入 `// TODO` 验证变红后移除。
 
 ---
@@ -68,7 +68,7 @@
 
 | 口径 | 数字 | 出处 |
 |---|---|---|
-| AOT 零售空闲稳态 Private | ~115–131MB | CHANGELOG.md:526（1.4.9）；deskbox-aot-curve-samples.csv |
+| AOT 零售空闲稳态 Private | ~115–131MB | CHANGELOG.md:526（1.4.9）；deskcue-aot-curve-samples.csv |
 | AOT 零售空闲稳态 WS | ~171–208MB | 同上 |
 | 大批量后 idle 平台 | ~490MB（private=commit，托管堆 ~35MB） | docs/releases/v1.5.4.md:43 |
 | 隐藏/空闲裁剪后 WS | <10MB | CHANGELOG.md:519；residency 文档 6.7MB |
@@ -135,7 +135,7 @@
 ### 前置 1：资源上移（已裁定：进 `Styles/SettingsOverviewResources.xaml`，不进 App.xaml）
 
 - **理由**：5 个独有 key 的消费集精确等于"设置面"（窗口+分区都已合并公共字典，零额外接线）；仓内已有跨字典 BasedOn 先例（公共字典 L83 `AccentActionButtonStyle BasedOn AccentButtonStyle`）；App.xaml 方案会进程启动即常驻设置样式+命名空间污染，无增益。
-- **做法**：5 个 key（两转换器+三样式）上移进公共字典，**同批删除**窗口 Grid.Resources 的 5 条本地定义（L45/46/81-86/88-92/94-100）与分区副本（AppearanceSettingsSection L15 **零引用纯冗余**/L16、CapsuleModeSettingsSection L15/L17-23/L24-29）。公共字典根需新增 `xmlns:controls="using:DeskBox.Controls"`；新条目放文件尾（`SliderSettingValueTextStyle` BasedOn 的 `SettingValueTextStyle` 在 L51-54，同文件前向引用 parse 期会炸）。
+- **做法**：5 个 key（两转换器+三样式）上移进公共字典，**同批删除**窗口 Grid.Resources 的 5 条本地定义（L45/46/81-86/88-92/94-100）与分区副本（AppearanceSettingsSection L15 **零引用纯冗余**/L16、CapsuleModeSettingsSection L15/L17-23/L24-29）。公共字典根需新增 `xmlns:controls="using:DeskCue.Controls"`；新条目放文件尾（`SliderSettingValueTextStyle` BasedOn 的 `SettingValueTextStyle` 在 L51-54，同文件前向引用 parse 期会炸）。
 - **陷阱（必须同批完成的原因）**：字典直接条目优先于 MergedDictionaries，残留本地副本会静默遮蔽公共字典。
 - **核对附赠发现**：窗口 Grid.Resources 另有 **4 个死样式零引用**（`SettingRowStyle` L61-67、`SettingTextPanelStyle` L69-72、`SettingDividerStyle` L74-79、`CompactTextActionButtonStyle` L102-110）可一并删（账面 18 key 实为 ~13 活）；Appearance 分区 `Localization` 属性（:11）是死代码。
 

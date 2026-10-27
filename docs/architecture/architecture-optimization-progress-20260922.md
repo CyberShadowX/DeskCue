@@ -26,7 +26,7 @@
 ## 依赖约束
 
 - `ModuleBoundaryContractTests` 为 Models、ViewModels、Services 的存量 App.Current、App.UiDispatcherQueue 和 IServiceProvider 文本访问建立逐文件清单；新增位置或计数增长会失败。日志兼容调用不计入这条规则。
-- 对新的 `DeskBox.Features.*`、Todo/Search 设置协调器及 Search 设置视图，额外检查编译后的类型引用，包括字段、方法签名、IL 调用和异步状态机。功能业务代码禁止依赖 App、全局容器和具体 Services/Platform 实现；Search 视图保留合法 XAML 框架调用，禁止直接依赖 SettingsService、SearchHotkeyService、EverythingSearchService。
+- 对新的 `DeskCue.Features.*`、Todo/Search 设置协调器及 Search 设置视图，额外检查编译后的类型引用，包括字段、方法签名、IL 调用和异步状态机。功能业务代码禁止依赖 App、全局容器和具体 Services/Platform 实现；Search 视图保留合法 XAML 框架调用，禁止直接依赖 SettingsService、SearchHotkeyService、EverythingSearchService。
 - 当前 WinUI 内容契约仍留在宿主；本批新增的 Todo 设置和提醒会话契约不含 WinUI 类型。
 - 纯规则、UI 行为、文件提交和运行时资源分别声明所有者。扩充旧例外清单不能替代边界修复。
 
@@ -35,13 +35,13 @@
 - canonical Debug 最终构建：通过，22 警告、0 错误；警告来自现有控件/可空性等位置。
 - 首轮针对性测试：39/39 通过，覆盖提醒规则、开关串行化、启动失败清理、停止等待、恢复路径和依赖检查。
 - 全量 x64 测试：4,073/4,073 通过。初次全量发现两个属性迁出后旧 AOT 生成属性计数仍为 77，已调整为 75，并另加可读写属性及 AOT 绑定入口保留检查。
-- AOT 条件编译：x64 / win-x64、`DeskBoxAotAudit=true`、`DeskBoxAotSmokeHarness=true`、`DeskBoxRustNative=true` 的 Release build 通过，0 错误。构建报告 890 个警告，包含 WMC1510 等绑定提示；这是条件编译验证，没有执行 Native AOT publish/link 或发布包 smoke。
+- AOT 条件编译：x64 / win-x64、`DeskCueAotAudit=true`、`DeskCueAotSmokeHarness=true`、`DeskCueRustNative=true` 的 Release build 通过，0 错误。构建报告 890 个警告，包含 WMC1510 等绑定提示；这是条件编译验证，没有执行 Native AOT publish/link 或发布包 smoke。
 - AOT 构建使用临时 artifacts 和独立 NuGet lock 路径。普通仓库锁文件不包含 AOT 隐式编译器依赖，初次 locked restore 失败后改用隔离的 AOT restore；仓库锁文件未改动。
-- 最终 canonical Debug 进程：`src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`；2026-09-22 20:01 核验 PID 22844，仓库下只运行这一个 DeskBox 实例，Medium 完整性。
-- 使用独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/todo-architecture-20260922-a82b40bd` 启动，预置空数据和启用的 Todo 提醒。日志确认提醒实例按需创建一次、设置窗口完成构造和加载、启动 35 步中 0 degraded / 0 failed。原安装版进程继续运行。
+- 最终 canonical Debug 进程：`src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`；2026-09-22 20:01 核验 PID 22844，仓库下只运行这一个 DeskCue 实例，Medium 完整性。
+- 使用独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/todo-architecture-20260922-a82b40bd` 启动，预置空数据和启用的 Todo 提醒。日志确认提醒实例按需创建一次、设置窗口完成构造和加载、启动 35 步中 0 degraded / 0 failed。原安装版进程继续运行。
 - `git diff --check`：通过。
 
-可复查的本地证据：`tests/DeskBox.Tests/TestResults/todo-architecture-full-final.trx`，以及 `%TEMP%/deskbox-todo-architecture-full-final.log`、`%TEMP%/deskbox-todo-architecture-aot-build.log`、`%TEMP%/deskbox-todo-architecture-debug-final.log`。日志和构建产物不加入版本控制。
+可复查的本地证据：`tests/DeskCue.Tests/TestResults/todo-architecture-full-final.trx`，以及 `%TEMP%/deskcue-todo-architecture-full-final.log`、`%TEMP%/deskcue-todo-architecture-aot-build.log`、`%TEMP%/deskcue-todo-architecture-debug-final.log`。日志和构建产物不加入版本控制。
 
 自动测试与真实点击、系统通知交互是不同证据。未完成的 UI 验收不能用构建通过代替。
 
@@ -81,11 +81,11 @@
 - 针对性测试 53/53 通过，含迟到探测、排队通知、重复访问、运行时更换、失败恢复、禁用状态和快捷键冲突。
 - 最终全量 x64 测试：4,085/4,085 通过。首次全量唯一失败为旧 AOT 源码测试把 `_searchSettingsViewModel.Dispose()` 子串误认成 `ViewModel.Dispose()`；精确匹配主属性后仍保留“先解除绑定、后释放主 ViewModel”的顺序要求。
 - 最终 AOT 条件编译通过，0 错误、888 警告，含 WMC1510 等绑定提示。采用 x64/win-x64、AOT audit 与 smoke 条件编译、隔离 artifacts/lock 路径；未执行 Native AOT publish/link 或发布包运行验证。
-- 最终 canonical Debug 构建：22 警告、0 错误。2026-09-22 20:46 核验进程 PID 23652，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，仓库下唯一 DeskBox 实例，Medium 完整性。
-- 开发数据目录为 `C:/Users/simon/AppData/Local/DeskBox-Dev/search-architecture-20260922-42d41e6f`。预置 Search 功能启用、Everything 查询授权关闭、搜索快捷键关闭；启动日志确认搜索历史/快捷键服务/Everything provider 各初始化一次，设置窗口完成加载，启动 36 步中 0 degraded / 0 failed。未用此启动检查冒充 Search 页或 Everything IPC 实机验收。
+- 最终 canonical Debug 构建：22 警告、0 错误。2026-09-22 20:46 核验进程 PID 23652，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，仓库下唯一 DeskCue 实例，Medium 完整性。
+- 开发数据目录为 `C:/Users/simon/AppData/Local/DeskCue-Dev/search-architecture-20260922-42d41e6f`。预置 Search 功能启用、Everything 查询授权关闭、搜索快捷键关闭；启动日志确认搜索历史/快捷键服务/Everything provider 各初始化一次，设置窗口完成加载，启动 36 步中 0 degraded / 0 failed。未用此启动检查冒充 Search 页或 Everything IPC 实机验收。
 - `git diff --check` 通过；SearchSettingsSection 的 App.Current 和具体设置/搜索运行时类型引用均为 0。
 
-第二批证据使用 `tests/DeskBox.Tests/TestResults/search-architecture-full-final.trx` 及 `%TEMP%/deskbox-search-architecture-*.log`。实际页面点击、快捷键设备行为和 Everything 实例联调仍需人工验收。
+第二批证据使用 `tests/DeskCue.Tests/TestResults/search-architecture-full-final.trx` 及 `%TEMP%/deskcue-search-architecture-*.log`。实际页面点击、快捷键设备行为和 Everything 实例联调仍需人工验收。
 
 ## 第三批：BackupRuntime 与退出资源归属
 
@@ -134,12 +134,12 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 - 首轮针对性测试 198/198 通过。
 - 最终全量 x64 测试 4,102/4,102 通过，包含手动/定时重叠、排队取消、提交排空、重试、配置重入、刷盘失败、退出步骤故障、上传确认前/后取消、保留清理取消及观察者异常。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 编译配置，888 警告、0 错误。没有做 Native AOT publish/link 或发布包运行验证。
-- 最终 canonical Debug 构建：22 警告、0 错误。2026-09-22 21:50 核验 PID 33600，仓库下唯一 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性。
-- 独立开发数据为 `C:/Users/simon/AppData/Local/DeskBox-Dev/backup-architecture-20260922-8b0415bf`，仅放入样例配置，启用本地自动备份（5 分钟、保留 2 份），未配置云端。启动生成 21:50 的快照，5 分钟调度又生成 21:55 的快照；读取最新 ZIP，核对 `manifest.json` 所列两个数据文件的长度和 SHA-256 全部一致。启动 35 步中 0 degraded / 0 failed。
+- 最终 canonical Debug 构建：22 警告、0 错误。2026-09-22 21:50 核验 PID 33600，仓库下唯一 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性。
+- 独立开发数据为 `C:/Users/simon/AppData/Local/DeskCue-Dev/backup-architecture-20260922-8b0415bf`，仅放入样例配置，启用本地自动备份（5 分钟、保留 2 份），未配置云端。启动生成 21:50 的快照，5 分钟调度又生成 21:55 的快照；读取最新 ZIP，核对 `manifest.json` 所列两个数据文件的长度和 SHA-256 全部一致。启动 35 步中 0 degraded / 0 failed。
 - `git diff --check` 通过。
 - 使用模拟 WebDAV 传输验证取消边界；真实服务器联调和用户点击退出时的实机表现尚未验收。
 
-证据：`tests/DeskBox.Tests/TestResults/backup-architecture-full-final.trx`，`%TEMP%/deskbox-backup-architecture-full-final.log`、`%TEMP%/deskbox-backup-architecture-aot-build.log`、`%TEMP%/deskbox-backup-architecture-debug-final.log`。
+证据：`tests/DeskCue.Tests/TestResults/backup-architecture-full-final.trx`，`%TEMP%/deskcue-backup-architecture-full-final.log`、`%TEMP%/deskcue-backup-architecture-aot-build.log`、`%TEMP%/deskcue-backup-architecture-debug-final.log`。
 
 ## 第四批：备份设置页与读取操作会话
 
@@ -167,11 +167,11 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 - 最终全量 x64 测试：4,110/4,110 通过，含页面重复进入仅保留一条完成事件订阅、可见且端点匹配的后台上传刷新列表。
 - 全量回归后补充的上传完成端点断言，云备份传输定向测试 60/60 通过。
 - AOT 条件编译：x64/win-x64，audit + smoke 编译配置，888 警告、0 错误；未做 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建：22 警告、0 错误。2026-09-23 09:45 最终核验 PID 6632，仓库下只有一个 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`；启动器为 Medium 完整性。
-- 独立开发数据目录：`C:/Users/simon/AppData/Local/DeskBox-Dev/backup-settings-architecture-20260923-c6834218`，关闭自动备份、云端配置和实验开关。启动日志显示设置窗口构造完成、35 个启动步骤中 0 degraded / 0 failed，未见备份设置错误或致命异常。此项只证明启动和默认设置页装配；真实 WebDAV、密码输入、云备份页面与恢复对话框的设备交互仍需人工验收。
+- canonical Debug 构建：22 警告、0 错误。2026-09-23 09:45 最终核验 PID 6632，仓库下只有一个 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`；启动器为 Medium 完整性。
+- 独立开发数据目录：`C:/Users/simon/AppData/Local/DeskCue-Dev/backup-settings-architecture-20260923-c6834218`，关闭自动备份、云端配置和实验开关。启动日志显示设置窗口构造完成、35 个启动步骤中 0 degraded / 0 failed，未见备份设置错误或致命异常。此项只证明启动和默认设置页装配；真实 WebDAV、密码输入、云备份页面与恢复对话框的设备交互仍需人工验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
-测试记录：`tests/DeskBox.Tests/TestResults/backup-settings-full-final3-20260923.trx`；构建与测试日志位于 `%TEMP%/deskbox-backup-settings-*.log`。测试数据使用独立开发目录，不使用正式用户配置或系统凭据。
+测试记录：`tests/DeskCue.Tests/TestResults/backup-settings-full-final3-20260923.trx`；构建与测试日志位于 `%TEMP%/deskcue-backup-settings-*.log`。测试数据使用独立开发目录，不使用正式用户配置或系统凭据。
 
 ## 第五批：QuickCapture 启停与剪贴板监听归属
 
@@ -193,10 +193,10 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - QuickCapture、生命周期、模块边界与 Onboarding 定向测试先后 50/50、48/48 通过。首次全量测试发现一条旧 Onboarding 源码断言仍要求设置页直接调用 WidgetManager，已改为检查协调器及窗口锁的实际链路。
-- 最终全量 x64 测试 4,120/4,120 通过，记录在 `tests/DeskBox.Tests/TestResults/quickcapture-architecture-full-final3-20260923.trx`。覆盖新协调器、单监听运行时、迟到读取取消及拒写、停用及重置等待、默认/外部设置归一化和原有功能回归。
+- 最终全量 x64 测试 4,120/4,120 通过，记录在 `tests/DeskCue.Tests/TestResults/quickcapture-architecture-full-final3-20260923.trx`。覆盖新协调器、单监听运行时、迟到读取取消及拒写、停用及重置等待、默认/外部设置归一化和原有功能回归。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误。未执行 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建：22 警告、0 错误。2026-09-23 10:40 最终核验 PID 36108，仓库下只有一个 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`；启动器为 Medium 完整性。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/quickcapture-architecture-20260923-32e4264d` 关闭了录制和实验开关。日志确认设置窗口构造完成、35 个启动步骤中 0 degraded / 0 failed、没有创建剪贴板监听或出现 QuickCapture 错误。此项验证装配与关闭状态，实际系统剪贴板和 QuickCapture 页面交互仍需人工验收。
+- canonical Debug 构建：22 警告、0 错误。2026-09-23 10:40 最终核验 PID 36108，仓库下只有一个 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`；启动器为 Medium 完整性。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/quickcapture-architecture-20260923-32e4264d` 关闭了录制和实验开关。日志确认设置窗口构造完成、35 个启动步骤中 0 degraded / 0 failed、没有创建剪贴板监听或出现 QuickCapture 错误。此项验证装配与关闭状态，实际系统剪贴板和 QuickCapture 页面交互仍需人工验收。
 - `git diff --check` 通过；未提交、推送或混入并行内存实验改动。自动测试不能替代系统剪贴板与真实 UI 的设备交互验收。
 
 ## 第六批：Search 总开关与全局运行时入口
@@ -218,10 +218,10 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 第六批验证：
 
 - Search/模块边界/Onboarding/生命周期定向测试 48/48 通过，含关闭顺序、快速开关、启动失败重试、外部设置恢复、旧探测排空及热键冲突回归。
-- 全量 x64 测试 4,125/4,125 通过，记录在 `tests/DeskBox.Tests/TestResults/search-master-architecture-full-20260923.trx`。
+- 全量 x64 测试 4,125/4,125 通过，记录在 `tests/DeskCue.Tests/TestResults/search-master-architecture-full-20260923.trx`。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误。未做 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建：11 警告、0 错误。2026-09-23 10:59 核验 PID 17928，仓库下只有一个 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`；启动器为 Medium 完整性。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/search-master-architecture-20260923-187bf5e4` 关闭 Search 功能与热键。日志确认设置窗口构造完成、35 个启动步骤中 0 degraded / 0 failed，没有建立 Everything provider 或记录 Search 错误。此项只验证装配及禁用状态；测试中的假宿主和启动日志无法替代 Everything IPC、系统热键及真实 Search 页交互验收。
+- canonical Debug 构建：11 警告、0 错误。2026-09-23 10:59 核验 PID 17928，仓库下只有一个 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`；启动器为 Medium 完整性。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/search-master-architecture-20260923-187bf5e4` 关闭 Search 功能与热键。日志确认设置窗口构造完成、35 个启动步骤中 0 degraded / 0 failed，没有建立 Everything provider 或记录 Search 错误。此项只验证装配及禁用状态；测试中的假宿主和启动日志无法替代 Everything IPC、系统热键及真实 Search 页交互验收。
 - `git diff --check` 通过；未提交、推送或混入并行内存实验改动。
 
 ## 第七批：WidgetManager 内容窗口注册与清理
@@ -237,10 +237,10 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - 内容注册、模块边界、Surface 分组/提升及呈现链路定向测试 81/81 通过，含重复 ID/HWND、创建失败清理、旧关闭回调、分组重绑与冲突不改状态。
-- 全量 x64 测试 4,130/4,130 通过，记录在 `tests/DeskBox.Tests/TestResults/window-registration-full-20260923.trx`；包含内容注册身份边界及原有分组、Surface、文件窗口回归。
+- 全量 x64 测试 4,130/4,130 通过，记录在 `tests/DeskCue.Tests/TestResults/window-registration-full-20260923.trx`；包含内容注册身份边界及原有分组、Surface、文件窗口回归。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误。未执行 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建：11 警告、0 错误。2026-09-23 11:31 核验 PID 41836，仓库下只有一个 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`；启动器为 Medium 完整性。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/window-registration-20260923-2716c2d1` 不创建可见格子，也关闭剪贴板录制和热键。日志确认 WidgetManager 与设置窗口构造完成，35 个启动步骤中 0 degraded / 0 failed，没有窗口注册错误或致命异常。此项只验证装配与空窗口启动；真实分组切换、文件拖拽及动画仍需设备验收。
+- canonical Debug 构建：11 警告、0 错误。2026-09-23 11:31 核验 PID 41836，仓库下只有一个 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`；启动器为 Medium 完整性。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/window-registration-20260923-2716c2d1` 不创建可见格子，也关闭剪贴板录制和热键。日志确认 WidgetManager 与设置窗口构造完成，35 个启动步骤中 0 degraded / 0 failed，没有窗口注册错误或致命异常。此项只验证装配与空窗口启动；真实分组切换、文件拖拽及动画仍需设备验收。
 - `git diff --check` 通过；未提交、推送或混入并行内存实验改动。
 
 ## 第八批：文件格子会话的身份与清理
@@ -256,10 +256,10 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - 文件会话、内容窗口、模块边界、文件宿主诊断、Surface/分组及存储清理定向测试 100/100 通过，覆盖幂等、同宿主内容更换、同 ID 宿主替换、旧宿主迟到关闭、重复别名拒绝和退回独立窗口。
-- 全量 x64 测试 4,134/4,134 通过，记录在 `tests/DeskBox.Tests/TestResults/file-session-architecture-full-20260923.trx`，包含文件会话身份边界与原有 Surface、分组、存储清理回归。
+- 全量 x64 测试 4,134/4,134 通过，记录在 `tests/DeskCue.Tests/TestResults/file-session-architecture-full-20260923.trx`，包含文件会话身份边界与原有 Surface、分组、存储清理回归。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误。未执行 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建：11 警告、0 错误。2026-09-23 11:58 核验 PID 24452，仓库下只有一个 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`；启动器为 Medium 完整性。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/file-session-architecture-20260923-5364728d` 未创建可见格子，也关闭剪贴板录制与热键。日志确认 WidgetManager 与设置窗口构造完成，35 个启动步骤中 0 degraded / 0 failed，没有文件会话错误或致命异常。此项只验证装配与空窗口启动；实际文件拖拽和组切换仍需设备验收。
+- canonical Debug 构建：11 警告、0 错误。2026-09-23 11:58 核验 PID 24452，仓库下只有一个 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`；启动器为 Medium 完整性。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/file-session-architecture-20260923-5364728d` 未创建可见格子，也关闭剪贴板录制与热键。日志确认 WidgetManager 与设置窗口构造完成，35 个启动步骤中 0 degraded / 0 failed，没有文件会话错误或致命异常。此项只验证装配与空窗口启动；实际文件拖拽和组切换仍需设备验收。
 - `git diff --check` 通过；未提交、推送或混入并行内存实验改动。
 
 ## 第九批：Surface 宿主声明的提交与回滚
@@ -273,10 +273,10 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - Surface、候选事务、切换矩阵、窗口呈现与模块边界定向测试 74/74 通过。补充假宿主测试覆盖重复候选、取消后同组重试、已有分组失败保留旧宿主、新分组提交时转移成员声明、拆组回滚、迟到关闭和退出清空。
-- 最终全量 x64 测试 4,139/4,139 通过，记录在 `tests/DeskBox.Tests/TestResults/surface-registry-full-final2-20260923.trx`。
+- 最终全量 x64 测试 4,139/4,139 通过，记录在 `tests/DeskCue.Tests/TestResults/surface-registry-full-final2-20260923.trx`。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；没有执行 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建：22 警告、0 错误。2026-09-23 12:25 最终核验 PID 7860，仓库下只有一个 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，进程为 Medium 完整性。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/surface-registry-20260923-d299a602` 使用空格子布局并关闭功能热键、剪贴板录制和自动备份。日志确认 WidgetManager 和设置窗口构造完成，35 个启动步骤中 0 degraded / 0 failed。此项只验证空布局启动装配；真实分组提升、拆离和首帧动画仍需设备验收。
+- canonical Debug 构建：22 警告、0 错误。2026-09-23 12:25 最终核验 PID 7860，仓库下只有一个 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，进程为 Medium 完整性。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/surface-registry-20260923-d299a602` 使用空格子布局并关闭功能热键、剪贴板录制和自动备份。日志确认 WidgetManager 和设置窗口构造完成，35 个启动步骤中 0 degraded / 0 failed。此项只验证空布局启动装配；真实分组提升、拆离和首帧动画仍需设备验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十批：Surface 成员声明转移与拓扑对账
@@ -292,10 +292,10 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - Surface、分组、呈现与模块边界定向测试 222/222 通过。新增假宿主测试覆盖多源组完整转移、重复/部分/过期声明拒绝、捕获后宿主或活动成员改变、待提交候选拒绝、保存失败保留源声明、旧组退役后的迟到关闭；gate 测试覆盖多 Surface 等待与取消释放。
-- 最终全量 x64 测试 4,154/4,154 通过，记录在 `tests/DeskBox.Tests/TestResults/surface-claim-transfer-full-final-20260923.trx`。
+- 最终全量 x64 测试 4,154/4,154 通过，记录在 `tests/DeskCue.Tests/TestResults/surface-claim-transfer-full-final-20260923.trx`。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；没有执行 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建：22 警告、0 错误。2026-09-23 13:05 最终核验 PID 12192，仓库下只有一个 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，进程为 Medium 完整性。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/surface-claim-transfer-20260923-27ff52b1` 使用空格子布局并关闭功能热键、剪贴板录制和自动备份。日志确认 WidgetManager 和设置窗口构造完成，35 个启动步骤中 0 degraded / 0 failed。未得到真实分组合并、拆离或解散的设备日志；自动化假宿主测试与空布局启动不能代替实际窗口、拖动及动画验收。
+- canonical Debug 构建：22 警告、0 错误。2026-09-23 13:05 最终核验 PID 12192，仓库下只有一个 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，进程为 Medium 完整性。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/surface-claim-transfer-20260923-27ff52b1` 使用空格子布局并关闭功能热键、剪贴板录制和自动备份。日志确认 WidgetManager 和设置窗口构造完成，35 个启动步骤中 0 degraded / 0 failed。未得到真实分组合并、拆离或解散的设备日志；自动化假宿主测试与空布局启动不能代替实际窗口、拖动及动画验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十一批：分组持久化后窗口失败的补偿
@@ -309,24 +309,24 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - 分组持久化回滚、Surface、呈现与模块边界定向测试 226/226 通过。新增纯事务测试覆盖回写成功、返回失败和抛错后的内存/磁盘状态选择；呈现契约测试检查非复用拆离、解散均在替换窗口首帧失败时进入补偿。既有迟到 Closed 与 Surface 身份测试继续通过。WinUI 窗口创建和真实首帧失败尚未做设备级故障注入。
-- 首次全量测试 4,157/4,158：唯一失败是设置切片访问门禁发现新增 2 处平铺访问。新代码已改为通过 `WidgetLayout` 切片写入，门禁单测通过；最终全量 x64 测试 4,158/4,158 通过，记录在 `tests/DeskBox.Tests/TestResults/group-replacement-recovery-full-final2-20260923.trx`。未扩张旧访问清单。
+- 首次全量测试 4,157/4,158：唯一失败是设置切片访问门禁发现新增 2 处平铺访问。新代码已改为通过 `WidgetLayout` 切片写入，门禁单测通过；最终全量 x64 测试 4,158/4,158 通过，记录在 `tests/DeskCue.Tests/TestResults/group-replacement-recovery-full-final2-20260923.trx`。未扩张旧访问清单。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；没有执行 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建：22 警告、0 错误。2026-09-23 14:06 最终核验 PID 9484，仓库下只有一个 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，进程为 Medium 完整性。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/group-recovery-20260923-78703819` 使用空格子布局并关闭功能热键、剪贴板录制和自动备份。日志确认设置窗口完成构造、35 个启动步骤中 0 degraded / 0 failed。此项只验证装配；真实分组窗口的创建、首帧、拖动和动画仍需设备验收。
+- canonical Debug 构建：22 警告、0 错误。2026-09-23 14:06 最终核验 PID 9484，仓库下只有一个 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，进程为 Medium 完整性。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/group-recovery-20260923-78703819` 使用空格子布局并关闭功能热键、剪贴板录制和自动备份。日志确认设置窗口完成构造、35 个启动步骤中 0 degraded / 0 failed。此项只验证装配；真实分组窗口的创建、首帧、拖动和动画仍需设备验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十二批：复用拆离的持久化回滚与设备检查
 
 实施基线：`44e7a0d4` 加前十一批未提交的工作区改动，分支仍为 `experiment/memory-probe-destroy-hidden`。本批只修复复用原 HWND 拆离时的回滚写盘边界，并在独立开发数据目录检查真实窗口。并行内存探针、用户文件操作、磁盘 schema 和窗口动画策略未改。
 
-原复用路径先把新拓扑写盘，再将活动 HWND 改为独立成员并创建剩余成员的替换宿主。失败时旧代码无论回滚写盘是否成功，都会把原 HWND 重新登记为旧组；若写盘失败，磁盘已拆离而内存和 Registry 却恢复为旧组。现在用已提交状态的快照调用 `WidgetGroupPersistedTopologyRecovery`：只有旧拓扑回写成功才关闭替换宿主、恢复旧组声明和原 HWND；回写被拒绝或抛错时，内存保持已保存的拆离状态，原 HWND 维持独立成员声明，存活的替换宿主继续保留，缺失时尝试补建并记录失败。复用路径的创建、首帧和回滚写盘故障点只在带独立 `DESKBOX_DEV_DATA_ROOT` 的 Debug 构建下可单次触发。为自动执行设备检查临时加入的启动动作入口已在验证后移除；常规 Debug 启动不执行分组动作。
+原复用路径先把新拓扑写盘，再将活动 HWND 改为独立成员并创建剩余成员的替换宿主。失败时旧代码无论回滚写盘是否成功，都会把原 HWND 重新登记为旧组；若写盘失败，磁盘已拆离而内存和 Registry 却恢复为旧组。现在用已提交状态的快照调用 `WidgetGroupPersistedTopologyRecovery`：只有旧拓扑回写成功才关闭替换宿主、恢复旧组声明和原 HWND；回写被拒绝或抛错时，内存保持已保存的拆离状态，原 HWND 维持独立成员声明，存活的替换宿主继续保留，缺失时尝试补建并记录失败。复用路径的创建、首帧和回滚写盘故障点只在带独立 `DESKCUE_DEV_DATA_ROOT` 的 Debug 构建下可单次触发。为自动执行设备检查临时加入的启动动作入口已在验证后移除；常规 Debug 启动不执行分组动作。
 
 验证记录：
 
-- Surface、分组、呈现、设置访问门禁及故障探针定向测试 235/235 通过；最终移除临时启动动作入口后，全量 x64 测试 4,166/4,166 通过，记录在 `tests/DeskBox.Tests/TestResults/reused-detach-rollback-final-clean-20260923.trx`。用例覆盖回滚写盘成功与失败时的内存/Registry 归属，以及写盘确认前不恢复旧组声明。
+- Surface、分组、呈现、设置访问门禁及故障探针定向测试 235/235 通过；最终移除临时启动动作入口后，全量 x64 测试 4,166/4,166 通过，记录在 `tests/DeskCue.Tests/TestResults/reused-detach-rollback-final-clean-20260923.trx`。用例覆盖回滚写盘成功与失败时的内存/Registry 归属，以及写盘确认前不恢复旧组声明。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。canonical Debug 构建 22 警告、0 错误。
 - 独立配置中的真实 HWND 检查：正常复用拆离从 1 个组宿主变为 2 个可见独立宿主，原 HWND `0x9B0E5C` 保留；替换创建失败时旧组与原 HWND `0xE610DA` 保留；替换首帧失败时回滚写盘成功，旧组与原 HWND `0x420210` 保留，替换窗口不再可见；首帧失败且注入回滚写盘拒绝时磁盘组数为 0、Registry 有 2 个 Surface，两个实际 HWND 均可见。合并检查中源 HWND 关闭、目标 HWND 保留，2 个窗口归为 1 个组 Surface；解散检查中旧组 HWND 关闭，出现 2 个可见独立窗口。上述操作由隔离 Debug 诊断入口自动触发，完成后入口已移除；它验证了 Win32 HWND/注册关系，不等同于用户拖拽手势、视觉动画或窗口层级的人工验收。
-- 最终空布局 Debug 使用 `C:/Users/simon/AppData/Local/DeskBox-Dev/reused-detach-final-20260923-80ffe2f9`，2026-09-23 15:07 核验 PID 39020，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed。`git diff --check` 通过，未提交或推送。
+- 最终空布局 Debug 使用 `C:/Users/simon/AppData/Local/DeskCue-Dev/reused-detach-final-20260923-80ffe2f9`，2026-09-23 15:07 核验 PID 39020，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed。`git diff --check` 通过，未提交或推送。
 
 ## 第十三批：Todo 布局设置的单一写入入口
 
@@ -337,9 +337,9 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - Todo 协调器、设置切片/模块边界和 AOT 定向测试在最终小幅时序调整后 529/529 通过。新增用例覆盖布局模式与旧兼容字段同时写入、宽布局自动选中、外部变化刷新、默认值重置、持久化往返和协调器停止后的失败回退。
-- 最终全量 x64 测试 4,169/4,169 通过，记录在 `tests/DeskBox.Tests/TestResults/todo-layout-writer-full-final-20260923.trx`。既有 JSON 默认值、序列化、设置绑定与 Surface 回归均通过。
+- 最终全量 x64 测试 4,169/4,169 通过，记录在 `tests/DeskCue.Tests/TestResults/todo-layout-writer-full-final-20260923.trx`。既有 JSON 默认值、序列化、设置绑定与 Surface 回归均通过。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。canonical Debug 构建 22 警告、0 错误。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/todo-layout-final-20260923-ad163b26` 预置 `SinglePane`、兼容宽布局关闭、自动选中关闭及空格子布局。2026-09-23 15:28 核验 PID 3964，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性。设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，三个磁盘字段保持一致。此项验证装配与既有状态加载；Todo 设置页实际点击、运行中宽窄布局切换仍需设备交互验收。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/todo-layout-final-20260923-ad163b26` 预置 `SinglePane`、兼容宽布局关闭、自动选中关闭及空格子布局。2026-09-23 15:28 核验 PID 3964，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性。设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，三个磁盘字段保持一致。此项验证装配与既有状态加载；Todo 设置页实际点击、运行中宽窄布局切换仍需设备交互验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十四批：Todo 默认筛选与标签可见性的联动写入
@@ -353,9 +353,9 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - 最终无效外部配置边界修复后的定向 x64 测试 657/657 通过，覆盖选择隐藏筛选时自动显示标签、隐藏当前默认标签后的顺序回退、最后一个标签不能消失、标签栏开关、外部刷新、默认重置与持久化往返。
-- 最终全量 x64 测试 4,173/4,173 通过，记录在 `tests/DeskBox.Tests/TestResults/todo-tab-writer-full-final-20260923.trx`；原设置、绑定、AOT 契约及 Surface 回归通过。
+- 最终全量 x64 测试 4,173/4,173 通过，记录在 `tests/DeskCue.Tests/TestResults/todo-tab-writer-full-final-20260923.trx`；原设置、绑定、AOT 契约及 Surface 回归通过。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。canonical Debug 构建 22 警告、0 错误。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/todo-tab-writer-20260923-8e4dec31` 预置 `ThisWeek` 为默认筛选及唯一可见标签，其他功能与热键关闭、格子布局为空。2026-09-23 15:54 核验 PID 36904，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘筛选/标签组合保持一致。此项只验证装配与已保存状态加载；Todo 设置页实际点击和运行中格子切换仍需设备验收。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/todo-tab-writer-20260923-8e4dec31` 预置 `ThisWeek` 为默认筛选及唯一可见标签，其他功能与热键关闭、格子布局为空。2026-09-23 15:54 核验 PID 36904，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘筛选/标签组合保持一致。此项只验证装配与已保存状态加载；Todo 设置页实际点击和运行中格子切换仍需设备验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十五批：Todo 内容密度与文字大小设置
@@ -369,8 +369,8 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - Todo、SettingsService、设置切片/模块边界、AOT 与设置同步定向 x64 测试 677/677 通过，新增用例覆盖字号 `0` 继承全局值、显式字号覆盖后的独立保持、半点归一化、预览行数上下界、默认恢复、持久化往返与停止后拒写。
-- 全量 x64 测试 4,176/4,176 通过，记录在 `tests/DeskBox.Tests/TestResults/todo-density-writer-full-20260923.trx`。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 最终构建 22 警告、0 错误。独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/todo-density-20260923-93839b4b` 预置全局字号 12.5、Todo 预览 4 行、列表字号覆盖值 0、正文覆盖值 13.5 及空格子布局。2026-09-23 17:47 核验 PID 38288，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性。设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘字段保持原值。此项验证装配与加载，未代替 Todo 设置页滑块拖动和运行中格子字号变化的设备验收。
+- 全量 x64 测试 4,176/4,176 通过，记录在 `tests/DeskCue.Tests/TestResults/todo-density-writer-full-20260923.trx`。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。
+- canonical Debug 最终构建 22 警告、0 错误。独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/todo-density-20260923-93839b4b` 预置全局字号 12.5、Todo 预览 4 行、列表字号覆盖值 0、正文覆盖值 13.5 及空格子布局。2026-09-23 17:47 核验 PID 38288，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性。设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘字段保持原值。此项验证装配与加载，未代替 Todo 设置页滑块拖动和运行中格子字号变化的设备验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十六批：Todo 输入行为设置的写入归属
@@ -382,8 +382,8 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - Todo 协调器、Todo 运行时、SettingsService、设置切片/模块边界和 AOT 定向 x64 测试 734/734 通过。新增用例覆盖 Bottom/EnterSaves 写入与持久化、Enter 和 Ctrl+Enter 原按键规则、非法值回退、外部刷新、默认重置与停止后的拒写。
-- 全量 x64 测试 4,179/4,179 通过，记录在 `tests/DeskBox.Tests/TestResults/todo-input-writer-full-20260923.trx`。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建 22 警告、0 错误。独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/todo-input-20260923-a49138a2` 预置 Bottom、EnterSaves 与空格子布局。2026-09-23 17:59 核验 PID 32308，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘字段保持原值。此项验证装配与加载；真实 Todo 编辑器按键输入、新任务插入位置仍需设备交互验收。
+- 全量 x64 测试 4,179/4,179 通过，记录在 `tests/DeskCue.Tests/TestResults/todo-input-writer-full-20260923.trx`。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。
+- canonical Debug 构建 22 警告、0 错误。独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/todo-input-20260923-a49138a2` 预置 Bottom、EnterSaves 与空格子布局。2026-09-23 17:59 核验 PID 32308，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘字段保持原值。此项验证装配与加载；真实 Todo 编辑器按键输入、新任务插入位置仍需设备交互验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十七批：Todo 显示开关与标签样式的写入归属
@@ -396,7 +396,7 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 
 - Todo 协调器、SettingsService、设置切片/模块边界、设置同步与 AOT 定向 x64 测试 682/682 通过。新增用例覆盖四项设置的持久化往返、外部刷新、无效标签样式只读归一化及重置写回、协调器停止后的拒写与状态回退。
 - 全量 x64 测试 4,181/4,181 通过。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。canonical Debug 构建 22 警告、0 错误。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/todo-display-20260923-1d244a8d` 预置“隐藏已完成、显示页脚统计、隐藏清除按钮、Pivot 标签”和空格子布局。2026-09-23 18:13 核验 PID 32900，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，四个磁盘字段保持原值。这验证装配与已存配置加载，不代替 Todo 设置页实际点击、运行中列表过滤和页脚呈现的设备验收。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/todo-display-20260923-1d244a8d` 预置“隐藏已完成、显示页脚统计、隐藏清除按钮、Pivot 标签”和空格子布局。2026-09-23 18:13 核验 PID 32900，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，四个磁盘字段保持原值。这验证装配与已存配置加载，不代替 Todo 设置页实际点击、运行中列表过滤和页脚呈现的设备验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十八批：Todo 功能默认恢复中的提醒写入收尾
@@ -409,7 +409,7 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 
 - Todo 协调器、提醒运行时、SettingsService、设置边界和 AOT 定向 x64 测试 691/691 通过；补充真实 `TodoReminderRuntime` 假会话联测后，相关最终定向测试 44/44 通过。用例覆盖默认值快照、外层保存前零刷新、保存后仅一次协调、会话创建与关闭、显式恢复的 `checkNow`、重复重置不重复通知、停止后的拒写、外部保存恢复及持久化往返。
 - 最终全量 x64 测试 4,186/4,186 通过。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。canonical Debug 构建 22 警告、0 错误。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/todo-reminder-reset-20260923-30f36340` 预置提醒关闭、提前 30 分钟、Todo 关闭及空格子布局。2026-09-23 20:05 最终核验 PID 44552，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘提醒值保持原样。该检查证明装配和已有设置加载，未在真实 UI 中执行清空 Todo 数据的功能重置，也不等同于系统通知投递验收。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/todo-reminder-reset-20260923-30f36340` 预置提醒关闭、提前 30 分钟、Todo 关闭及空格子布局。2026-09-23 20:05 最终核验 PID 44552，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘提醒值保持原样。该检查证明装配和已有设置加载，未在真实 UI 中执行清空 Todo 数据的功能重置，也不等同于系统通知投递验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十九批：QuickCapture 默认视图与标签可见性的联动写入
@@ -424,7 +424,7 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 
 - QuickCapture 协调器、SettingsService、设置同步/复制、模块边界和 AOT 定向 x64 测试 667/667 通过；补充导航与剪贴板监听隔离用例后，相关最终定向测试 28/28 通过。新增用例覆盖选择隐藏默认视图的一次提交、隐藏当前默认标签后的顺序回退、最后一个标签的保底、无效外部组合的只读展示、默认恢复与持久化、协调器停止后的拒写，以及标签变动不刷新剪贴板会话。
 - 最终全量 x64 测试 4,192/4,192 通过。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。canonical Debug 构建 22 警告、0 错误。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/quickcapture-tabs-20260923-8137ed76` 预置默认 Recent、只显示 Recent 标签、隐藏标签栏及空格子布局。2026-09-23 20:40 核验 PID 40120，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，五个磁盘字段保持预置值。这验证装配与已保存状态加载，实际点击标签、运行中 QuickCapture 格子切换及视觉呈现仍需设备交互验收。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/quickcapture-tabs-20260923-8137ed76` 预置默认 Recent、只显示 Recent 标签、隐藏标签栏及空格子布局。2026-09-23 20:40 核验 PID 40120，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，五个磁盘字段保持预置值。这验证装配与已保存状态加载，实际点击标签、运行中 QuickCapture 格子切换及视觉呈现仍需设备交互验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第二十批：QuickCapture 标签样式与内容预览偏好
@@ -437,7 +437,7 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 
 - QuickCapture 协调器、SettingsService、设置同步/复制、模块边界和 AOT 定向 x64 测试 672/672 通过。新增用例覆盖非法样式与越界行数的只读展示、用户写入归一化和持久化往返、默认值重置时不提前保存、外部呈现变化通知且不刷新剪贴板会话，以及停止后的拒写。
 - 全量 x64 测试 4,196/4,196 通过。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。canonical Debug 构建 22 警告、0 错误。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/quickcapture-presentation-20260923-76c3d5ba` 预置 Pivot、隐藏创建时间、预览 7 行及空格子布局。2026-09-23 21:02 核验 PID 16628，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，三个磁盘字段保持预置值。这验证装配和已保存状态加载；实际设置页点击、QuickCapture 内容卡片样式及运行中切换仍需设备交互验收。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/quickcapture-presentation-20260923-76c3d5ba` 预置 Pivot、隐藏创建时间、预览 7 行及空格子布局。2026-09-23 21:02 核验 PID 16628，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，三个磁盘字段保持预置值。这验证装配和已保存状态加载；实际设置页点击、QuickCapture 内容卡片样式及运行中切换仍需设备交互验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第二十一批：QuickCapture 最近记录容量与裁剪归属
@@ -452,7 +452,7 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 
 - QuickCapture 协调器、剪贴板运行时/服务、SettingsService、设置同步、模块边界和 AOT 定向 x64 测试 678/678 通过；调整通知顺序后相关最终定向测试 39/39 通过。新增用例覆盖快速设置仅执行最后的待裁剪值、默认恢复取消待执行请求、停止等待活动裁剪并拒绝新写入、失败报告后下一次仍可运行、外部配置改变不刷新剪贴板监听。真实隔离 `QuickCaptureStore` 中的 25 条最近记录按新容量裁为 10 条，重新加载仍为 10 条。
 - 最终全量 x64 测试 4,203/4,203 通过。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，890 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。canonical Debug 构建 22 警告、0 错误。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/quickcapture-limit-20260923-5731a4ff` 预置容量 80、功能关闭及空格子布局。2026-09-23 22:54 核验 PID 39980，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘容量保持 80。该启动检查验证装配与加载；真实设置页数字输入交互、运行中剪贴板采集仍需设备验收。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/quickcapture-limit-20260923-5731a4ff` 预置容量 80、功能关闭及空格子布局。2026-09-23 22:54 核验 PID 39980，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘容量保持 80。该启动检查验证装配与加载；真实设置页数字输入交互、运行中剪贴板采集仍需设备验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 历史下一批（第 22 批现已完成）：QuickCapture 列表与正文字号的写入归属
@@ -473,15 +473,15 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 
 ## 2026-09-24：A+B/C/D 与第 22 批统一候选收口
 
-当前隔离候选在 `C:/Users/simon/.codex/worktrees/deskbox-surface-group/wingezi`，包含第 1–22 批架构改动及评审核实后的 A+B/C/D 修复；原共享目录 `D:/project/wingezi` 和 `MemoryDestroyProbe` 未并入。候选 HEAD 仍是本地检查点 `f3f357f1`，本轮增量均未提交、推送或创建 PR。
+当前隔离候选在 `C:/Users/simon/.codex/worktrees/deskcue-surface-group/wingezi`，包含第 1–22 批架构改动及评审核实后的 A+B/C/D 修复；原共享目录 `D:/project/wingezi` 和 `MemoryDestroyProbe` 未并入。候选 HEAD 仍是本地检查点 `f3f357f1`，本轮增量均未提交、推送或创建 PR。
 
 - QuickCapture 最近记录裁剪贯通退出取消令牌，15 秒退出步骤上限兜底；不可取消的原子持久化仍可能在超时后运行，退出会记录该情况。随记格子内启用剪贴板捕获改为先保存设置、后刷新监听，避免额外显示格子；协调器测试钉住该行为。
 - Todo 列表/正文非有限字号输入在协调器和编辑门面均拒写。第 22 批 QuickCapture 两个字号覆盖值已单独提取到候选：原始 `0` 继续继承全局字号，设置页由协调器写入；增加实际设置门面的继承、保存、再显式覆盖往返测试。
 - D 段补充仅在 Debug 且隔离数据根下启用的无目标窗口故障点。用户实测合并双故障后无可用窗口：5 个故障点命中，磁盘仍保留 1 组 2 成员，两份样例文件完好；去掉故障重启恢复同一组合且切换正常，Registry 仅 1 条有效声明。复用拆离的首次窗口外拖动命中 `reused-detach-first-frame`，真实回滚写盘和窗口边界恢复均成功；之后的正常拖动又完成拆离。具体日志、HWND 和数据根见 `surface-group-recovery-segment-20260924.md`。
-- 最终统一候选全量 x64 测试 **4,226/4,226 通过**，本地 TRX 为 `tests/DeskBox.Tests/TestResults/architecture-final-x64-20260924.trx`（按仓库规则被忽略）；Release AOT audit+smoke 条件构建 888 警告、0 错误，canonical Debug 构建 22 警告、0 错误。
+- 最终统一候选全量 x64 测试 **4,226/4,226 通过**，本地 TRX 为 `tests/DeskCue.Tests/TestResults/architecture-final-x64-20260924.trx`（按仓库规则被忽略）；Release AOT audit+smoke 条件构建 888 警告、0 错误，canonical Debug 构建 22 警告、0 错误。
 - x64 Native AOT publish/link 与完整 `publish-aot-audit.ps1` 审计通过，产物 44 个文件、约 95.7 MiB，`AlwaysThrowCount=0`，源码快照审计前后一致。真实 AOT 程序在独立数据根启动，36 步 0 degraded / 0 failed。审计中发现两处旧源码形态匹配误报（主 ViewModel `Dispose` 子串匹配、Todo 提醒异步入口改为包装+核心方法），已收紧对应审计条件；两次失败的原始产物和摘要均保留在 `.artifacts/aot-audit/` 下。
-- x64 Native AOT 测试 MSIX `1.5.5.0` 构建完成，原始包 73 文件、签名副本 75 文件的静态包审计均通过。未签名包被 `0x80073CFF` 拒绝；当前用户 TrustedPeople/Root 信任仍被 `0x800B0109` 拒绝，符合微软文档对 `LocalMachine\TrustedPeople` 的要求。经用户另行授权后，短期测试证书仅临时加入整机 TrustedPeople：MSIX 成功安装，状态 `Ok`。从包入口启动的 PID 13096 位于 `WindowsApps`，`GetPackageFullName` 与安装包身份完全一致，exe SHA-256 与审计解包文件一致，完整性级别为 Medium；“DeskBox 设置”窗口可响应，导航按钮实际切换并恢复。随后结束该进程、卸载包并移除整机证书信任；当前用户/整机均无该证书，包与进程均为 0。包内启动证据保存在 `.artifacts/architecture-final-sideload-test-x64-20260924/packaged-run-evidence.json`。正式双架构安装包、商店合并上传包与发布不属于这次架构候选。
-- 隔离 Debug 数据根 `C:/Users/simon/AppData/Local/DeskBox-Dev/architecture-final-quickcapture-ui-20260924` 预置全局字号 12.5、随记列表原始覆盖值 `0`、正文覆盖值 13.5。用户在真实设置页看到列表 12.5pt/正文 13.5pt，调列表滑块到 13pt 正常；磁盘只将列表原始值改为 13，正文仍为 13.5。用户开启随记格子并在「最近」页点击「开启记录」，界面仍只有 1 个随记窗口、最近页正常；磁盘记录功能与剪贴板记录均启用，布局仅 1 个随记格子，日志有监听启动与一次文本捕获、无相关错误。强制结束测试进程后重启同一目录，1 个随记格子和字号/记录设置保持不变，启动 35 步 0 degraded / 0 failed，监听恢复。测试实例最后已结束，不影响生产数据根。
+- x64 Native AOT 测试 MSIX `1.5.5.0` 构建完成，原始包 73 文件、签名副本 75 文件的静态包审计均通过。未签名包被 `0x80073CFF` 拒绝；当前用户 TrustedPeople/Root 信任仍被 `0x800B0109` 拒绝，符合微软文档对 `LocalMachine\TrustedPeople` 的要求。经用户另行授权后，短期测试证书仅临时加入整机 TrustedPeople：MSIX 成功安装，状态 `Ok`。从包入口启动的 PID 13096 位于 `WindowsApps`，`GetPackageFullName` 与安装包身份完全一致，exe SHA-256 与审计解包文件一致，完整性级别为 Medium；“DeskCue 设置”窗口可响应，导航按钮实际切换并恢复。随后结束该进程、卸载包并移除整机证书信任；当前用户/整机均无该证书，包与进程均为 0。包内启动证据保存在 `.artifacts/architecture-final-sideload-test-x64-20260924/packaged-run-evidence.json`。正式双架构安装包、商店合并上传包与发布不属于这次架构候选。
+- 隔离 Debug 数据根 `C:/Users/simon/AppData/Local/DeskCue-Dev/architecture-final-quickcapture-ui-20260924` 预置全局字号 12.5、随记列表原始覆盖值 `0`、正文覆盖值 13.5。用户在真实设置页看到列表 12.5pt/正文 13.5pt，调列表滑块到 13pt 正常；磁盘只将列表原始值改为 13，正文仍为 13.5。用户开启随记格子并在「最近」页点击「开启记录」，界面仍只有 1 个随记窗口、最近页正常；磁盘记录功能与剪贴板记录均启用，布局仅 1 个随记格子，日志有监听启动与一次文本捕获、无相关错误。强制结束测试进程后重启同一目录，1 个随记格子和字号/记录设置保持不变，启动 35 步 0 degraded / 0 failed，监听恢复。测试实例最后已结束，不影响生产数据根。
 
 ### 下一批
 
@@ -502,7 +502,7 @@ A+B 工作树已补齐最终 QuickCapture 退出/快捷入口和 Todo 非有限�
 
 ## 2026-09-25：分段提交与远程审阅
 
-在用户明确授权“发”之后，A+B 已提交并推送 `c966a9a0`，创建 [PR #423](https://github.com/Tianyu199509/DeskBox/pull/423)；C 从该提交叠加 `6728c2e4`，创建 [PR #424](https://github.com/Tianyu199509/DeskBox/pull/424)；D 再叠加 `a3809579`，创建 [PR #425](https://github.com/Tianyu199509/DeskBox/pull/425)。第 22 批使用独立 `codex/architecture-quickcapture-text-size-review` 分支，以 D 提交为基线。前三段本地全量 x64 分别为 4,167、4,177、4,224 全绿；最终叠加态 **4,229/4,229** 通过，完整 Native AOT publish/link 与审计通过。最终 canonical Debug 从独立数据根恢复 1 个随记格子，原始字号 13/13.5 与剪贴板记录状态保持，启动 35 步 0 degraded / 0 failed；测试进程已退出。最终源码、测试与脚本和先前已实测的统一候选逐文件一致，内存探针未进入提交链。
+在用户明确授权“发”之后，A+B 已提交并推送 `c966a9a0`，创建 [PR #423](https://github.com/CyberShadowX/DeskCue/pull/423)；C 从该提交叠加 `6728c2e4`，创建 [PR #424](https://github.com/CyberShadowX/DeskCue/pull/424)；D 再叠加 `a3809579`，创建 [PR #425](https://github.com/CyberShadowX/DeskCue/pull/425)。第 22 批使用独立 `codex/architecture-quickcapture-text-size-review` 分支，以 D 提交为基线。前三段本地全量 x64 分别为 4,167、4,177、4,224 全绿；最终叠加态 **4,229/4,229** 通过，完整 Native AOT publish/link 与审计通过。最终 canonical Debug 从独立数据根恢复 1 个随记格子，原始字号 13/13.5 与剪贴板记录状态保持，启动 35 步 0 degraded / 0 failed；测试进程已退出。最终源码、测试与脚本和先前已实测的统一候选逐文件一致，内存探针未进入提交链。
 
 **下一批**：核对四个 PR 各自 CI 及审阅反馈，按依赖顺序处理合并；合并动作和正式版本发布另行授权。云同步设备层、contribution descriptor、Generic Host 或物理拆工程仍遵照原路线图的触发条件，不混入当前 PR 链。具体范围见 `architecture-final-candidate-review-20260924.md`。
 
@@ -526,13 +526,13 @@ A+B 工作树已补齐最终 QuickCapture 退出/快捷入口和 Todo 非有限�
 
 实现：`ShutdownSequence.RunAsync` 返回完整清理是否执行。`ShutdownStep.Bounded` 期限届满抛出专用 `ShutdownStepDeadlineExceededException`；后端自身的超时或失败仍按普通失败记录并继续，不触发中止。带 `abortFollowingStepsOnTimeout` 的步骤超时后中止其余步骤并返回 false——超时后仍会运行的操作不得与随后关闭窗口、释放服务和容器的步骤竞争。三步均以 15 秒期限启用该语义。`ShutdownApplicationAsync` 的 finally 成为兜底：托盘窗关闭、单实例互斥释放并置空（正常路径由 `single-instance` 步执行并置空，null 传播防止双重释放）。`SearchSettingsCoordinator` 停止时移除内部 5 秒上限，改为排空全部在途请求：期限由 App 层统一持有，协调器报告完成即代表没有请求再使用连接；超时则不释放借用的搜索运行时，交由进程退出接管。
 
-测量与故障注入（隔离 Debug，数据根含 `architecture-shutdown-ownership-20260925`，`DESKBOX_DEV_SHUTDOWN_PROBE`）：`clean-exit` 全序列执行、2 秒退出；`hang-todo` 在 15 秒整抛出期限并跳过依赖清理。测量发现：跳过依赖清理时 `Application.Exit()` 返回后 XAML 消息循环继续泵送（dotnet-stack 证实 UI 线程空转于 Main、无前台线程阻塞、`ShutdownApplicationAsync` 已完成），进程无限存活。修复：deadline 路径在 `Exit()` 前布置 3 秒 `Environment.Exit(0)` 看门狗，仅该路径武装。修复后 `hang-todo` 20 秒退出（15 秒期限 + 3 秒看门狗 + 余量），`clean-exit` 仍 2 秒且不触及看门狗；契约测试钉住看门狗与跳过日志。注意本批首次尝试用 `BaseIntermediateOutputPath` 隔离 AOT 构建会破坏 XamlCompiler 状态（WMC9999），隔离应使用 SDK `ArtifactsPath`。
+测量与故障注入（隔离 Debug，数据根含 `architecture-shutdown-ownership-20260925`，`DESKCUE_DEV_SHUTDOWN_PROBE`）：`clean-exit` 全序列执行、2 秒退出；`hang-todo` 在 15 秒整抛出期限并跳过依赖清理。测量发现：跳过依赖清理时 `Application.Exit()` 返回后 XAML 消息循环继续泵送（dotnet-stack 证实 UI 线程空转于 Main、无前台线程阻塞、`ShutdownApplicationAsync` 已完成），进程无限存活。修复：deadline 路径在 `Exit()` 前布置 3 秒 `Environment.Exit(0)` 看门狗，仅该路径武装。修复后 `hang-todo` 20 秒退出（15 秒期限 + 3 秒看门狗 + 余量），`clean-exit` 仍 2 秒且不触及看门狗；契约测试钉住看门狗与跳过日志。注意本批首次尝试用 `BaseIntermediateOutputPath` 隔离 AOT 构建会破坏 XamlCompiler 状态（WMC9999），隔离应使用 SDK `ArtifactsPath`。
 
 验证记录：
 
 - 定向测试 56/56 通过，含所有权期限中止与共享完成结果、后端超时区分、挂起的 Todo 窗口操作/提醒排空/搜索探测分别中止依赖清理。
 - 全量 x64 测试 4,235/4,235 通过（合并态 4,230 + 本批 5 个新用例）。
-- AOT 条件编译（x64/win-x64、DeskBoxAotAudit + DeskBoxAotSmokeHarness + DeskBoxRustNative、`ArtifactsPath` 隔离）通过：888 警告、0 错误。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
+- AOT 条件编译（x64/win-x64、DeskCueAotAudit + DeskCueAotSmokeHarness + DeskCueRustNative、`ArtifactsPath` 隔离）通过：888 警告、0 错误。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
 - Debug 构建 0 错误；`git diff --check` 通过。
 - 真实挂起仅经探针模拟；生产三步后端均自带取消与排空，期限属于最后防线。未提交推送。
 
@@ -565,7 +565,7 @@ A+B 工作树已补齐最终 QuickCapture 退出/快捷入口和 Todo 非有限�
 
 ## 第二十六批（部分）：P0 归因与日志队列评估
 
-- **P0 全应用内存归因已完成**（报告 `residency-p0-attribution-20260926.md`）：framework Release、3 组×9 格子同进程差分——组缓存树增量 3~5MB、占稳态私有 2~3%，**命中 <10% 停止线：跳过 Cold 档**。两个意外发现：冷启动缓存为空（按需物化+Small 预算封顶，"缓存常驻"前提已不成立）；P2（Warm TTL）价值降级为 CPU/订阅冻结，降为低优先级待真实反馈，**P1-c 维持无条件执行**。测量用临时解除 `DESKBOX_DEV_DATA_ROOT` Release 门控的本地构建，改动已全部还原（一次真实数据误写疑云经快照比对确认为虚惊、零影响，如实记录）。
+- **P0 全应用内存归因已完成**（报告 `residency-p0-attribution-20260926.md`）：framework Release、3 组×9 格子同进程差分——组缓存树增量 3~5MB、占稳态私有 2~3%，**命中 <10% 停止线：跳过 Cold 档**。两个意外发现：冷启动缓存为空（按需物化+Small 预算封顶，"缓存常驻"前提已不成立）；P2（Warm TTL）价值降级为 CPU/订阅冻结，降为低优先级待真实反馈，**P1-c 维持无条件执行**。测量用临时解除 `DESKCUE_DEV_DATA_ROOT` Release 门控的本地构建，改动已全部还原（一次真实数据误写疑云经快照比对确认为虚惊、零影响，如实记录）。
 - **日志队列迁移评估结案：不迁移**。理由：日志队列与单实例锁同属进程生命周期基础设施，必须活到所有服务释放之后（退出序列中 log-drain 在 service-container 之后）；移入 DI 容器会倒置依赖，移入协调器只换边界无行为收益；模块边界立法本就将日志兼容调用豁免在外。重开触发条件：日志需要可配置 sink/级别（结构化日志功能立项）时，抽 Contracts 接口、App 为默认实现。第 3 批起的"待评估"就此关闭。
 
 ## 第二十七批：外部审计对照（#427/#428 复审）
@@ -606,11 +606,11 @@ A+B 工作树已补齐最终 QuickCapture 退出/快捷入口和 Todo 非有限�
 
 ### 第二十九批验证记录
 
-- canonical x64 Debug 构建（restore Updater 后 `dotnet build src/DeskBox/DeskBox.csproj -p:Platform=x64`）：22 警告、0 错误（警告来自既有可空性/控件位置）；非平台 canonical Debug（启动用）24 警告、0 错误。
+- canonical x64 Debug 构建（restore Updater 后 `dotnet build src/DeskCue/DeskCue.csproj -p:Platform=x64`）：22 警告、0 错误（警告来自既有可空性/控件位置）；非平台 canonical Debug（启动用）24 警告、0 错误。
 - 定向测试 18/18 通过（新增 AppearanceSettingsCoordinatorTests 8 用例：步进归一化反馈、非有限拒写回读、滑块零通知零保存、选项归一化与无变化跳过、密度预设七字段不落保存、动画 scheduleSave、前景/标题图标延迟保存、停止后拒写；SettingsSliceOwnership 7；FeatureSettingsBoundary 3）。首轮全量 4,259/4,260：唯一失败是第 22 批全局字号回归测试用反射构造 SettingsViewModel 未注入新编辑器，已补注入真实 `AppearanceSettingsViewModel(AppearanceSettingsCoordinator)`。
 - 全量 x64 测试：**4,260/4,260 通过**（基线 4,252 + 本批 8 个新用例）。
-- AOT 定义编译检查（x64、`DefineConstants="TRACE;...;DEBUG;DESKBOX_NATIVE_AOT"`）：22 警告、0 错误。
-- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskBox-Dev/appearance-track-a-20260926-215022` 预置外观非默认值（White 托盘图标、Acrylic 0.92/0.8、Custom 前景 #20A0FF、Small 角/Accent 边/Medium 边框、图标 36/字号 13、Custom 密度 0.84/0.68/0.82/0.5、文件名 1 行、默认 340×460、Compact/Overlay chrome、FilledMono 标题图标、Zoom/Fast/Strong 动画、空格子布局）。canonical 路径 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe` 启动 PID 27704，启动管线 35 步、0 degraded、0 failed；停机后磁盘全部预置字段保持。唯一变化 `widgetAnimationSlideDirection: "Left"→"None"` 为既有加载归一化（非 SlideFade 效果强制方向 None——预置组合本身无效），非本批行为。验证后已按路径停止本 worktree 实例。
+- AOT 定义编译检查（x64、`DefineConstants="TRACE;...;DEBUG;DESKCUE_NATIVE_AOT"`）：22 警告、0 错误。
+- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskCue-Dev/appearance-track-a-20260926-215022` 预置外观非默认值（White 托盘图标、Acrylic 0.92/0.8、Custom 前景 #20A0FF、Small 角/Accent 边/Medium 边框、图标 36/字号 13、Custom 密度 0.84/0.68/0.82/0.5、文件名 1 行、默认 340×460、Compact/Overlay chrome、FilledMono 标题图标、Zoom/Fast/Strong 动画、空格子布局）。canonical 路径 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe` 启动 PID 27704，启动管线 35 步、0 degraded、0 failed；停机后磁盘全部预置字段保持。唯一变化 `widgetAnimationSlideDirection: "Left"→"None"` 为既有加载归一化（非 SlideFade 效果强制方向 None——预置组合本身无效），非本批行为。验证后已按路径停止本 worktree 实例。
 - `git diff --check` 通过。
 - 已知残余：OnboardingWindow.Appearance.cs 的 1 处 WidgetMaterialType 直写留给后续 onboarding 批次；设置壳 ApplySettingsSnapshot/构造函数中的外观读仍走门面读（无写入，ratchet 已顺带收缩 141→94）。未做真实滑块拖动的设备级手感验收，自动化证据不替代外观页实际拖动与材质切换的视觉验收。
 
@@ -618,7 +618,7 @@ A+B 工作树已补齐最终 QuickCapture 退出/快捷入口和 Todo 非有限�
 
 实施基线：`688d7d67`（main）。本批对象是路线图 §2B 标记的最后一项剩余——格子布局/拓扑 → 设备域 store（原定云同步立项触发，Simon 拍板提前）。**对码结论：迁移本体已随 `b8dfb443`（2026-09-19）及四轮加固（`0b66db18`/`ed5b5a52`/`8319db1e`/`1d598f90`/`4378134c`）进入 main，路线图"剩余 ~330 处"的记载滞后于实况**；本批做全量收口核验、补齐演练契约与文档对账，未发现需要修复的产品缺陷。
 
-store 设计（在库现状，非本批新写）：`DeskBox.Core.Persistence.WidgetLayoutStore` 承载 `widget-layout.json`（与 `desktop-organization-history.json` 同款命名风格），11 个布局线级键（widgets/widgetGroups/widgetTopologyLayouts/activeWidgetTopologyKey/deletedWidgetIds/featureWidgetEnabledStates + 5 个组导航/兼容默认值键）整体迁出 settings.json。接入 `ResilientJsonStore`（`.bak` 自救 + `.corrupt-*` 隔离 + 校验写入），自带 schemaVersion 与未来 schema 只读保护（typed slice 表示不了的文件拒绝覆写、save 如实报失败并保留冗余 settings 键），结构校验 fail-closed（`null`/`{}`/`{"layout":null}` 走隔离路径而非充当权威空布局）。
+store 设计（在库现状，非本批新写）：`DeskCue.Core.Persistence.WidgetLayoutStore` 承载 `widget-layout.json`（与 `desktop-organization-history.json` 同款命名风格），11 个布局线级键（widgets/widgetGroups/widgetTopologyLayouts/activeWidgetTopologyKey/deletedWidgetIds/featureWidgetEnabledStates + 5 个组导航/兼容默认值键）整体迁出 settings.json。接入 `ResilientJsonStore`（`.bak` 自救 + `.corrupt-*` 隔离 + 校验写入），自带 schemaVersion 与未来 schema 只读保护（typed slice 表示不了的文件拒绝覆写、save 如实报失败并保留冗余 settings 键），结构校验 fail-closed（`null`/`{}`/`{"layout":null}` 走隔离路径而非充当权威空布局）。
 
 领养规则（fail-closed，2B-2 同款）：`SettingsService.LoadAsync` 把迁移+归一化后的旧 settings 键作为种子交给 `WidgetLayoutStore.LoadAsync`——store 文件落盘成为权威后才在下次保存剥离 settings 旧键；写失败保留旧键下次重试；corrupt primary 隔离留证不覆写；settings.json 整体加载失败时 layout 独立重新领养（单文件损坏不拖垮桌面）。旧版回退语义如实记录：旧版读不到设备层文件=回默认布局，与 2B-2 同款既定取舍。
 
@@ -634,21 +634,21 @@ store 设计（在库现状，非本批新写）：`DeskBox.Core.Persistence.Wid
 
 - 定向 `WidgetLayoutStoreTests` 22/22 通过（20 既有 + 2 新增）。
 - 全量 x64 **4,254/4,254**（基线 4,252 + 2 新用例）；build x64 0 错误（并发测试+构建会撞 XamlCompiler 状态，分开跑即净）。
-- AOT 定义编译检查（`DESKBOX_NATIVE_AOT` DefineConstants）0 错误、22 警告；canonical Debug 构建 0 错误。
-- 隔离 Debug 启动演练（2026-09-26 晚，数据根 `device-layer-batch30-20260926-7f3a1c`，DESKBOX_DEV_DATA_ROOT，仓库唯一实例 PID 4104→45084，路径 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`）：预置 2 组 4 成员+1 独立文件格子（真实映射文件夹）+双拓扑档案+墓碑的旧 settings.json→首启 36 步 0 degraded / 0 failed，两组表面以真实 HWND 呈现且成员切换正常（surface-a 0x1410E10 / surface-b 0xCF166A），磁盘上 `widget-layout.json` 生成且完整承载 5 格子/2 组/双拓扑/墓碑/功能态，settings.json 11 键全部清空；强制结束→重启同数据根，36 步 0 degraded / 0 failed，组/成员/拓扑/墓碑保持，settings 保持清空，无 corrupt 残留。演练中一次预置错误（非法 `viewMode` 枚举值）被既有 fail-closed 机制正确拦截（settings 整体隔离为 `.corrupt-*` 留证），顺带验证了损坏路径。测试实例已结束，未触碰生产数据根与并行代理实例。
+- AOT 定义编译检查（`DESKCUE_NATIVE_AOT` DefineConstants）0 错误、22 警告；canonical Debug 构建 0 错误。
+- 隔离 Debug 启动演练（2026-09-26 晚，数据根 `device-layer-batch30-20260926-7f3a1c`，DESKCUE_DEV_DATA_ROOT，仓库唯一实例 PID 4104→45084，路径 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`）：预置 2 组 4 成员+1 独立文件格子（真实映射文件夹）+双拓扑档案+墓碑的旧 settings.json→首启 36 步 0 degraded / 0 failed，两组表面以真实 HWND 呈现且成员切换正常（surface-a 0x1410E10 / surface-b 0xCF166A），磁盘上 `widget-layout.json` 生成且完整承载 5 格子/2 组/双拓扑/墓碑/功能态，settings.json 11 键全部清空；强制结束→重启同数据根，36 步 0 degraded / 0 failed，组/成员/拓扑/墓碑保持，settings 保持清空，无 corrupt 残留。演练中一次预置错误（非法 `viewMode` 枚举值）被既有 fail-closed 机制正确拦截（settings 整体隔离为 `.corrupt-*` 留证），顺带验证了损坏路径。测试实例已结束，未触碰生产数据根与并行代理实例。
 - `git diff --check` 通过；未推送。路线图 §2B 状态同步更新（2B-3 条目 + 节奏建议行）。
 ## 第三十一批：Platform P/Invoke 主动全迁（Track C）
 
 Simon 拍板放弃"随触碰 ratchet"，对 Platform 域的 DllImport/LibraryImport 存量做一次性主动全迁（与 2026-09-18 路线图"不做一次性大搬家"的原始口径就此收口）。实施基线：`688d7d67`（origin/main，worktree `codex/final-platform-pinvoke`）。行为零变化：只做声明搬家/抽取，DllImport 特性、字符集、SetLastError 错误位、签名逐字保留；调用语义、线程模型、错误处理不动。
 
-计数对账（ratchet 口径，文件→调用点）：立法日 2026-09-18 为 **41 文件 / 260 调用点**（路线图口径）；历经各批收缩后本批起点（origin/main）为 **14 文件 / 99 调用点**（任务简报中的 41→26 为撰写时点快照，26 在中间批已继续下降）；本批完成后 **0 文件 / 0 调用点**——`PlatformInterop_StaysInsideThePlatformDomain` 自此成为硬零法，新增 P/Invoke 只能落 `DeskBox.Platform`。Platform 域内现有 26 个文件 / 约 270 处声明。
+计数对账（ratchet 口径，文件→调用点）：立法日 2026-09-18 为 **41 文件 / 260 调用点**（路线图口径）；历经各批收缩后本批起点（origin/main）为 **14 文件 / 99 调用点**（任务简报中的 41→26 为撰写时点快照，26 在中间批已继续下降）；本批完成后 **0 文件 / 0 调用点**——`PlatformInterop_StaysInsideThePlatformDomain` 自此成为硬零法，新增 P/Invoke 只能落 `DeskCue.Platform`。Platform 域内现有 26 个文件 / 约 270 处声明。
 
 迁移清单（14 文件：1 整迁 + 1 整类迁 + 12 抽取）：
 
-| 原文件 | 计数 | 方式 | 去向（DeskBox.Platform） |
+| 原文件 | 计数 | 方式 | 去向（DeskCue.Platform） |
 | --- | --- | --- | --- |
 | Helpers/NativeDropDescriptionWriter.cs | 7 | 整文件迁 | Platform/NativeDropDescriptionWriter.cs |
-| Views/ContentWidgetWindow.AotNativeDropSmoke.cs（尾部 AotNativeDropWin32 类） | 4 | 整类迁（保留 `#if DESKBOX_NATIVE_AOT` 门控） | Platform/AotNativeDropWin32.cs |
+| Views/ContentWidgetWindow.AotNativeDropSmoke.cs（尾部 AotNativeDropWin32 类） | 4 | 整类迁（保留 `#if DESKCUE_NATIVE_AOT` 门控） | Platform/AotNativeDropWin32.cs |
 | App.xaml.cs | 10 | 抽取 | Platform/ProcessDiagnosticsNativeMethods.cs（含 ProcessEntry32/TokenElevation/TokenMandatoryLabel/SidAndAttributes/TokenInformationClass） |
 | Services/DragDropPermissionService.cs | 13 | 抽取 | Platform/DragDropPermissionNativeMethods.cs（含 StartupInfo/ProcessInformation 及 token 结构） |
 | Helpers/NativeDropTarget.cs | 12 | 抽取 | Platform/OleDropTargetNativeMethods.cs |
@@ -667,10 +667,10 @@ Simon 拍板放弃"随触碰 ratchet"，对 Platform 域的 DllImport/LibraryImp
 棘轮与钉同步：
 
 - `ModuleBoundaryContractTests.PlatformInteropExpectedViolations` 清空（14 条→0），测试转为硬零法；Destructive 清单无需变化（NativeDropTarget.cs = 5 等条目所在文件未迁走、调用未动）。
-- `NativeDropVisualContractTests`：NativeDropDescriptionWriter 的 2 处路径钉 Helpers→Platform；`NativeDropDescriptionWriterTests` 补 `using DeskBox.Platform`。
-- AOT 文本钉逐一复核未破坏：`SHFileOperation(ref operation/fileOperation)`（AotStage4D2/5B4C1B1/5B4C1B2A 与 publish-aot-audit.ps1 5984/6269 行）——调用文本加限定后子串保留；`GlobalAlloc(`（AotStage5B4C1C2A 探针钉）同理保留；AotRetailIsolation 的烟具清单 61 个与排除模式列表不变（新 Platform 文件不匹配 `*.Aot*Smoke.cs`，且保留 `#if DESKBOX_NATIVE_AOT` 门控，retail 烟具移除后无引用可裁）。
+- `NativeDropVisualContractTests`：NativeDropDescriptionWriter 的 2 处路径钉 Helpers→Platform；`NativeDropDescriptionWriterTests` 补 `using DeskCue.Platform`。
+- AOT 文本钉逐一复核未破坏：`SHFileOperation(ref operation/fileOperation)`（AotStage4D2/5B4C1B1/5B4C1B2A 与 publish-aot-audit.ps1 5984/6269 行）——调用文本加限定后子串保留；`GlobalAlloc(`（AotStage5B4C1C2A 探针钉）同理保留；AotRetailIsolation 的烟具清单 61 个与排除模式列表不变（新 Platform 文件不匹配 `*.Aot*Smoke.cs`，且保留 `#if DESKCUE_NATIVE_AOT` 门控，retail 烟具移除后无引用可裁）。
 
-验证记录：restore Updater 后 build x64 0 错误；全量单测 4,252/4,252 全绿；AOT 定义编译检查（DESKBOX_NATIVE_AOT）0 错误；隔离 Debug 启动烟测通过。`grep DllImport|LibraryImport` 非 Platform 命中 0。
+验证记录：restore Updater 后 build x64 0 错误；全量单测 4,252/4,252 全绿；AOT 定义编译检查（DESKCUE_NATIVE_AOT）0 错误；隔离 Debug 启动烟测通过。`grep DllImport|LibraryImport` 非 Platform 命中 0。
 
 ## 第三十二批：IFeatureRuntime 正式化与两项残余收口
 
@@ -686,7 +686,7 @@ Simon 拍板放弃"随触碰 ratchet"，对 Platform 域的 DllImport/LibraryImp
 
 **App 侧所有权（`Services/FeatureRuntimeRegistry`，新）**：注册表登记 `search`/`quick-capture`/`todo-reminders` 三个运行时实例（键与退出步同名），提供 `TryGet` 借用、按 id 释放、`DisposeAllAsync` 反向注册序兜底清扫（与契约的逆获取序回收一致；单运行时故障记 `[FeatureRuntimes] '...' ... quarantined for leak isolation` 诊断后跳过，不阻塞其余释放）。退出序列：`todo-reminders` 与 `search-runtime` 两步改经注册表解析（语义同前）；`search-runtime` 之后新增 `feature-runtimes` 兜底清扫步（`ShutdownStep.Bounded`，现有三运行时在此均为幂等 no-op，为未来无专属步骤的运行时立安全网）。装配区创建注册表并注册三个实例；协调器构造注入是装配期注入而非调用方缓存。
 
-**共享契约测试（`tests/DeskBox.Tests/FeatureRuntimeContractTests.cs`）**：接口级状态机测试以 Theory 同时跑四个用例——全 gated 的多资源 Fake（立法本体）+ 三个生产运行时的薄用例适配。断言：重复 Start 单租约、预取消 token 零获取、重复 Dispose 单次释放、部分失败无残留租约且可重试；Fake 专属断言逆序回收与 Dispose/Start 竞争串行（Start 完成→Dispose、Start 取消→Dispose 两序）；Search 专属断言 enable/disable 循环（释放后可再 Start）。生产运行时在自有 UI 线程上的串行边界无法从测试线程证明，由 Fake 的门控转换测试代替钉住，功能级既有测试保留不动。`FeatureRuntimeRegistryTests` 钉注册表：注册/借用/重复键拒绝、按 id 定向释放、反向注册序清扫与故障隔离。
+**共享契约测试（`tests/DeskCue.Tests/FeatureRuntimeContractTests.cs`）**：接口级状态机测试以 Theory 同时跑四个用例——全 gated 的多资源 Fake（立法本体）+ 三个生产运行时的薄用例适配。断言：重复 Start 单租约、预取消 token 零获取、重复 Dispose 单次释放、部分失败无残留租约且可重试；Fake 专属断言逆序回收与 Dispose/Start 竞争串行（Start 完成→Dispose、Start 取消→Dispose 两序）；Search 专属断言 enable/disable 循环（释放后可再 Start）。生产运行时在自有 UI 线程上的串行边界无法从测试线程证明，由 Fake 的门控转换测试代替钉住，功能级既有测试保留不动。`FeatureRuntimeRegistryTests` 钉注册表：注册/借用/重复键拒绝、按 id 定向释放、反向注册序清扫与故障隔离。
 
 **残余一（第 25 批文档化项）**：备份设置页的远端 PROPFIND/列表读从 `BackupSettingsCoordinator.ListAsync` 直连 `CloudBackupService` 改经 `BackupRestoreActions.ListSnapshotsAsync`（internal）——同一 `CaptureCurrent` 端点校验、同一 `TrackAsync`/`StopAsync` 冻结语义，与删除/下载一致；`IBackupSettings.ListAsync` 端口不变，页面取消链不变。`BackupRestoreActions` 由设置窗口每次新建改为 App 启动时创建的单实例（设置窗口借用；未开过窗口时 `backup-restore-actions` 退出步也补了无窗口分支的 Stop）。新增测试：列表经登记路径返回条目、端点漂移拒绝、StopAsync 后列表拒绝。
 
@@ -696,9 +696,9 @@ Simon 拍板放弃"随触碰 ratchet"，对 Platform 域的 DllImport/LibraryImp
 
 - 定向测试（契约/注册表/三运行时/备份传输/边界/启动韧性/关停序列）172/172 通过。
 - 全量 x64 测试 **4,277/4,277** 通过（main 基线 4,252 + 本批 25 个新用例：契约 Theory 16 + Fake/Search 专属 4 + 注册表 4 + 列表登记 1）。
-- AOT 定义编译检查（`DESKBOX_NATIVE_AOT` DefineConstants、x64、`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`，仓库主 obj 与锁文件未受影响）：11 警告、**0 错误**。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
+- AOT 定义编译检查（`DESKCUE_NATIVE_AOT` DefineConstants、x64、`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`，仓库主 obj 与锁文件未受影响）：11 警告、**0 错误**。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
 - canonical Debug 构建 0 错误（警告均为既有位置：CS0108/CS0414/CS0169/CS8602 与 WinUI 可空性，无本批新文件告警）。
-- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskBox-Dev/final-feature-runtime-20260926-d32`，核验进程 PID 45132，路径为 `D:/project/wingezi-final-d/src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`（本工作树唯一实例）；启动 **36 步、0 degraded、0 failed**，默认态 Search 未初始化服务（符合禁用路径），外部状态恢复完成，正常关闭退出（本工作树实例计数归零）。三个功能的开关循环由 SearchCase/接口级用例与既有功能级测试覆盖（真实 UI 点击仍属人工验收）。
+- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskCue-Dev/final-feature-runtime-20260926-d32`，核验进程 PID 45132，路径为 `D:/project/wingezi-final-d/src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`（本工作树唯一实例）；启动 **36 步、0 degraded、0 failed**，默认态 Search 未初始化服务（符合禁用路径），外部状态恢复完成，正常关闭退出（本工作树实例计数归零）。三个功能的开关循环由 SearchCase/接口级用例与既有功能级测试覆盖（真实 UI 点击仍属人工验收）。
 - `git diff --check` 通过；未提交推送（本记录随提交一并入库）。
 
 ## 第三十三批：胶囊/紧凑模式设置节迁移（Track A 第二批）
@@ -720,11 +720,11 @@ Simon 拍板放弃"随触碰 ratchet"，对 Platform 域的 DllImport/LibraryImp
 
 ### 第三十三批验证记录
 
-- restore Updater 后 `dotnet build src/DeskBox/DeskBox.csproj -p:Platform=x64`：22 警告（均为既有位置）、0 错误；非平台 canonical Debug（启动用）0 错误。
+- restore Updater 后 `dotnet build src/DeskCue/DeskCue.csproj -p:Platform=x64`：22 警告（均为既有位置）、0 错误；非平台 canonical Debug（启动用）0 错误。
 - 定向测试 30/30 通过（新增 CapsuleSettingsCoordinatorTests 8 用例：选项归一化与无变化跳过、动画预设成对写单次保存、自定义时长翻转 Custom/保留 Custom 或 None、数值钳制（NaN 间距回默认 8、时长/延迟夹 Min/Max）、行为/延迟/排列端口读写、磁盘往返、上移预设映射与持久字段一致、停止后拒写；SettingsSliceOwnership 7；FeatureSettingsBoundary 3；AotStage5B4B1 相关）。
 - 全量 x64 测试：**4,295/4,295 通过**（新基线 4,287 + 本批 8 个新用例）。
-- AOT 定义编译检查（x64、`DefineConstants="TRACE;...;DEBUG;DESKBOX_NATIVE_AOT"`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`）：11 警告、**0 错误**（与批 32 同位警告）。未执行 Native AOT publish/link，仍为发版门禁。
-- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskBox-Dev/capsule-track-a-33-20260926`（DESKBOX_DEV_DATA_ROOT）预置胶囊 14 字段非默认值（Smart 折叠、Minimal 内容、隐藏敏感内容、Independent 宽度、Up 展开、Bar 排列/Top 位置/Vertical 方向/21px 间距、Custom 动画 330ms、500/900ms 悬停延迟、Round 媒体圆角）。canonical 路径 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe` 启动 PID 11544，启动管线 35 步、0 degraded、0 failed；优雅关停后磁盘全部 14 个预置字段保持。验证后已按路径停止本 worktree 实例。
+- AOT 定义编译检查（x64、`DefineConstants="TRACE;...;DEBUG;DESKCUE_NATIVE_AOT"`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`）：11 警告、**0 错误**（与批 32 同位警告）。未执行 Native AOT publish/link，仍为发版门禁。
+- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskCue-Dev/capsule-track-a-33-20260926`（DESKCUE_DEV_DATA_ROOT）预置胶囊 14 字段非默认值（Smart 折叠、Minimal 内容、隐藏敏感内容、Independent 宽度、Up 展开、Bar 排列/Top 位置/Vertical 方向/21px 间距、Custom 动画 330ms、500/900ms 悬停延迟、Round 媒体圆角）。canonical 路径 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe` 启动 PID 11544，启动管线 35 步、0 degraded、0 failed；优雅关停后磁盘全部 14 个预置字段保持。验证后已按路径停止本 worktree 实例。
 - `git diff --check` 通过；未推送。
 - 已知残余：胶囊覆盖项重置命令（行为/几何/全量重置）仍操作 Widgets/WidgetGroups 集合（非平铺门面写入，清点表口径外，随分组导航或覆盖项后续批评估）；设置壳 ApplySettingsSnapshot/构造的胶囊读仍走门面读（无写入，ratchet 20 计数内）；未做真实胶囊悬停/动画的设备级手感验收，自动化证据不替代胶囊页实际拖动与悬停展开的视觉验收。
 
@@ -741,17 +741,17 @@ Simon 拍板放弃"随触碰 ratchet"，对 Platform 域的 DllImport/LibraryImp
 | XAML 绑定名、AOT 生成属性、文案、启动注册操作与状态回映（StartupService.SetEnabled/SetMode/失败回读）、更新检查触发时序、宿主侧联动（ResizeGuideOverlay 同步、WidgetManager 层级刷新、ShellContextMenuProxy.Prewarm）、HoverActions 的 SaveAppearanceChange 提交 | `SettingsViewModel` 兼容门面（PreferenceCallbacks/HoverActions/AppearanceOptions 三个 partial） |
 | 装配 | App 创建协调器与编辑器，经 SettingsWindow 注入 SettingsViewModel（与批 29/33 同款） |
 
-特有语义保全：①AutoStart——设置页写点在 `ApplyAutoStartState` 尾部（注册状态回映），StartupService 的模式切换/任务计划/Run 键迁移链零改动（DirectStartupService.SetMode 自身的 AutoStartMode 写入维持原样，属宿主侧自启动逻辑）；开发数据根（DESKBOX_DEV_DATA_ROOT）不触发开机默认自启应用，`ApplyDefaultAutoStartOnce` 的 App 侧写入不在本批范围。②AutoCheckForUpdates——App 启动时检查触发（App.xaml.cs 读门面）零改动，设置页只改持久值。③Idle/ImmediateTrim——第 1.4.9 时代工作集修剪仍只走既有 SettingsChanged 消费链（App.ImmediateHiddenWorkingSetTrim / App.QuiescenceWorkingSetTrim 读门面），协调器不触碰。④WidgetLayerMode——写值后壳仍按原顺序调 `RefreshVisibleWidgetDesktopLayers("settings-layer-mode")`。WidgetHoverButtonActions 语义精确化：协调器 SetWidgetHoverButtonActions 只存值不排保存（壳随后调 SaveAppearanceChange，避免双保存）；写入后宿主联动顺序（写→存→联动）原样保留。
+特有语义保全：①AutoStart——设置页写点在 `ApplyAutoStartState` 尾部（注册状态回映），StartupService 的模式切换/任务计划/Run 键迁移链零改动（DirectStartupService.SetMode 自身的 AutoStartMode 写入维持原样，属宿主侧自启动逻辑）；开发数据根（DESKCUE_DEV_DATA_ROOT）不触发开机默认自启应用，`ApplyDefaultAutoStartOnce` 的 App 侧写入不在本批范围。②AutoCheckForUpdates——App 启动时检查触发（App.xaml.cs 读门面）零改动，设置页只改持久值。③Idle/ImmediateTrim——第 1.4.9 时代工作集修剪仍只走既有 SettingsChanged 消费链（App.ImmediateHiddenWorkingSetTrim / App.QuiescenceWorkingSetTrim 读门面），协调器不触碰。④WidgetLayerMode——写值后壳仍按原顺序调 `RefreshVisibleWidgetDesktopLayers("settings-layer-mode")`。WidgetHoverButtonActions 语义精确化：协调器 SetWidgetHoverButtonActions 只存值不排保存（壳随后调 SaveAppearanceChange，避免双保存）；写入后宿主联动顺序（写→存→联动）原样保留。
 
 门禁收缩：`SettingsSliceOwnershipContractTests` 平铺清单 3 个文件收缩（PreferenceCallbacks 17→6，剩文件显示 6 字段留给第 35 批；HoverActions 1→0 删除条目；AppearanceOptions 2→1，仅剩 chrome 覆盖项重置的 Widgets 清单读），只删不加；协调器新文件走切片路径零新增门面访问。`FeatureSettingsBoundaryContractTests.SettingsShell_DoesNotWriteMigratedFeatureFieldsDirectly` 新增交互字段写入门禁（12 字清单），批 29 注释中"WidgetLayerMode 留给交互批"改为指向新门禁。ModuleBoundary 的 App.Current 例外清单 PreferenceCallbacks=3 **保留并注明**：三处（ResizeGuideOverlay×2、WidgetManager 层刷新）是刻意留在壳门面的宿主侧联动，Prewarm 钉（ShellContextMenuCompatibilityContractTests.Prewarm_IsWiredToStartupAndSettingsToggle 要求 Prewarm 调用留在 PreferenceCallbacks）不受影响。AOT 绑定面（属性零增删）自动保持。磁盘 schema、XAML、文案零变化。
 
 ### 第三十四批验证记录
 
-- restore Updater 后 `dotnet build src/DeskBox/DeskBox.csproj -p:Platform=x64`：0 错误（警告均为既有位置）；非平台 canonical Debug（启动用）0 错误。
+- restore Updater 后 `dotnet build src/DeskCue/DeskCue.csproj -p:Platform=x64`：0 错误（警告均为既有位置）；非平台 canonical Debug（启动用）0 错误。
 - 定向测试 46/46 通过（新增 InteractionSettingsCoordinatorTests 7 用例：开关族写入+未变化跳过、AutoStart 回映守卫、SnapSpacing NaN/越界钳制、LayerMode 归一与无变化跳过、HoverActions 只存值不排保存且显式保存可落盘、12 字段磁盘往返、停止后拒写；SettingsSliceOwnership 7；FeatureSettingsBoundary 3；ModuleBoundary 4；ShellContextMenuCompatibility 5 及其余）。首版 LayerMode 用例把"无效值归一到已存默认值→无变化跳过"误计为一次通知，按实际语义修正断言。
 - 全量 x64 测试：**4,302/4,302 通过**（新基线 4,295 + 本批 7 个新用例）。
-- AOT 定义编译检查（x64、`DefineConstants="TRACE;...;DEBUG;DESKBOX_NATIVE_AOT"`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`，检查后已清理）：11 警告（与批 32/33 同位）、**0 错误**。未执行 Native AOT publish/link，仍为发版门禁。
-- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskBox-Dev/interaction-track-a-34-20260926`（DESKBOX_DEV_DATA_ROOT）预置交互 12 字段非默认值（autoStart/autoCheckForUpdates/doubleClickToOpen/resizeSnap/keepVisible/showHoverButtons/idle+immediateTrim 全 false、fileItemSystemContextMenuEnabled true、widgetSnapSpacing 14、widgetLayerMode QuickReveal、widgetHoverButtonActions "LockPosition,Delete"）。canonical 路径 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe` 启动 PID 33680，启动管线 **35 步、0 degraded、0 failed**（日志中 F7 RegisterHotKey error=1409 为本机并存生产实例占用热键的环境性记录，非启动步失败）；停机后磁盘 12 个预置字段全部保持（settings.json 经首启规范化补全 schema，预置值原样）。验证后已按路径停止本 worktree 实例。
+- AOT 定义编译检查（x64、`DefineConstants="TRACE;...;DEBUG;DESKCUE_NATIVE_AOT"`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`，检查后已清理）：11 警告（与批 32/33 同位）、**0 错误**。未执行 Native AOT publish/link，仍为发版门禁。
+- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskCue-Dev/interaction-track-a-34-20260926`（DESKCUE_DEV_DATA_ROOT）预置交互 12 字段非默认值（autoStart/autoCheckForUpdates/doubleClickToOpen/resizeSnap/keepVisible/showHoverButtons/idle+immediateTrim 全 false、fileItemSystemContextMenuEnabled true、widgetSnapSpacing 14、widgetLayerMode QuickReveal、widgetHoverButtonActions "LockPosition,Delete"）。canonical 路径 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe` 启动 PID 33680，启动管线 **35 步、0 degraded、0 failed**（日志中 F7 RegisterHotKey error=1409 为本机并存生产实例占用热键的环境性记录，非启动步失败）；停机后磁盘 12 个预置字段全部保持（settings.json 经首启规范化补全 schema，预置值原样）。验证后已按路径停止本 worktree 实例。
 - `git diff --check` 通过。
 - 已知残余：设置壳 ApplySettingsSnapshot/构造的交互字段读仍走门面读（无写入，ratchet 6 计数内）；OnboardingWindow.Hotkey.cs 的 2 处 AutoStart 直写与 App.xaml.cs ApplyDefaultAutoStartOnce 的 1 处（开发根豁免外的开机默认回映）属宿主/onboarding 侧写入，不在 Track A 设置页清零口径内，已登记到剩余批次表的外部残余写入者行；未做真实设置页点击（自启开关、吸附间距滑杆、悬停按钮组合）的设备级手感验收，自动化证据不替代交互页实际操作验收。
 
@@ -774,11 +774,11 @@ Simon 拍板放弃"随触碰 ratchet"，对 Platform 域的 DllImport/LibraryImp
 
 ### 第三十五批验证记录
 
-- restore Updater 后 `dotnet build src/DeskBox/DeskBox.csproj -p:Platform=x64`：0 错误、11 警告（均为既有位置，与批 34 后同位）。
+- restore Updater 后 `dotnet build src/DeskCue/DeskCue.csproj -p:Platform=x64`：0 错误、11 警告（均为既有位置，与批 34 后同位）。
 - 定向测试 34/34 通过（新增 FileDisplaySettingsCoordinatorTests 4 用例：6 字段写入+未变化跳过、ReadAll 快照磁盘往返、显式保存落盘且未触字段保持默认、停止后拒写；SettingsSliceOwnership 7；FeatureSettingsBoundary 3；ModuleBoundary 20）。
 - 全量 x64 测试：**4,306/4,306 通过**（新基线 4,302 + 本批 4 个新用例）。
-- AOT 定义编译检查（x64、`DefineConstants="TRACE;...;DEBUG;DESKBOX_NATIVE_AOT"`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`，检查后已清理）：11 警告（与批 32/33/34 同位）、**0 错误**。未执行 Native AOT publish/link，仍为发版门禁。
-- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskBox-Dev/filedisplay-track-a-35-20260926`（DESKBOX_DEV_DATA_ROOT）预置文件显示 6 字段非默认值（showFileExtensions=true、hideShortcutExtensionWhenShowingFileExtensions=false、hideShortcutArrowOverlay=false、showImageFilesAsIcons=true、showListItemDetails=true、showFileItemPathTooltips=false，另预置 hasCompletedOnboarding/hasResolvedInitialFileWidgetSetup=true 保持无格子安静启动）。canonical 路径 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe` 启动 PID 28520，启动管线 35 步（5 critical）、0 degraded、0 failed（日志中 F7 RegisterHotKey error=1409 为本机并存实例占用热键的环境性记录，非启动步失败）；运行中与停止后磁盘 6 个预置字段均保持原值（首启规范化补全 schema，预置值原样；widget-layout.json 由 store 正常领养生成空布局）。停止采用按 PID 强制结束（关闭到托盘语义下 WM_CLOSE 不触发退出序列，无 CLI 退出入口），未走完整退出管线——本批验证的字段在启动加载时已由既有保存链定格，不受影响。验证后已确认本 worktree 实例归零（并存的他 worktree 实例未触碰）。
+- AOT 定义编译检查（x64、`DefineConstants="TRACE;...;DEBUG;DESKCUE_NATIVE_AOT"`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`，检查后已清理）：11 警告（与批 32/33/34 同位）、**0 错误**。未执行 Native AOT publish/link，仍为发版门禁。
+- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskCue-Dev/filedisplay-track-a-35-20260926`（DESKCUE_DEV_DATA_ROOT）预置文件显示 6 字段非默认值（showFileExtensions=true、hideShortcutExtensionWhenShowingFileExtensions=false、hideShortcutArrowOverlay=false、showImageFilesAsIcons=true、showListItemDetails=true、showFileItemPathTooltips=false，另预置 hasCompletedOnboarding/hasResolvedInitialFileWidgetSetup=true 保持无格子安静启动）。canonical 路径 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe` 启动 PID 28520，启动管线 35 步（5 critical）、0 degraded、0 failed（日志中 F7 RegisterHotKey error=1409 为本机并存实例占用热键的环境性记录，非启动步失败）；运行中与停止后磁盘 6 个预置字段均保持原值（首启规范化补全 schema，预置值原样；widget-layout.json 由 store 正常领养生成空布局）。停止采用按 PID 强制结束（关闭到托盘语义下 WM_CLOSE 不触发退出序列，无 CLI 退出入口），未走完整退出管线——本批验证的字段在启动加载时已由既有保存链定格，不受影响。验证后已确认本 worktree 实例归零（并存的他 worktree 实例未触碰）。
 - `git diff --check` 通过。
 - 已知残余：设置壳 ApplySettingsSnapshot/构造的文件显示字段读仍走门面读（无写入，FacadeAccessManifest SettingsSync 133/SettingsViewModel.cs 94 计数内）；未做真实设置页点击（扩展名开关、图片图标投影切换后真实文件夹图标的实际重投影效果）的设备级手感验收，自动化证据不替代文件显示页实际操作与图标刷新的视觉验收。
 
@@ -801,11 +801,11 @@ Simon 拍板放弃"随触碰 ratchet"，对 Platform 域的 DllImport/LibraryImp
 
 ### 第三十六批验证记录
 
-- restore Updater 后 `dotnet build src/DeskBox/DeskBox.csproj -p:Platform=x64`：0 错误、22 警告（均为既有位置，与批 35 后同位）；非平台 canonical Debug（启动用）0 错误。
+- restore Updater 后 `dotnet build src/DeskCue/DeskCue.csproj -p:Platform=x64`：0 错误、22 警告（均为既有位置，与批 35 后同位）；非平台 canonical Debug（启动用）0 错误。
 - 定向测试 27/27 通过（新增 FileStackSettingsCoordinatorTests 5 用例：9 标量+规则集合写入与未变化跳过、规则单一入口等价重提交跳过/真实排序与编辑落盘、非默认全量磁盘往返（ReadAll 快照+扩展名归一化断言）、无效选项按页面归一化收口、停止后拒写；SettingsSliceOwnership 7；FeatureSettingsBoundary 3；AotStage5B4B1 12）。
 - 全量 x64 测试：**4,311/4,311 通过**（新基线 4,306 + 本批 5 个新用例）。
-- AOT 定义编译检查（x64、`DefineConstants="TRACE;DEBUG;DESKBOX_NATIVE_AOT"`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`，检查后已清理）：11 警告（与批 32/33/34/35 同位）、**0 错误**。未执行 Native AOT publish/link，仍为发版门禁。
-- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskBox-Dev/filestack-track-a-36-20260926`（DESKBOX_DEV_DATA_ROOT）预置文件栈 10 字段非默认值（开+Custom 分组+2 条自定义规则（Documents/.pdf/.docx、Images/.png/.jpg）+自动堆叠开+阈值 2+Name 排序+Popover 打开+Grid5 浮窗+FollowMaterial 样式+Other 未匹配行为，另预置 hasCompletedOnboarding/hasResolvedInitialFileWidgetSetup=true 保持无格子安静启动）。canonical 路径 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe` 启动 PID 21896，启动管线 **35 步（5 critical）、0 degraded、0 failed**（日志中 F7 RegisterHotKey error=1409 为本机并存实例占用热键的环境性记录，非启动步失败）；运行中与按 PID 强制结束（关闭到托盘语义下无 CLI 退出入口，与批 35 同款）后磁盘 10 个预置字段（含 2 条规则的 Id/名称/归一化扩展名）全部保持原值。验证后已确认本 worktree 实例归零（并存的他 worktree 实例未触碰）。
+- AOT 定义编译检查（x64、`DefineConstants="TRACE;DEBUG;DESKCUE_NATIVE_AOT"`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`，检查后已清理）：11 警告（与批 32/33/34/35 同位）、**0 错误**。未执行 Native AOT publish/link，仍为发版门禁。
+- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskCue-Dev/filestack-track-a-36-20260926`（DESKCUE_DEV_DATA_ROOT）预置文件栈 10 字段非默认值（开+Custom 分组+2 条自定义规则（Documents/.pdf/.docx、Images/.png/.jpg）+自动堆叠开+阈值 2+Name 排序+Popover 打开+Grid5 浮窗+FollowMaterial 样式+Other 未匹配行为，另预置 hasCompletedOnboarding/hasResolvedInitialFileWidgetSetup=true 保持无格子安静启动）。canonical 路径 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe` 启动 PID 21896，启动管线 **35 步（5 critical）、0 degraded、0 failed**（日志中 F7 RegisterHotKey error=1409 为本机并存实例占用热键的环境性记录，非启动步失败）；运行中与按 PID 强制结束（关闭到托盘语义下无 CLI 退出入口，与批 35 同款）后磁盘 10 个预置字段（含 2 条规则的 Id/名称/归一化扩展名）全部保持原值。验证后已确认本 worktree 实例归零（并存的他 worktree 实例未触碰）。
 - `git diff --check` 通过。
 - 已知残余：设置壳 ApplySettingsSnapshot/构造的文件栈字段读仍走门面读（无写入，FileStackOptions ratchet 22 计数内）；规则预览的文件枚举（BuildFileStackPreviewEntries 读 Widgets）仍在壳门面；未做真实设置页点击（开关切换、规则增删拖拽后真实堆叠投影重建效果）的设备级手感验收，自动化证据不替代文件栈页实际操作与堆叠重建的视觉验收。
 
@@ -828,11 +828,11 @@ Simon 拍板放弃"随触碰 ratchet"，对 Platform 域的 DllImport/LibraryImp
 
 ### 第三十七批验证记录
 
-- restore Updater 后 `dotnet build src/DeskBox/DeskBox.csproj -p:Platform=x64`：0 错误、22 警告（均为既有位置，与批 36 后同位）；非平台 canonical Debug（启动用）0 错误。
+- restore Updater 后 `dotnet build src/DeskCue/DeskCue.csproj -p:Platform=x64`：0 错误、22 警告（均为既有位置，与批 36 后同位）；非平台 canonical Debug（启动用）0 错误。
 - 定向测试 26/26 通过（新增 GroupNavigationSettingsCoordinatorTests 4 用例：4 字段经编辑器缝写入/bool 变化报告/未变化跳过（SettingsChanged 计数 4 不涨）、无效值按页面归一化收口（FollowDefault→Tabs no-op、legacy Auto→Stack、Nonsense/null→出厂默认、归一化等值重发 no-op）、非默认全量磁盘往返（写→SaveAsync→fresh LoadAsync→ReadAll 等值，验证 widget-layout.json 设备层承载与再会话 no-op）、停止后拒写（ObjectDisposedException+磁盘保持默认）；SettingsSliceOwnership 7；FeatureSettingsBoundary 3；AotStage5B4B1 12）。
 - 全量 x64 测试：**4,315/4,315 通过**（新基线 4,311 + 本批 4 个新用例）。
-- AOT 定义编译检查（x64、`DefineConstants="TRACE;DEBUG;DESKBOX_NATIVE_AOT"`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`（Updater 引用随 DeskBox 的 ArtifactsPath 一并隔离 restore），检查后已清理）：11 警告（与批 32/33/34/35/36 同位）、**0 错误**。未执行 Native AOT publish/link，仍为发版门禁。
-- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskBox-Dev/groupnav-track-a-37-20260926`（DESKBOX_DEV_DATA_ROOT）预置分组导航 4 字段非默认值（Stack 导航+TextOnly 标题+滚轮切换关+悬停切换开，另预置 hasCompletedOnboarding/hasResolvedInitialFileWidgetSetup=true 保持无格子安静启动）。canonical 路径 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe` 启动 PID 35452（本 worktree 唯一实例），启动管线 **36 步（5 critical）、0 degraded、0 failed**（日志中 F7 RegisterHotKey error=1409 为本机并存实例占用热键的环境性记录，非启动步失败，与批 36 同款）；懒领养符合预期（本次会话无设置变更即无持久保存，widget-layout.json 未生成、settings.json 仍为权威并完整保有 4 键——设备层往返已由本批磁盘往返测试覆盖）；按 PID 强制结束（关闭到托盘语义下无 CLI 退出入口，与批 35/36 同款）后磁盘 4 个预置字段全部保持原值。验证后已确认本 worktree 实例归零（并存的他 worktree 实例未触碰）。
+- AOT 定义编译检查（x64、`DefineConstants="TRACE;DEBUG;DESKCUE_NATIVE_AOT"`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`（Updater 引用随 DeskCue 的 ArtifactsPath 一并隔离 restore），检查后已清理）：11 警告（与批 32/33/34/35/36 同位）、**0 错误**。未执行 Native AOT publish/link，仍为发版门禁。
+- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskCue-Dev/groupnav-track-a-37-20260926`（DESKCUE_DEV_DATA_ROOT）预置分组导航 4 字段非默认值（Stack 导航+TextOnly 标题+滚轮切换关+悬停切换开，另预置 hasCompletedOnboarding/hasResolvedInitialFileWidgetSetup=true 保持无格子安静启动）。canonical 路径 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe` 启动 PID 35452（本 worktree 唯一实例），启动管线 **36 步（5 critical）、0 degraded、0 failed**（日志中 F7 RegisterHotKey error=1409 为本机并存实例占用热键的环境性记录，非启动步失败，与批 36 同款）；懒领养符合预期（本次会话无设置变更即无持久保存，widget-layout.json 未生成、settings.json 仍为权威并完整保有 4 键——设备层往返已由本批磁盘往返测试覆盖）；按 PID 强制结束（关闭到托盘语义下无 CLI 退出入口，与批 35/36 同款）后磁盘 4 个预置字段全部保持原值。验证后已确认本 worktree 实例归零（并存的他 worktree 实例未触碰）。
 - `git diff --check` 通过。
 - 已知残余：设置壳的 GroupNavigation 属性 get/概要/既有组投影读仍走门面读（无写入，ratchet 20 计数内）；per-group 覆盖写（WidgetGroupConfig 对象）按口径留在壳（非平铺门面写入）；未做真实设置页点击（导航风格/标题显示切换后真实组表面呈现刷新）的设备级手感验收，自动化证据不替代分组导航页实际操作与组切换行为的视觉验收。
 
@@ -857,11 +857,11 @@ Simon 拍板放弃"随触碰 ratchet"，对 Platform 域的 DllImport/LibraryImp
 
 ### 第三十八批验证记录
 
-- restore Updater 后 `dotnet build src/DeskBox/DeskBox.csproj -p:Platform=x64`：0 错误、22 警告（均为既有位置，与批 36/37 后同位）；非平台 canonical Debug（启动用）0 错误。
+- restore Updater 后 `dotnet build src/DeskCue/DeskCue.csproj -p:Platform=x64`：0 错误、22 警告（均为既有位置，与批 36/37 后同位）；非平台 canonical Debug（启动用）0 错误。
 - 定向测试 62/62 通过（新增 FeatureWidgetsSettingsCoordinatorTests 6 用例：音乐+杂项经编辑器缝写入/未变化跳过/无效值按页面归一化收口、天气政策路径写入与无效值收口与刷新间隔钳制/未变化跳过/未知显示开关抛参、手动城市政策拒绝（91°/NaN）与有效写入及同城市重选零保存、功能重置默认不排保存+调用方单次保存后全量磁盘往返（含 WeatherDataSource 不在重置块的保真）、功能卡启停写不排保存+保存后经设备层保持、停止后全端口拒写；QuickCaptureSettingsCoordinatorTests 新增 1 用例：编辑器 5 字段归一化/未变化跳过/磁盘往返/重置清 LastQuickCaptureFileWidgetId 不排保存；SettingsSliceOwnership 7；FeatureSettingsBoundary 3；ModuleBoundary；AotStage5B4B2C2A 11）。首轮全量 4,321/4,322：唯一失败是 AotStage5B4B2C2A 的"产品政策复用"钉仍指向壳文件，已随归属更新为协调器。
 - 全量 x64 测试：**4,322/4,322 通过**（新基线 4,315 + 本批 7 个新用例）。
-- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKBOX_NATIVE_AOT`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`，Updater 引用随同隔离 restore，检查后已清理）：11 警告（与批 32-37 同位）、**0 错误**。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
-- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskBox-Dev/featurewidgets-track-a-38-20260926`（DESKBOX_DEV_DATA_ROOT）预置功能节 24 项非默认值（音乐 Controls/双 false、天气 Hanoi 21.03/105.85 手动定位+Fahrenheit+mph+Week+Rich+OpenMeteo+Wind 关/Pressure 开+180 分、QuickCapture 编辑器 EnterSaves/PlainText/DualPane/Editing/远程图片开、附件 Copy/托管拖放 FollowWindows/文件夹打开 Embedded、功能卡 Music 关/Weather 开，另预置 hasCompletedOnboarding/hasResolvedInitialFileWidgetSetup=true 保持无格子安静启动）。canonical 路径 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe` 启动 PID 35804（本 worktree 唯一实例，进程路径核验一致；并存的 wingezi-p1c 实例未触碰），启动管线 **36 步（5 critical）、0 degraded、0 failed**；按 PID 强制结束（关闭到托盘语义下无 CLI 退出入口，与批 35-37 同款）后磁盘 24 项预置字段全部保持原值（本会话无设置变更即无持久保存，settings.json 未被重写，与批 37 懒领养观察一致）。
+- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKCUE_NATIVE_AOT`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`，Updater 引用随同隔离 restore，检查后已清理）：11 警告（与批 32-37 同位）、**0 错误**。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
+- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskCue-Dev/featurewidgets-track-a-38-20260926`（DESKCUE_DEV_DATA_ROOT）预置功能节 24 项非默认值（音乐 Controls/双 false、天气 Hanoi 21.03/105.85 手动定位+Fahrenheit+mph+Week+Rich+OpenMeteo+Wind 关/Pressure 开+180 分、QuickCapture 编辑器 EnterSaves/PlainText/DualPane/Editing/远程图片开、附件 Copy/托管拖放 FollowWindows/文件夹打开 Embedded、功能卡 Music 关/Weather 开，另预置 hasCompletedOnboarding/hasResolvedInitialFileWidgetSetup=true 保持无格子安静启动）。canonical 路径 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe` 启动 PID 35804（本 worktree 唯一实例，进程路径核验一致；并存的 wingezi-p1c 实例未触碰），启动管线 **36 步（5 critical）、0 degraded、0 failed**；按 PID 强制结束（关闭到托盘语义下无 CLI 退出入口，与批 35-37 同款）后磁盘 24 项预置字段全部保持原值（本会话无设置变更即无持久保存，settings.json 未被重写，与批 37 懒领养观察一致）。
 - `git diff --check` 通过。
 - 已知残余：设置壳构造/快照/属性 get 的功能节读仍走门面读（无写入，ratchet 内）；天气城市搜索的定位状态/建议列表 UI 状态机仍留在壳门面（非设置写入）；publish-aot-audit.ps1 的 stage5B4B2C2A 文件清单已随归属更新但完整 Native AOT publish/link 审计未在本批重跑（发版门禁时验证）；未做真实设置页点击（音乐显示模式切换、天气单位/城市选择、功能卡开关后真实格子创建隐藏、QuickCapture 编辑器格式切换后真实编辑行为）的设备级手感验收，自动化证据不替代功能节实际操作与天气/音乐格子呈现的视觉验收。
 
@@ -884,16 +884,16 @@ Simon 拍板放弃"随触碰 ratchet"，对 Platform 域的 DllImport/LibraryImp
 
 ### 第三十九批验证记录
 
-- restore Updater 后 `dotnet build src/DeskBox/DeskBox.csproj -p:Platform=x64`：0 错误、22 警告（与批 36/37/38 后同位）；非平台 canonical Debug（启动用）0 错误、22 警告。
+- restore Updater 后 `dotnet build src/DeskCue/DeskCue.csproj -p:Platform=x64`：0 错误、22 警告（与批 36/37/38 后同位）；非平台 canonical Debug（启动用）0 错误、22 警告。
 - 定向测试 48/48 通过（新增 ManagedStorageSettingsCoordinatorTests 4 用例：归一化写入+广播保持/空路径回退默认根/磁盘往返/停止拒写；MaintenanceSettingsCoordinatorTests 3 用例：静默记录零广播/磁盘往返/停止拒写；SettingsSliceOwnership 7、FeatureSettingsBoundary 3、ModuleBoundary、AotStage7C1、第 22 批字号回归 2 等边界组全绿）。
 - 全量 x64 测试：**4,329/4,329 通过**（新基线 4,322 + 本批 7 个新用例）。
-- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKBOX_NATIVE_AOT`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`，Updater 引用随同隔离 restore，检查后已清理）：11 警告（与批 32-38 同位）、**0 错误**。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
-- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskBox-Dev/storage-tail-39-20260927-a1c4e8f2` 预置两字段非默认值（`defaultManagedStorageRootPath=batch39-managed-store`、`lastUpdateCheckAt=2026-09-20T10:11:12+08:00`、`autoCheckForUpdates=false` 防宿主后台检查改写、空格子布局全功能关）。canonical 路径 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe` 启动 PID 21472（仓库下唯一实例），启动管线 35 步、0 degraded、0 failed；停止后磁盘两字段保持预置值（路径斜杠方向由既有加载归一化统一为反斜杠，语义位置不变）。验证后已按路径停止本 worktree 实例。
+- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKCUE_NATIVE_AOT`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`，Updater 引用随同隔离 restore，检查后已清理）：11 警告（与批 32-38 同位）、**0 错误**。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
+- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskCue-Dev/storage-tail-39-20260927-a1c4e8f2` 预置两字段非默认值（`defaultManagedStorageRootPath=batch39-managed-store`、`lastUpdateCheckAt=2026-09-20T10:11:12+08:00`、`autoCheckForUpdates=false` 防宿主后台检查改写、空格子布局全功能关）。canonical 路径 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe` 启动 PID 21472（仓库下唯一实例），启动管线 35 步、0 degraded、0 failed；停止后磁盘两字段保持预置值（路径斜杠方向由既有加载归一化统一为反斜杠，语义位置不变）。验证后已按路径停止本 worktree 实例。
 - `git diff --check` 通过。
 
 ### Track A 收官对账（批 29-39 结账）
 
-**清单终值 vs 起始：第二十九批清点口径（`_settingsService.Settings.<平铺门面> = ` 直接赋值）在 SettingsViewModel 33 个 partial 内的 115 个写入点 → 归零。** 复核命令（`grep -rE "_settingsService\.Settings\.[A-Za-z]+\s*=[^=]" src/DeskBox/ViewModels/SettingsViewModel*.cs`）当前命中 0；批次销账对账：29 外观 28 + 33 胶囊/紧凑 16 + 34 交互 12 + 35 文件显示 6 + 36 文件栈 10 + 37 分组导航 4 + 38 功能节+QuickCapture 编辑器 37 + 39 存储/诊断尾巴 2 = 115，无遗漏无重复。已知口径外残余：①`SettingsViewModel.Performance.cs` 的自定义性能节 11 处经局部变量 lambda（`UpdateCustomPerformanceSetting(settings => settings.X = …)`）的门面写——该模式不匹配批 29 清点的直接赋值口径，一直由 FacadeAccessManifest 预算（Performance=11）圈住，属设置页最后一块未迁节，留待后续按节立项；②设置壳大量门面**读**（构造/快照/属性 get，SettingsSync 实测 88/预算 133、SettingsViewModel.cs 94 等）无写入，按"只删不加"棘轮继续收缩。
+**清单终值 vs 起始：第二十九批清点口径（`_settingsService.Settings.<平铺门面> = ` 直接赋值）在 SettingsViewModel 33 个 partial 内的 115 个写入点 → 归零。** 复核命令（`grep -rE "_settingsService\.Settings\.[A-Za-z]+\s*=[^=]" src/DeskCue/ViewModels/SettingsViewModel*.cs`）当前命中 0；批次销账对账：29 外观 28 + 33 胶囊/紧凑 16 + 34 交互 12 + 35 文件显示 6 + 36 文件栈 10 + 37 分组导航 4 + 38 功能节+QuickCapture 编辑器 37 + 39 存储/诊断尾巴 2 = 115，无遗漏无重复。已知口径外残余：①`SettingsViewModel.Performance.cs` 的自定义性能节 11 处经局部变量 lambda（`UpdateCustomPerformanceSetting(settings => settings.X = …)`）的门面写——该模式不匹配批 29 清点的直接赋值口径，一直由 FacadeAccessManifest 预算（Performance=11）圈住，属设置页最后一块未迁节，留待后续按节立项；②设置壳大量门面**读**（构造/快照/属性 get，SettingsSync 实测 88/预算 133、SettingsViewModel.cs 94 等）无写入，按"只删不加"棘轮继续收缩。
 
 **Track A 九个设置页写入协调器（批 29-39 新建）全表：**
 
@@ -943,9 +943,9 @@ Track A 就此收官：设置页（SettingsViewModel）不再有任何平铺门�
 
 ### 第四十批验证记录
 
-- canonical Debug（非平台）`dotnet build src/DeskBox/DeskBox.csproj -c Debug`：0 错误；x64 Debug 随测试构建 0 错误。
+- canonical Debug（非平台）`dotnet build src/DeskCue/DeskCue.csproj -c Debug`：0 错误；x64 Debug 随测试构建 0 错误。
 - 新增 `MusicSettingsEditorPilotTests` 9 用例（构造投影/快照归一化/写穿透+广播计数/外部同步零回写/选项表/本地化重建/常量别名/壳反射面无残留/XAML+桥+接线文本钉）。全量 x64 测试：**4,338/4,338 通过**（批 39 基线 4,329 + 本批 9）。
-- AOT 定义编译检查（x64、`DefineConstants=DESKBOX_NATIVE_AOT`，`ArtifactsPath`/`RestorePackagesPath` 隔离，Updater 随同隔离 restore，检查后已清理 `.aotcheck/`）：11 警告（与批 32-39 同位）、**0 错误**。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
+- AOT 定义编译检查（x64、`DefineConstants=DESKCUE_NATIVE_AOT`，`ArtifactsPath`/`RestorePackagesPath` 隔离，Updater 随同隔离 restore，检查后已清理 `.aotcheck/`）：11 警告（与批 32-39 同位）、**0 错误**。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
 - **绑定实效验证（UIA 探针，非构建绿即绑定活的替代）**：隔离数据根 `facade-pilot-music-20260928-a1f3c2` 预置 `musicDisplayMode=Cover`、`musicUseArtworkBackdrop=false`、`musicEnableCoverHoverMotion=false`（camelCase 平铺键）、`hasCompletedOnboarding=true`、`language=zh-CN`。canonical Debug `--open-settings` 启动（跳转列表激活路径），UIA 经"功能格子"页音乐卡 drill-down 进入 Music 节：两个 ToggleSwitch 读到 **Off/Off**、显示模式 ComboBox 读到**封面模式**——预置非默认值经"磁盘→协调器读快照→编辑器→节级 DataContext {Binding}→控件"全链投影（绑定若死则控件呈编辑器默认 true/true/自动）。再经 TogglePattern 把"根据封面配色背景"拨到 On，2.5 秒后磁盘 `musicUseArtworkBackdrop=true`（另两字段不动）——TwoWay 经"控件→{Binding}→编辑器 setter→协调器→SaveDebounced→磁盘"回写贯通。启动管线 35 步、0 degraded、0 failed。探针后已按路径停止本 worktree 实例；探针脚本不入库。
 - `git diff --check` 通过。
 
@@ -972,7 +972,7 @@ Track A 就此收官：设置页（SettingsViewModel）不再有任何平铺门�
 | 已完成（批 49） | BackupRestore/CloudBackup/CompatibilityDiagnostics | 8+19+13 | BackupSettingsViewModel 扩面（批 4 状态机原位扩成可绑定编辑器） | 访问代次/取消链状态机留编辑器主分部原样；手动备份/恢复流程+快照列表 ItemsSource 留壳 code-behind 推面（SetCommandBusy/ConnectionStatusText）；拖放诊断与运行健康计算留壳薄 partial 推面；PasswordBox 凭据纪律保全（见第四十九批） |
 | 已完成（批 50） | General/About/Performance | 16/25/14 | Performance 节+两跨域组合框迁编辑器（新建 `Features/Performance/PerformanceSettingsViewModel`，批 39 漏网族销账）；General 节留壳（语言/自启动宿主生命线）；About 节留壳（更新流水线宿主域） | 收官批裁决与终态对账见第五十批 |
 
-**共享钉资源表**：迁 N 个门面绑定属性时必同步——AotBindableProperties nameof 计数（345 起逐批递减，批 49 后=49；测试+审计 ps1 两处+四编辑器测试桥）；SettingsViewModel.cs ObservableProperty 计数（73 起，批 48 后=17，AotPublishContract InlineData）；{Binding} 不得转 x:Bind（否则 WMC1510 866 变更牵动 ~20 runner×2 处钉；外观族首用的 `{Binding ..., Converter=...}` 不改 {Binding} 计数）；BindableSettingsViewModelInventory 动态测试自动平衡（勿在壳残留同名属性——需要保留的壳工作态可转 internal，如批 42 的 ManagedStorageRootPath、批 43 的 UseSystemAccentColor）；编辑器文件 FacadePassthroughAccess 零命中（可绑定属性名避开平铺门面名，去前缀即可；**本地化资源键字面量也会被该正则命中**——"Settings.Theme.*" 键含 `settings.Theme`（忽略大小写），编辑器源里必须分片拼接或改从常量拼装，注释同理，批 41/43 实测踩坑；"Settings.QuickCapture.*"/"Settings.Todo.*"/"Settings.Weather.*"/"Weather.*" 键安全——QuickCapture/Todo/Weather 均非平铺门面名（Weather 是 get-only 切片），批 46-48 实测）；ModuleBoundary 编译引用检查（Features/* 不得引用 DeskBox.Services/Platform/App——常量下沉 Contracts、本地化经 Func 委托）。
+**共享钉资源表**：迁 N 个门面绑定属性时必同步——AotBindableProperties nameof 计数（345 起逐批递减，批 49 后=49；测试+审计 ps1 两处+四编辑器测试桥）；SettingsViewModel.cs ObservableProperty 计数（73 起，批 48 后=17，AotPublishContract InlineData）；{Binding} 不得转 x:Bind（否则 WMC1510 866 变更牵动 ~20 runner×2 处钉；外观族首用的 `{Binding ..., Converter=...}` 不改 {Binding} 计数）；BindableSettingsViewModelInventory 动态测试自动平衡（勿在壳残留同名属性——需要保留的壳工作态可转 internal，如批 42 的 ManagedStorageRootPath、批 43 的 UseSystemAccentColor）；编辑器文件 FacadePassthroughAccess 零命中（可绑定属性名避开平铺门面名，去前缀即可；**本地化资源键字面量也会被该正则命中**——"Settings.Theme.*" 键含 `settings.Theme`（忽略大小写），编辑器源里必须分片拼接或改从常量拼装，注释同理，批 41/43 实测踩坑；"Settings.QuickCapture.*"/"Settings.Todo.*"/"Settings.Weather.*"/"Weather.*" 键安全——QuickCapture/Todo/Weather 均非平铺门面名（Weather 是 get-only 切片），批 46-48 实测）；ModuleBoundary 编译引用检查（Features/* 不得引用 DeskCue.Services/Platform/App——常量下沉 Contracts、本地化经 Func 委托）。
 
 
 ## 第四十一批：门面退役第二阶段第一复制批（Interaction 主节+InteractionWindow 节 XAML 绑定迁编辑器）
@@ -999,7 +999,7 @@ Track A 就此收官：设置页（SettingsViewModel）不再有任何平铺门�
 
 - canonical Debug（非平台）与 x64 Debug 构建：0 错误、22 警告（与批 40 后同码同位：CS8602×14/CS8601×2/CS0414×2/CS0169×2/CS0108×2）。
 - 新增 `InteractionSettingsEditorTests` 11 用例（构造投影/快照归一化+钳制/写穿透+广播计数/联动事件触发与推面静默/热键开关事件传值/外部同步零回写/选项表/本地化重建/常量别名/壳反射面无残留/XAML+桥+接线文本钉）。全量 x64 测试：**4,349/4,349 通过**（批 40 基线 4,338 + 本批 11）。
-- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKBOX_NATIVE_AOT`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`，DeskBox 与 Updater 均随隔离 restore，检查后已清理）：**0 错误**、22 警告（与同树常规 x64 构建逐码同位，无 AOT 特有新增）。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
+- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKCUE_NATIVE_AOT`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`，DeskCue 与 Updater 均随隔离 restore，检查后已清理）：**0 错误**、22 警告（与同树常规 x64 构建逐码同位，无 AOT 特有新增）。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
 - **绑定实效验证（UIA 探针）**：隔离数据根 `facade-interaction-41-20260928-b41e7a` 的 `<root>/data/settings.json` 预置 `widgetLayerMode=QuickReveal`、`resizeSnapEnabled=false`、`widgetSnapSpacing=17`、`doubleClickToOpen=false`、`keepWidgetsVisibleOnShowDesktop=false`（camelCase，schemaVersion 9）+已完成 onboarding。canonical Debug `--open-settings` 启动（跳转列表激活路径），UIA 选中"快捷与交互"导航进入两节：层模式 ComboBox 读到**快捷唤起层**、打开方式读到**单击打开**、按 Win+D 后读到**和窗口一起隐藏**、格子吸附 ToggleSwitch 读到 **Off**、全局快捷键 ToggleSwitch 读到 **On**（推面）——预置非默认值经"磁盘→协调器读快照→编辑器→节级 DataContext {Binding}→控件"全链投影（绑定若死则控件呈编辑器默认 动态层/双击/保持显示/On）。再经 TogglePattern 把格子吸附拨到 On，3 秒后磁盘 `resizeSnapEnabled=true` 且其余预置字段不动——TwoWay 经"控件→{Binding}→编辑器 setter→协调器→SaveDebounced→磁盘"回写贯通（另在首轮错误预置位置的会话中亦已复证：默认态拨 Off 落盘 false）。启动管线 35 步（5 critical）、0 degraded、0 failed；Interaction/InteractionWindowSettings 两节延迟创建正常。探针后已按路径停止本 worktree 实例（主检出与 wingezi-p1c 实例未触碰）；探针脚本临时件未入库。
 - `git diff --check` 通过。
 - 遗留风险：①热键卡与悬停摘要的"推面"粒度是全量 push（每次重算 6 字段/1 字符串），状态机仍在壳，后续批次若迁状态机进编辑器需一并下沉本地化与 GlobalHotkeyService 查询委托；②ComboBox 选中项的 UIA 可读性依赖展开（未展开时 SelectionPattern 无选中项暴露），不影响绑定本身；③未做真实设置页逐控件操作手感验收（热键录制/预设按钮/悬停 flyout 的交互流仍是代码后置原路径，未受本批影响）。
@@ -1030,8 +1030,8 @@ Track A 就此收官：设置页（SettingsViewModel）不再有任何平铺门�
 
 - canonical Debug（非平台）构建 0 错误；x64 Debug 随测试构建 0 错误。
 - 新增 `FileSettingsEditorTests` 12 用例（两编辑器构造投影/快照归一化/写穿透+广播计数与unchanged跳过/外部同步零回写/CommitRootPath 归一化持久推面/快速访问推面/选项表/本地化重建/常量别名/壳反射面无残留/XAML+桥+接线+烟囱文本钉）。另将批 35 的 FileDisplaySettingsCoordinatorTests/ManagedStorageSettingsCoordinatorTests 两处旧薄缝调用改指新绑定面。全量 x64 测试：**4,361/4,361 通过**（批 41 基线 4,349 + 本批 12）。
-- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKBOX_NATIVE_AOT`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`，DeskBox 与 Updater 均随隔离 restore，`--no-incremental` 全量重编确认 DefineConstants 经 `-getProperty` 实际生效——Git Bash 下分号属性需内嵌引号传递，检查后已清理）：**0 错误**、22 警告。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
-- **绑定实效验证（UIA 探针）**：隔离数据根 `facade-file-42-20260928-c42f7d` 的 `<root>/data/settings.json` 预置 `showFileExtensions=true`、`hideShortcutExtensionWhenShowingFileExtensions=false`、`showImageFilesAsIcons=true`、`hideShortcutArrowOverlay=false`、`showListItemDetails=true`、`showFileItemPathTooltips=false`、`managedDropAction=FollowWindows`（camelCase，schemaVersion 9）+已完成 onboarding、zh-CN。canonical Debug `--open-settings` 启动（跳转列表激活路径），UIA 选中"文件格子"导航：收纳与路径节读到拖放下拉选中**跟随 Windows 默认**（预置 FollowWindows）与只读根路径 `C:\Users\simon\DeskBox`；drill-down 进入文件显示节后六 ToggleSwitch 读到 **On/Off/On/Off/On/Off**——与预置逐项一致（绑定若死则控件呈编辑器默认 Off/On/Off/On/Off/On）。再经 TogglePattern 把"图片和视频只显示图标"拨到 Off，4 秒后磁盘 `showImageFilesAsIcons=false` 且其余预置字段（含 managedDropAction）不动——TwoWay 经"控件→{Binding}→编辑器 setter→协调器→SaveDebounced→磁盘"回写贯通。启动管线 35 步（5 critical）、0 degraded、0 failed；FileDisplaySettings/FileStorageSettings 两节延迟创建正常。探针后已按路径停止本 worktree 实例（主检出实例未触碰）；探针脚本临时件未入库。
+- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKCUE_NATIVE_AOT`，`ArtifactsPath`/`RestorePackagesPath` 隔离于 `.aotcheck/`，DeskCue 与 Updater 均随隔离 restore，`--no-incremental` 全量重编确认 DefineConstants 经 `-getProperty` 实际生效——Git Bash 下分号属性需内嵌引号传递，检查后已清理）：**0 错误**、22 警告。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
+- **绑定实效验证（UIA 探针）**：隔离数据根 `facade-file-42-20260928-c42f7d` 的 `<root>/data/settings.json` 预置 `showFileExtensions=true`、`hideShortcutExtensionWhenShowingFileExtensions=false`、`showImageFilesAsIcons=true`、`hideShortcutArrowOverlay=false`、`showListItemDetails=true`、`showFileItemPathTooltips=false`、`managedDropAction=FollowWindows`（camelCase，schemaVersion 9）+已完成 onboarding、zh-CN。canonical Debug `--open-settings` 启动（跳转列表激活路径），UIA 选中"文件格子"导航：收纳与路径节读到拖放下拉选中**跟随 Windows 默认**（预置 FollowWindows）与只读根路径 `C:\Users\simon\DeskCue`；drill-down 进入文件显示节后六 ToggleSwitch 读到 **On/Off/On/Off/On/Off**——与预置逐项一致（绑定若死则控件呈编辑器默认 Off/On/Off/On/Off/On）。再经 TogglePattern 把"图片和视频只显示图标"拨到 Off，4 秒后磁盘 `showImageFilesAsIcons=false` 且其余预置字段（含 managedDropAction）不动——TwoWay 经"控件→{Binding}→编辑器 setter→协调器→SaveDebounced→磁盘"回写贯通。启动管线 35 步（5 critical）、0 degraded、0 failed；FileDisplaySettings/FileStorageSettings 两节延迟创建正常。探针后已按路径停止本 worktree 实例（主检出实例未触碰）；探针脚本临时件未入库。
 - `git diff --check` 通过。
 - 遗留风险：①快速访问推面为全量五字段 push（状态机在壳，迁编辑器需一并下沉 Explorer 查询委托与本地化）；②FileWidget 总览节仍走壳门面 x:Bind（DP 类型改 x:Bind 免桥路线已评估未执行，见上），其 5 绑定与 FileStack 批耦合；③根路径显示值首开帧从裸值变归一化值（正常安装两者相同）；④未做真实设置页逐控件操作手感验收（文件夹选择器/迁移对话框/桌面快捷方式开关的交互流仍是代码后置原路径，未受本批影响）。
 
@@ -1061,7 +1061,7 @@ Track A 就此收官：设置页（SettingsViewModel）不再有任何平铺门�
 
 - canonical Debug（非平台）构建 0 错误、11 警告（全为存量无关位）；x64 Debug 随测试构建 0 错误。
 - 新增 `AppearanceSettingsEditorTests` 17 用例（构造投影/读快照归一化/滑杆写穿透+事件/归一化重入/密度标自定义/密度预设七字段单事件/动画预设四字段+回 Custom/SlideFade 方向纠偏/外部同步零回写/推面静默零事件/用户选择事件链/主机环境推面门控/选项写保存语义分族/默认尺寸归一化重入/本地化重建/壳反射面无残留+组导航保留/XAML+桥+接线文本钉）。全量 x64 测试：**4,378/4,378 通过**（批 42 基线 4,361 + 本批 17）。
-- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKBOX_NATIVE_AOT` 以 `%3B` 内码传递，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离于 `.aotcheck/`，DeskBox 与 Updater 随同隔离 restore，`--no-incremental`，经 `-getProperty:DefineConstants` 确认生效，检查后已清理）：**0 错误**、22 警告（码集与批 41/42 同位：CS8602/CS8601/CS0414/CS0169/CS0108）。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
+- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKCUE_NATIVE_AOT` 以 `%3B` 内码传递，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离于 `.aotcheck/`，DeskCue 与 Updater 随同隔离 restore，`--no-incremental`，经 `-getProperty:DefineConstants` 确认生效，检查后已清理）：**0 错误**、22 警告（码集与批 41/42 同位：CS8602/CS8601/CS0414/CS0169/CS0108）。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
 - **绑定实效验证（UIA 探针）**：隔离数据根 `facade-appearance-43-20260928-d43a9f` 的 `<root>/data/settings.json` 预置 `theme=Dark`、`trayIconStyle=White`、`widgetMaterialType=Mica`、`widgetMaterialIntensity=0.3`、`widgetOpacity=0.4`、密度七字段=Relaxed 预设值、`fileNameLineCount=1`、`widgetCornerPreference=Square`、`widgetBorderColorMode=Accent`、`widgetBorderStyle=Thick`、`widgetTitleIconMode=Hidden`、`widgetAnimationEffect=Zoom`、`widgetForegroundMode=Light`（camelCase，schemaVersion 9）+已完成 onboarding、zh-CN。canonical Debug `--open-settings` 启动（跳转列表激活路径，启动管线 35 步（5 critical）、0 degraded、0 failed），UIA 进入"外观"主节读到：应用主题=**深色**、托盘图标=**黑色**（White 值的中文显示名）、材质行=**云母**、密度行=**宽松**（七字段解析出的预设标签）、标题栏行=**隐藏**、动画行=**自定义**（Zoom 解析）——主节 6 项非默认值经"磁盘→协调器读快照→编辑器→节级 DataContext {Binding}→控件"全链投影（主题/托盘走壳推面链）。drill-down 材质子节读到：格子文字=**浅色文字**、边框颜色=**主题色**、边框样式=**粗**、材质浓度滑杆=**0.3**（Mica 下透明度滑杆按材质能力门正确折叠）；圆角读到**大圆角**——预置 Square 被协调器读路径的 `ResolveEffectiveWidgetCornerPreference` 按 OS 能力归一化为 Round，与旧壳构造器逐字同源（绑定活、语义同）。再经 RangeValuePattern 把材质浓度拨到 **0.6**，6 秒后磁盘 `widgetMaterialIntensity=0.6` 且其余预置字段（widgetOpacity=0.4、iconSize=36、textSize=13、widgetAnimationEffect=Zoom、theme=Dark）不动——TwoWay 经"控件→{Binding}→编辑器 setter→协调器→事件→壳 SaveAppearanceChange→SaveDebounced→磁盘"回写贯通。探针后已按路径停止本 worktree 实例（主检出与 wingezi-p1c 实例未触碰）；探针脚本临时件未入库。
 - `git diff --check` 通过。
 - 遗留风险：①主节主题/主题色/组导航三族是全量 push+事件回壳（状态机在壳；迁编辑器需下沉 ThemeService 委托与组导航域）；②组导航选项表由壳推送（WidgetGroups 批迁移时编辑器可自建表，届时回收推送）；③密度/动画预设的编辑器状态机重演了旧壳分支（后续若多节复用可抽公共预设助手）；④XAML 值转换器（bool→Visibility、十六进制↔Color）为外观族新增的首批 {Binding Converter} 用法，JIT 与 AOT 均编译过、UIA 双向已验，但发布级 AOT publish 未跑（发版门禁）；⑤未做真实设置页逐滑杆拖动手感验收（拖动旗标链路代码未动，且 UIA 写入路径已证明提交链贯通）。
@@ -1092,9 +1092,9 @@ Track A 就此收官：设置页（SettingsViewModel）不再有任何平铺门�
 
 ### 第四十四批验证记录
 
-- canonical Debug（非平台）`dotnet build src/DeskBox/DeskBox.csproj -c Debug`：0 错误、11 警告（存量位）；x64 Debug 随测试构建 0 错误。
+- canonical Debug（非平台）`dotnet build src/DeskCue/DeskCue.csproj -c Debug`：0 错误、11 警告（存量位）；x64 Debug 随测试构建 0 错误。
 - 新增 `GroupAndCapsuleSettingsEditorTests` 15 用例（组导航构造投影/写穿透+宿主事件与 unchanged 跳过/外部同步零回写/现有组推面静默/选项表规范值与本地化重建；胶囊构造投影+快照归一化（含悬停预设解析）/九字段写穿透/动画预设配对写+自定义翻转/悬停预设延迟对写入且标签不落盘+手动延迟翻 Custom/Smart 覆盖推面门/外部同步零回写/排列摘要格式化/XAML+桥+接线文本钉/壳反射面无残留）。另将 CapsuleSettingsCoordinatorTests/GroupNavigationSettingsCoordinatorTests 两处旧缝构造改指新编辑器签名。全量 x64 测试：**4,393/4,393 通过**（批 43 基线 4,378 + 本批 15）。
-- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKBOX_NATIVE_AOT` 以 `%3B` 内码传递，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离于 `.aotcheck/`，DeskBox 与 Updater 均随隔离 restore 且 Updater 需带同 ArtifactsPath，`--no-incremental`，经 `-getProperty:DefineConstants` 确认生效，检查后已清理）：**0 错误**、22 警告（码集与批 41-43 同位：CS8602/CS8601/CS0414/CS0169/CS0108）。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
+- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKCUE_NATIVE_AOT` 以 `%3B` 内码传递，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离于 `.aotcheck/`，DeskCue 与 Updater 均随隔离 restore 且 Updater 需带同 ArtifactsPath，`--no-incremental`，经 `-getProperty:DefineConstants` 确认生效，检查后已清理）：**0 错误**、22 警告（码集与批 41-43 同位：CS8602/CS8601/CS0414/CS0169/CS0108）。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
 - **绑定实效验证（UIA 探针）**：隔离数据根 `facade-groupcapsule-44-3b85f1` 的 `<root>/data/settings.json` 预置（schemaVersion 9 + `widgetCompactSettingsVersion: 2`，缺后者会被旧迁移重写折叠/内容两字段——探针首跑踩坑后在 progress 记录）`widgetCollapseBehavior=Smart`、`widgetCompactContentMode=Minimal`、`widgetCompactHideSensitiveContent=true`、`widgetCompactWidthMode=Independent`、`widgetCompactExpansionDirection=Up`、`widgetCapsuleArrangementMode=Bar`、`widgetCapsuleBarPlacement=Top`、`widgetCapsuleBarDirection=Vertical`、`widgetCapsuleBarSpacing=12`、`widgetCompactAnimationEffect=Slow`、`widgetCompactExpandDelayMs=620`、`widgetCompactCollapseDelayMs=900`（PreventAccidental 预设对）；`widget-layout.json` 预置 `widgetGroupDefaultNavigationStyle=Stack`、`widgetGroupDefaultTitleDisplayMode=TextOnly`、`widgetGroupWheelSwitchEnabled=false`、`widgetGroupHoverSwitchEnabled=true`（envelope 需 `{"schemaVersion":1,"layout":{...}}`，缺 layout 键走隔离检疫路径——首跑踩坑记录）+已完成 onboarding、zh-CN。canonical Debug `--open-settings` 启动（启动管线 35 步（5 critical）、0 degraded、0 failed），UIA 先选"外观"再 invoke WidgetGroups drill-down 行进入分组节：标题栏布局=**折叠显示**（Stack）、名称显示=**仅文字**（TextOnly）、滚轮切换=**Off**、鼠标移入自动切换=**On**——四项非默认值经"磁盘（含 widget-layout 设备域）→协调器读快照→编辑器→节级 DataContext {Binding}→控件"全链投影。再经 TogglePattern 把滚轮切换拨到 On，6 秒后磁盘 `widget-layout.json` 的 `widgetGroupWheelSwitchEnabled=true` 且其余预置（Stack/TextOnly/hover=true）不动——组导航 TwoWay 经"控件→{Binding}→编辑器 setter→协调器→SaveDebounced→widget-layout.json"回写贯通。选"胶囊模式"主节读到：默认显示方式=**悬停自动展开**（Smart）、展开方向=**向上展开**（Up）、收起后显示=**仅图标和标题**（Minimal）、排列方式=**组合排列**（Bar）、隐藏具体内容=**On**；drill-down 组合排列子节读到：胶囊间距滑杆文本=**12 px**、高级排列方向=**纵向**（Vertical）——主节 5 项+排列子节 2 项非默认值投影（绑定若死则控件呈编辑器默认）。再经 TogglePattern 把"隐藏具体内容"拨到 Off，6 秒后磁盘 `widgetCompactHideSensitiveContent=false` 且其余 11 项预置（含 620/900 延迟对与 Smart/Minimal）不动——胶囊 TwoWay 回写贯通。探针后已按路径停止本 worktree 实例（主检出与 wingezi-p1c 实例未触碰）；探针脚本临时件未入库。
 - `git diff --check` 通过。
 - 遗留风险：①现有组/覆盖列表两投影仍是壳算好整包推送（状态机在壳，迁编辑器需一并下沉组编辑与重置命令）；②CapsuleMode UserControl 的 ViewModel DP 仍指壳（ResetCapsuleWidthOverrides 命令状态机在壳，后续批可随覆盖域整体下沉）；③外观主节 WidgetGroups 行的内联选择器被回收后行内不再能快捷改组导航风格（需进分组节；该族字段归属所致）；④WMC1510 866→864 为计数钉同步而非 {Binding}→x:Bind 转换（发版门禁的 publish 级审计会在下次发版跑真值）；⑤未做真实设置页逐滑杆拖动手感验收（滑杆提交链路 UIA 已证贯通，动画/悬停预设的状态机重演有单测钉）。
@@ -1121,13 +1121,13 @@ Track A 就此收官：设置页（SettingsViewModel）不再有任何平铺门�
 
 行为语义保全要点：①编辑器构造/Sync 期 `_isSyncingPresentation` 静默不回写（替代原壳 `_isRestoringDefaults`/`_isApplyingSettingsSnapshot` 守卫），归一化语义逐字同源（GroupBy 的 DateCreated→DateAdded 折叠、Threshold 2/3/5 白名单等）；②规则增删改/拖拽排序/逐字段编辑的持久化时序与写次数不变（单写口 + 协调器等价跳过）；③未匹配行为 setter 先刷预览再落盘（原壳同序）；④右键菜单开→On 的预热只对用户拨动触发（原壳快照镜像赋值路径的预热为等值 no-op 场景，语义等价、少一次冷加载优化）；⑤总览节 folder-open 组合框在快照应用期的回写（原壳无快照守卫）由协调器等值跳过承接，语义不变。
 
-门禁同步：①`AotStage5B4B1ContractTests` nameof 计数 192→**174**（测试两处+审计 ps1）；②`AotPublishContractTests` SettingsViewModel.cs ObservableProperty 53→**52**（删 FileItemSystemContextMenuEnabled）；③动态对账测试自动平衡（壳属性与 XAML 路径双侧同步收缩；FileStack 模板 x:DataType 重定型后其 {Binding} 名不再匹配壳反射面）；④WMC1510 **864 零触碰**，并把批 44 只同步了 stage5B4B1 一处、其余 ~33 处存量 866 钉（ps1 34 处 + 17 个测试文件的字面钉）全部修齐到 864（否则发布级审计会在 stage4E5 首个精确钉处误掷）；⑤`SettingsSliceOwnership` 读棘轮自动收缩（FileStackOptions 22→2、FeatureOptions 2→0）；⑥`FacadePassthroughAccess` 新编辑器/Contracts 文件零命中（属性名去 FileStack/Selected/FileWidget 前缀；"Settings.FileStacks.*"/"Settings.FileWidget.FolderOpenBehavior.*" 本地化键无平铺门面名碰撞——FileWidget 为 get-only 切片属性不计入门面清单）；⑦外部文本钉更新：AotStage4E4ContractTests（三 DP 桥形状/赋值清空标记/行为钉改指编辑器文件）、AotStage5B4B1ContractTests（总览 x:Bind 钉、规则列表 x:Bind 钉、FileWidget 投影钉改指编辑器）、SettingsCopyAndHierarchyTests（总览/节绑定名与排序标记）、SettingsDeferredSectionsTests（模板 x:DataType 期望按节例外）、DeskBox.csproj 桥描述（four typed ViewModel bridge bindings→three typed section-editor bridges）与对应钉。
+门禁同步：①`AotStage5B4B1ContractTests` nameof 计数 192→**174**（测试两处+审计 ps1）；②`AotPublishContractTests` SettingsViewModel.cs ObservableProperty 53→**52**（删 FileItemSystemContextMenuEnabled）；③动态对账测试自动平衡（壳属性与 XAML 路径双侧同步收缩；FileStack 模板 x:DataType 重定型后其 {Binding} 名不再匹配壳反射面）；④WMC1510 **864 零触碰**，并把批 44 只同步了 stage5B4B1 一处、其余 ~33 处存量 866 钉（ps1 34 处 + 17 个测试文件的字面钉）全部修齐到 864（否则发布级审计会在 stage4E5 首个精确钉处误掷）；⑤`SettingsSliceOwnership` 读棘轮自动收缩（FileStackOptions 22→2、FeatureOptions 2→0）；⑥`FacadePassthroughAccess` 新编辑器/Contracts 文件零命中（属性名去 FileStack/Selected/FileWidget 前缀；"Settings.FileStacks.*"/"Settings.FileWidget.FolderOpenBehavior.*" 本地化键无平铺门面名碰撞——FileWidget 为 get-only 切片属性不计入门面清单）；⑦外部文本钉更新：AotStage4E4ContractTests（三 DP 桥形状/赋值清空标记/行为钉改指编辑器文件）、AotStage5B4B1ContractTests（总览 x:Bind 钉、规则列表 x:Bind 钉、FileWidget 投影钉改指编辑器）、SettingsCopyAndHierarchyTests（总览/节绑定名与排序标记）、SettingsDeferredSectionsTests（模板 x:DataType 期望按节例外）、DeskCue.csproj 桥描述（four typed ViewModel bridge bindings→three typed section-editor bridges）与对应钉。
 
 ### 第四十五批验证记录
 
-- canonical Debug（非平台）`dotnet build src/DeskBox/DeskBox.csproj -c Debug`：0 错误、11 警告（存量位）；x64 Debug 随测试构建 0 错误。
+- canonical Debug（非平台）`dotnet build src/DeskCue/DeskCue.csproj -c Debug`：0 错误、11 警告（存量位）；x64 Debug 随测试构建 0 错误。
 - 新增 `FileStackSettingsEditorTests` 14 用例（构造投影+快照归一化/写穿透+unchanged 跳过/外部同步零回写+等价规则集不重建/规则增删改移单写口与等价重提交跳过/AddRule 上限与总开关门/推面预览条目驱动匹配与汇总/派生门与总览摘要四态/选项表规范值与本地化名+优先级/本地化重建/FeatureWidgets 面投影写穿透与读口/Interaction 右键菜单面+事件/壳反射面无残留/迁移模式文本钉含模板 x:DataType、三 DP、compiledBindingsRoot 路由与桥计数 174）。另 FileStackSettingsCoordinatorTests/FeatureWidgetsSettingsCoordinatorTests 两处旧缝构造改指新签名。全量 x64 测试：**4,407/4,407 通过**（批 44 基线 4,393 + 本批 14）。
-- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKBOX_NATIVE_AOT` 以 `%3B` 内码传递、`-getProperty:DefineConstants` 确认生效，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离，DeskBox 与 Updater 均随隔离构建，`--no-incremental`，检查后已清理）：**0 错误**、22 警告（码集与批 41-44 同位：CS8602/CS8601/CS0414/CS0169/CS0108）。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
+- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKCUE_NATIVE_AOT` 以 `%3B` 内码传递、`-getProperty:DefineConstants` 确认生效，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离，DeskCue 与 Updater 均随隔离构建，`--no-incremental`，检查后已清理）：**0 错误**、22 警告（码集与批 41-44 同位：CS8602/CS8601/CS0414/CS0169/CS0108）。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
 - **绑定实效验证（UIA 探针，FlaUI/UIA3 COM 通道——本会话的托管 UIA RootElement 不可用，探针脚本临时件未入库）**：隔离数据根的 `settings.json` 预置（schemaVersion 9）`fileStackGroupBy=Custom`、`fileStackThreshold=5`、`fileStackOrderBy=Name`、`fileStackOpenMode=Popover`、`fileStackPopoverLayout=Grid5`、`fileStackPopoverStyle=FollowMaterial`、`fileStackUnmatchedBehavior=Other`、`fileStackAutoStacking=true`、规则 `[设计文件 .psd .ai]`、`fileWidgetFolderOpenBehavior=Embedded`、`fileItemSystemContextMenuEnabled=true` +已完成 onboarding、zh-CN。canonical Debug `--open-settings` 启动（启动管线 **35 步（5 critical）、0 degraded、0 failed**；AppearanceDetail/FileStackSettings 两节延迟创建正常，日志无异常）。UIA 选"文件格子"进入总览节：叠放行概要=**自定义格式 · 1 条规则**、叠放总开关=**On**（FileStack DP）、文件夹打开方式组合框选中=**当前格子内浏览**（FeatureWidgets DP，Embedded 预置）、桌面原版右键菜单=**On**（Interaction DP）——预置非默认值经"磁盘→协调器读快照→各域编辑器→类型化 DP x:Bind→控件"全链投影。drill-down 进入文件叠放节：总开关/自动叠放=**On/On**、分组方式=**自定义格式**、自动叠放数量=**5 个文件**、叠放内排序=**名称**、展开方式=**弹出式展开**（x:Bind 组合框）、弹窗布局=**5×5 网格**、弹窗视觉样式=**跟随格子材质**、未匹配文件=**归入"其他"叠放**，自定义规则列表可见且含预置规则**设计文件**。再经 TogglePattern 把自动叠放拨 Off，6 秒后磁盘 `fileStackAutoStacking=false` 且其余 11 项预置（含规则表、Embedded、右键菜单 true、七个组合框值）逐项不动——TwoWay 经"控件→{Binding}/x:Bind→编辑器 setter→协调器→SaveDebounced→磁盘"回写贯通。探针后已按路径停止本 worktree 实例（主检出实例未触碰）。
 - `git diff --check` 通过。
 - 遗留风险：①预览条目磁盘扫描仍是整包推送（状态机在壳；迁编辑器需下沉 widget 配置与文件服务委托）；②右键菜单预热的触发面从"任何赋值"缩为"用户拨动"（快照镜像路径本就等值 no-op，仅少一次理论上的冷加载预热）；③WMC1510 866→864 存量钉修齐依据的是批 44 报告的真值（本批未改变 {Binding} 计数，canonical 全量重建亦无 WMC1510），publish 级审计仍会在下次发版跑真值复核；④设置窗口关闭时总览节三 DP 显式置 null（与既有 AppearanceDetail 清空同型），未观察到泄漏迹象但未做显存剖析。
@@ -1157,9 +1157,9 @@ Track A 就此收官：设置页（SettingsViewModel）不再有任何平铺门�
 
 ### 第四十六批验证记录
 
-- canonical Debug（非平台）`dotnet build src/DeskBox/DeskBox.csproj -c Debug`：0 错误、11 警告（存量位）；x64 Debug 随测试构建 0 错误（DeskBox+Updater）。
+- canonical Debug（非平台）`dotnet build src/DeskCue/DeskCue.csproj -c Debug`：0 错误、11 警告（存量位）；x64 Debug 随测试构建 0 错误（DeskCue+Updater）。
 - 新增 `QuickCaptureSettingsEditorTests` 14 用例（构造投影+未知值归一化/写穿透/外部同步零回写/**录制连锁：图片录制从关闭态拨开→协调器连锁开功能+文本录制、Changed 回推三开关全跟随**/标签 flyout 末位保护与可见过滤/容量归一化链（500→100、1→30）/字号半步回夹两遍提交+等值跳过/派生门与摘要/选项表规范值与本地化名/本地化重建+诊断行格式/图缓存推面/壳反射面无残留（60 成员清单）/迁移模式文本钉（XAML 路径、转换器、DeferredSections DataContext、flyout 接线、编辑器桥 35、壳桥 141））。全量 x64 测试：**4,421/4,421 通过**（批 45 基线 4,407 + 本批 14）。
-- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKBOX_NATIVE_AOT` 以 `%3B` 内码传递、`-getProperty:DefineConstants` 确认生效，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离于 `.aotcheck/`，DeskBox 与 Updater 均随隔离 restore+构建，`--no-incremental`，检查后已清理）：**0 错误**、22 警告（码集与批 41-45 同位：CS8602/CS8601/CS0414/CS0169/CS0108）。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
+- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKCUE_NATIVE_AOT` 以 `%3B` 内码传递、`-getProperty:DefineConstants` 确认生效，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离于 `.aotcheck/`，DeskCue 与 Updater 均随隔离 restore+构建，`--no-incremental`，检查后已清理）：**0 错误**、22 警告（码集与批 41-45 同位：CS8602/CS8601/CS0414/CS0169/CS0108）。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
 - **绑定实效验证（UIA 探针，FlaUI/UIA3 COM 通道，探针脚本临时件未入库）**：隔离数据根 `facade-quickcapture-46-3c71e9` 的 `settings.json` 预置（schemaVersion 9）`quickCaptureEnabled=true`、`quickCaptureClipboardEnabled=false`、`quickCaptureImageClipboardEnabled=false`、`quickCaptureWideLayout=DualPane`、`quickCaptureWideOpenMode=Editing`、`quickCaptureDefaultView=Pinned`、`quickCaptureShowRecentTab=false`、`quickCaptureTabStyle=Pivot`、`quickCaptureShowCreatedTime=false`、`quickCaptureItemPreviewLineCount=6`、`quickCaptureDefaultFormat=Markdown`、`quickCaptureEditorEnterBehavior=EnterSaves`、`quickCaptureAllowRemoteImages=true`、`quickCaptureRecentLimit=77`、`quickCaptureListTextSize=13.5`、`quickCaptureContentTextSize=12.5` +已完成 onboarding、zh-CN。canonical Debug `--open-settings` 启动（启动管线 **35 步（5 critical）、0 degraded、0 failed**），UIA 经"功能格子"页随记卡 drill-down 进入 QC 节，嵌套卡片经设置搜索结果激活 reveal（节内五组 SettingsExpander 为手风琴互斥，产品搜索路径自动展开命中分支）：状态行=**当前状态：已启用**、宽屏布局=**始终双列**、打开方式=**编辑**、默认视图=**固定**（RecentTab 预置隐藏后过滤生效）、列表字号滑杆=**13.5**、内容字号滑杆=**12.5**、预览行数=**6 行**、编辑格式=**Markdown**、回车行为=**Enter 保存，Ctrl+Enter 换行**、显示创建时间=**Off**、远程图片=**On**、最近容量=**77**、功能开关=**On**、图片录制=**Off**——16 项非默认值经"磁盘→协调器读快照→编辑器→节级 DataContext {Binding}→控件"全链投影（绑定若死则控件呈编辑器默认）。**联动回推验证**：经 TogglePattern 拨文本录制 Off→On 再拨图片录制 On→文本录制跟随确认 On，最后再拨文本录制 Off→**图片录制视觉跟随 Off**（协调器 WriteRecording 归一化→Changed→壳→编辑器 SyncPresentation 回推全链）、功能开关全程 On 不动；探针后磁盘 `quickCaptureClipboardEnabled=false`、`quickCaptureImageClipboardEnabled=false` 且其余 14 项预置（DualPane/Editing/Pinned/Pivot/false/6/Markdown/EnterSaves/true/77/13.5/12.5 等）逐项不动——TwoWay 经"控件→{Binding}→编辑器 setter→协调器→SaveAsync/SaveDebounced→磁盘"回写贯通。（预置的 `quickCaptureClipboardEnabled=false` 在启动后被随记组件恢复链 `EnableClipboardFromOpenWidgetAsync` 按产品语义置 true——组件打开即启用最近捕获，非绑定行为；联动链在该态下完整演示。）探针后已按路径停止本 worktree 实例（主检出实例未触碰）。
 - `git diff --check` 通过。
 - 遗留风险：①诊断摘要与图缓存行为壳推面（状态机在壳；迁编辑器需下沉 QuickCaptureService 与剪贴板会话委托）；②`RunUserAction` 的异步完成重投影依赖协调器 Changed 的同步前缀+finally 双保险，UI 线程外的完成（理论）由壳派发路径兜底但未构造多线程用例；③功能卡重置的编辑器重投影在 Reset 端口后立即执行、早于尾部单次 SaveAsync 的 SettingsChanged 广播——两路径幂等（同值重投影）但多一次 PropertyChanged；④~~Todo 节仍与壳共享预览行数/Enter 行为选项表与显示名函数~~（批 47 已随 Todo 编辑器自建回收）。
@@ -1188,9 +1188,9 @@ Track A 就此收官：设置页（SettingsViewModel）不再有任何平铺门�
 
 ### 第四十七批验证记录
 
-- canonical Debug（非平台）`dotnet build src/DeskBox/DeskBox.csproj -c Debug`：0 错误、11 警告（存量位，与批 46 同数）；x64 Debug 随测试构建 0 错误（DeskBox+Updater）。
+- canonical Debug（非平台）`dotnet build src/DeskCue/DeskCue.csproj -c Debug`：0 错误、11 警告（存量位，与批 46 同数）；x64 Debug 随测试构建 0 错误（DeskCue+Updater）。
 - 新增 `TodoSettingsEditorTests` 15 用例（构造投影+未知值归一化/写穿透/外部同步零回写/**联动两向：选隐藏筛选→标签自动开、隐藏默认标签→筛选回退全部**/flyout 末位保护与可见过滤/字号半步回夹两遍提交+等值跳过+commit 事件/**存储 0 继承全局且全局变化重投影**/派生门与摘要（页脚 Off 回退）/选项表规范值与本地化名/本地化重建/功能开关串行链 pending 投影/壳反射面无残留（69 成员清单）/迁移模式文本钉（XAML 路径、转换器、DeferredSections DataContext、两 flyout 接线、编辑器桥 29、壳桥 112））。全量 x64 测试：**4,436/4,436 通过**（批 46 基线 4,421 + 本批 15）。
-- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKBOX_NATIVE_AOT` 以 `%3B` 内码传递、`-getProperty:DefineConstants` 确认生效，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离于 `.aotcheck/`，DeskBox 与 Updater 均随隔离 restore+构建，`--no-incremental`，检查后已清理）：**0 错误**、22 警告（码集与批 41-46 同位：CS8602×14/CS8601/CS0414/CS0169/CS0108 各存量位）。
+- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKCUE_NATIVE_AOT` 以 `%3B` 内码传递、`-getProperty:DefineConstants` 确认生效，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离于 `.aotcheck/`，DeskCue 与 Updater 均随隔离 restore+构建，`--no-incremental`，检查后已清理）：**0 错误**、22 警告（码集与批 41-46 同位：CS8602×14/CS8601/CS0414/CS0169/CS0108 各存量位）。
 - **绑定实效验证（UIA 探针，FlaUI/UIA3 COM 通道即 System.Windows.Automation，探针脚本临时件未入库）**：隔离数据根 `facade-todo-47-9d4a2e` 的 `data/settings.json` 平铺预置（schemaVersion 9）`todoEnabled=true`、`todoReminderEnabled=false`、`todoDefaultReminderOffsetMinutes=30`、`todoLayoutMode=SinglePane`、`todoAutoSelectFirstInWideLayout=false`、`todoShowTodayTab=false`、`todoDefaultFilter=Important`、`todoTabStyle=Pivot`、`todoShowCompletedTasks=true`、`todoItemPreviewLineCount=6`、`todoNewTaskPosition=Bottom`、`todoEditorEnterBehavior=EnterSaves`、`todoListTextSize=13.5`、`todoContentTextSize=12.5`、`todoShowFooterStats=true`、`todoShowClearCompletedButton=false` +zh-CN。canonical Debug `--open-settings` 启动（启动管线 **35 步（5 critical）、0 degraded、0 failed**），UIA 经"功能格子"页待办卡 drill-down 进入 Todo 节，逐组展开（手风琴互斥）读出：**布局=固定单列、宽布局自动选中卡随 SinglePane 门隐藏（ShowWideOptions=false 命中）、顶部分类摘要=全部·重要·已完成（TodayTab 预置隐藏生效）、默认视图=重要、列表字号滑杆=13.5、内容字号滑杆=12.5、预览行数=6 行、新任务位置=底部、回车行为=Enter 保存，Ctrl+Enter 换行、显示已完成任务=On、到期提醒=Off（提前时间卡随门禁用）、开提醒后提前时间=30 分钟前、页脚显示=剩余任务数量（清除按钮预置隐藏）**——15 项非默认值经"磁盘→协调器读快照→编辑器→节级 DataContext {Binding}→控件"全链投影。**回写四链**：UIA 拨功能开关 Off→On（启动管线对账预置开关回置 false 后的真实状态）→磁盘 `todoEnabled=true`；布局组合框切"自动"→自动选中卡随门出现且投影预置值 Off→磁盘 `todoLayoutMode=Auto`；拨"显示已完成任务" On→Off→磁盘 `todoShowCompletedTasks=false`；拨"到期提醒" Off→On（读出 30 分钟前）→再 Off→磁盘 `todoReminderEnabled=false`。**联动回推验证**：顶部分类 flyout 拨掉"重要"（当前默认视图）→默认视图下拉自动回退**全部**、可见标签摘要变**全部·已完成**（协调器 SaveTabsIfChanged 归一化→编辑器 Refresh 重投影全链），磁盘 `todoDefaultFilter=All`、`todoShowImportantTab=false`；其余 12 项预置（字号 13.5/12.5、6 行、底部、EnterSaves、30 分钟、TodayTab 隐藏、页脚统计开/清除按钮关等）逐项不动——TwoWay 经"控件→{Binding}→编辑器 setter→协调器→SaveDebounced→磁盘"回写贯通。标签样式 Segmented 的 UIA SelectionItem 接口缺失（toolkit 控件仅暴露 ScrollItemPattern）无法 UIA 驱动，由 XAML 迁移钉+编辑器 TabStyleIndex 往返单测+批 46 QC 同款控件先例替代。探针后已按路径停止本 worktree 实例（主检出实例未触碰），数据根与探针件已清理。
 - `git diff --check` 通过。
 - 遗留风险：①Todo 协调器无 Changed 事件，编辑器写路径的重投影依赖 `RunWrite` 尾部同步 Refresh（写入全同步成立；若未来协调器引入异步归一化需补事件回推）；②功能卡重置链（Reset\* 六端口）逐个 RunWrite 重投影，早于尾部 SaveAsync 广播——幂等但多次 PropertyChanged（与批 46 ③ 同型）；③Segmented（标签样式）UIA 面缺失为 toolkit 控件级限制；④~~Weather 节（顺位 9，26 属性）~~（批 48 已迁编辑器）与 Backup 族（顺位 10）及 General/About/Performance（顺位 11）仍走壳门面。
@@ -1220,10 +1220,10 @@ Track A 就此收官：设置页（SettingsViewModel）不再有任何平铺门�
 
 ### 第四十八批验证记录
 
-- canonical Debug（非平台）`dotnet build src/DeskBox/DeskBox.csproj -c Debug`：0 错误、11 警告（存量位，与批 46/47 同数）；x64 Debug：0 错误、22 警告（码集存量：CS8602×14/CS8601/CS0414/CS0169/CS0108 各位，无新增）。
+- canonical Debug（非平台）`dotnet build src/DeskCue/DeskCue.csproj -c Debug`：0 错误、11 警告（存量位，与批 46/47 同数）；x64 Debug：0 错误、22 警告（码集存量：CS8602×14/CS8601/CS0414/CS0169/CS0108 各位，无新增）。
 - 新增 `WeatherSettingsEditorTests` 16 用例（构造投影+未知值归一化（皮肤 bogus→Standard 与旧壳构造语义逐字同源）/写穿透+写后重投影/外部 Refresh 零用户事件/位置模式用户编辑写自动定位+事件两向/**城市选择链：自动切手动+协调器落盘+搜索文本复位+建议清空**/非法坐标拒绝零写入/建议推面端口与无结果门/失焦复位取已存城市名/定位状态行可见门/显示 flyout 全关回退"关"+逐项落盘/重置默认+重投影/本地化重建/SettingsService 常量别名钉/壳反射面无残留（58 成员清单）/迁移模式文本钉（XAML 14 路径+3 个 DoesNotContain、转换器、DeferredSections DataContext、flyout 与 AutoSuggestBox 接线、编辑器桥 23、壳桥 89））。全量 x64 测试：**4,452/4,452 通过**（批 47 基线 4,436 + 本批 16）。
-- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKBOX_NATIVE_AOT` 以 `%3B` 内码传递、`-getProperty:DefineConstants` 确认生效，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离于 `.aotcheck/`，DeskBox 与 Updater 均随隔离 restore+构建（隔离产物含 DeskBox.exe/DeskBox.Updater.exe/DeskBox.ThumbnailProxy.exe），`-t:Rebuild` 全量，检查后已清理）：**0 错误**、22 警告（CS8602×14/CS8601×2/CS0414×2/CS0169×2/CS0108×2，码集与批 41-47 同位）。
-- **绑定实效验证（UIA 探针，System.Windows.Automation COM 通道，探针脚本临时件未入库）**：隔离数据根 `facade-weather-48-3d9cb9`（`DESKBOX_DEV_DATA_ROOT`）的 `data/settings.json` 平铺预置 `weatherAutoLocation=false`、`weatherCityName=Hanoi`、`weatherLatitude/Longitude=21.0333/105.85`、`weatherTemperatureUnit=Fahrenheit`、`weatherWindSpeedUnit=mph`、`weatherDefaultView=Week`、`weatherSkin=Standard`、`weatherDataSource=OpenMeteo`、`weatherRefreshIntervalMinutes=180`、`weatherShowForecast=false`、`weatherShowPressure=true`（其余显示项 true）+zh-CN+已完成 onboarding。canonical Debug `--open-settings` 启动（启动管线 **35 步（5 critical）、0 degraded、0 failed**），UIA 经"功能格子"页天气卡 drill-down 进入 Weather 节读出：**位置来源=手动选择城市、城市搜索框文本=Hanoi、数据源=Open-Meteo、温度单位=华氏度、风速单位=mph、默认视图=周视图、皮肤=简洁、刷新间隔=3 小时**——八项非默认值经"磁盘→协调器读快照→编辑器→节级 DataContext {Binding}→控件"全链投影（绑定若死则控件呈编辑器默认）。**回写两链**：①UIA SelectionPattern 温度单位"华氏度"→"摄氏度"→磁盘 `weatherTemperatureUnit=Celsius`；②**城市搜索链全程**：聚焦搜索框、清空、粘贴"北京"（TextChanged→壳搜索机防抖+网络查询→`SetCitySuggestions` 推面）、ENTER（QuerySubmitted→`HasCitySuggestions`→`TrySelectFirstCitySuggestion`→`SelectCity`→协调器 `TrySetWeatherManualLocation`）→磁盘 `weatherCityName="武汉, 湖北省, 中国"`、`weatherLatitude/Longitude=30.5928/114.3055`、`weatherAutoLocation=false`——壳推面+编辑器选择链+事件回壳全链贯通；其余预置项（手动模式、mph、周视图、简洁、Open-Meteo、180 分钟、显示预报关等）逐项不动。**显示选项 flyout 的 UIA 面缺失**：WinUI MenuFlyout 弹层不发布条目 UIA peer（ExpandCollapse 可开但条目对 UIA/键盘合成均不可达，与批 47 Segmented 同类控件级限制），显示开关回写由编辑器单测（DisplayOptions_FlyoutTogglesPersistAndUpdateTheSummary 落盘断言）+XAML 迁移钉覆盖。探针后已按路径停止本 worktree 实例（主检出实例未触碰），数据根与探针件已清理。
+- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKCUE_NATIVE_AOT` 以 `%3B` 内码传递、`-getProperty:DefineConstants` 确认生效，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离于 `.aotcheck/`，DeskCue 与 Updater 均随隔离 restore+构建（隔离产物含 DeskCue.exe/DeskCue.Updater.exe/DeskCue.ThumbnailProxy.exe），`-t:Rebuild` 全量，检查后已清理）：**0 错误**、22 警告（CS8602×14/CS8601×2/CS0414×2/CS0169×2/CS0108×2，码集与批 41-47 同位）。
+- **绑定实效验证（UIA 探针，System.Windows.Automation COM 通道，探针脚本临时件未入库）**：隔离数据根 `facade-weather-48-3d9cb9`（`DESKCUE_DEV_DATA_ROOT`）的 `data/settings.json` 平铺预置 `weatherAutoLocation=false`、`weatherCityName=Hanoi`、`weatherLatitude/Longitude=21.0333/105.85`、`weatherTemperatureUnit=Fahrenheit`、`weatherWindSpeedUnit=mph`、`weatherDefaultView=Week`、`weatherSkin=Standard`、`weatherDataSource=OpenMeteo`、`weatherRefreshIntervalMinutes=180`、`weatherShowForecast=false`、`weatherShowPressure=true`（其余显示项 true）+zh-CN+已完成 onboarding。canonical Debug `--open-settings` 启动（启动管线 **35 步（5 critical）、0 degraded、0 failed**），UIA 经"功能格子"页天气卡 drill-down 进入 Weather 节读出：**位置来源=手动选择城市、城市搜索框文本=Hanoi、数据源=Open-Meteo、温度单位=华氏度、风速单位=mph、默认视图=周视图、皮肤=简洁、刷新间隔=3 小时**——八项非默认值经"磁盘→协调器读快照→编辑器→节级 DataContext {Binding}→控件"全链投影（绑定若死则控件呈编辑器默认）。**回写两链**：①UIA SelectionPattern 温度单位"华氏度"→"摄氏度"→磁盘 `weatherTemperatureUnit=Celsius`；②**城市搜索链全程**：聚焦搜索框、清空、粘贴"北京"（TextChanged→壳搜索机防抖+网络查询→`SetCitySuggestions` 推面）、ENTER（QuerySubmitted→`HasCitySuggestions`→`TrySelectFirstCitySuggestion`→`SelectCity`→协调器 `TrySetWeatherManualLocation`）→磁盘 `weatherCityName="武汉, 湖北省, 中国"`、`weatherLatitude/Longitude=30.5928/114.3055`、`weatherAutoLocation=false`——壳推面+编辑器选择链+事件回壳全链贯通；其余预置项（手动模式、mph、周视图、简洁、Open-Meteo、180 分钟、显示预报关等）逐项不动。**显示选项 flyout 的 UIA 面缺失**：WinUI MenuFlyout 弹层不发布条目 UIA peer（ExpandCollapse 可开但条目对 UIA/键盘合成均不可达，与批 47 Segmented 同类控件级限制），显示开关回写由编辑器单测（DisplayOptions_FlyoutTogglesPersistAndUpdateTheSummary 落盘断言）+XAML 迁移钉覆盖。探针后已按路径停止本 worktree 实例（主检出实例未触碰），数据根与探针件已清理。
 - `git diff --check` 通过。
 - 遗留风险：①显示选项 flyout 与 AutoSuggestBox 建议列表项的 UIA peer 缺失为 WinUI 弹层控件级限制（显示开关回写的 UIA 侧已由单测+钉覆盖）；②城市搜索结果依赖网络（探针中 ENTER 取到的首条建议来自服务端排序，与绑定链无关）；③Backup 族（顺位 10）与 General/About/Performance（顺位 11）仍走壳门面。
 
@@ -1253,10 +1253,10 @@ Track A 就此收官：设置页（SettingsViewModel）不再有任何平铺门�
 
 ### 第四十九批验证记录
 
-- canonical Debug（非平台）`dotnet build src/DeskBox/DeskBox.csproj -c Debug`：0 错误、11 警告（存量位，与批 46-48 同数）；x64 Debug：0 错误（与全量测试并行触发的 obj 竞争曾报 4 错误，串行重跑归零，非源性问题）。
+- canonical Debug（非平台）`dotnet build src/DeskCue/DeskCue.csproj -c Debug`：0 错误、11 警告（存量位，与批 46-48 同数）；x64 Debug：0 错误（与全量测试并行触发的 obj 竞争曾报 4 错误，串行重跑归零，非源性问题）。
 - 新增 `BackupSettingsSurfaceTests` 16 用例（构造投影（回退目录警告+生效路径）/用户写穿透+未知预设归一化回默认+归一化无变化零写入+16 变更记录计数/外部 RefreshState 零回写/`UpdateLocalDirectory` 规整与清空/命令忙门与状态机忙门双源+幂等/Message→连接状态行映射/端点变更清状态行/远程快照集合投影（设备尾段+大小+端点）/最近成功·失败·未验证三段合成+从未备份/凭据状态随 vault 读翻转/HTTP 警告本地化/诊断推面端子与修复·重同步双门/RefreshLocalization 十属性通知集/选项表真数组与规范值（六档间隔/两渠道）/壳反射面无残留（48 成员清单））。全量 x64 测试：**4,468/4,468 通过**（批 48 基线 4,452 + 本批 16）。
-- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKBOX_NATIVE_AOT` 以 `%3B` 内码传递、`-getProperty:DefineConstants` 确认生效，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离于 `.aotcheck/`（2.0 GB），DeskBox 与 Updater 均随隔离 restore+构建（隔离产物含 DeskBox.exe/DeskBox.Updater.exe/DeskBox.ThumbnailProxy.exe），`-t:Rebuild` 全量，检查后已清理）：**0 错误**、22 警告（CS8602×14/CS8601×2/CS0414×2/CS0169×2/CS0108×2，码集与批 41-48 同位）。
-- **绑定实效验证（UIA 探针，System.Windows.Automation COM 通道，探针脚本临时件未入库）**：隔离数据根 `facade-backup-49-91c43c82`（`DESKBOX_DEV_DATA_ROOT`）的 `data/settings.json` 平铺预置 `automaticBackupEnabled=false`、`automaticBackupIntervalMinutes=720`、`automaticBackupRetentionCount=14`、`cloudBackupProvider=webdav`、`cloudBackupServerUrl=http://nas.local/dav`、`cloudBackupRemotePath=DeskBox/backups`、`cloudBackupUsername=probe-user`、`cloudBackupTodoDataEnabled=true`、`cloudBackupQuickCaptureDataEnabled=false`、`cloudBackupWidgetStyleEnabled=true`、`cloudBackupIntervalMinutes=360`、`cloudBackupRetentionCount=10`+zh-CN+已完成 onboarding。canonical Debug `--open-settings` 启动（启动管线 **35 步（5 critical）、0 degraded、0 failed**），UIA 经左导航"诊断与维护"→"设置与内容备份"卡进入本地备份节：**自动备份开关=关（默认开）、备份间隔下拉选中"12 小时"（默认 1 天）、保留下拉选中"保留 14 份"（默认 7）、目录显示框=Recovery\automatic 生效路径**——四项非默认值经"磁盘→协调器读快照→编辑器→节级 DataContext {Binding}→控件"全链投影；**回写**：TogglePattern 拨"自动备份"开关 Off→On→磁盘 `automaticBackupEnabled=true`（编辑器 setter→`Update(LocalEnabled)`→SaveDebounced 落盘），其余预置项不动。经设置搜索"云备份"进入云备份节：**WebDAV 连接卡整体可见（渠道门投影）、服务器地址=http://nas.local/dav、远端文件夹=DeskBox/backups、用户名=probe-user、待办数据=开/随记数据=关/格子样式=开（三域开关逐项）、HTTP 明文警告行可见、凭据状态行="尚未保存密码。"、最近备份行="还没有成功备份过。"**——探针全程**零真实网络/磁盘备份动作**（未触碰测试连接/立即备份/恢复/删除；凭据状态来自本地 vault 只读查询）。经设置搜索"拖拽诊断"进入兼容性诊断节：**摘要"启动项指向旧版本"+明细+六诊断行（进程完整性 Medium(0x2000)/Explorer/UAC EnableLUA/兼容性/启动项/快捷方式）+一键修复按钮 IsEnabled=True（可修复门推面）+运行健康"后台服务运行正常/生命周期事件：1"**——壳诊断计算→推面→编辑器→{Binding} 全链贯通。探针后已按路径停止本 worktree 实例（主检出实例未触碰），数据根与探针件已清理。
+- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKCUE_NATIVE_AOT` 以 `%3B` 内码传递、`-getProperty:DefineConstants` 确认生效，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离于 `.aotcheck/`（2.0 GB），DeskCue 与 Updater 均随隔离 restore+构建（隔离产物含 DeskCue.exe/DeskCue.Updater.exe/DeskCue.ThumbnailProxy.exe），`-t:Rebuild` 全量，检查后已清理）：**0 错误**、22 警告（CS8602×14/CS8601×2/CS0414×2/CS0169×2/CS0108×2，码集与批 41-48 同位）。
+- **绑定实效验证（UIA 探针，System.Windows.Automation COM 通道，探针脚本临时件未入库）**：隔离数据根 `facade-backup-49-91c43c82`（`DESKCUE_DEV_DATA_ROOT`）的 `data/settings.json` 平铺预置 `automaticBackupEnabled=false`、`automaticBackupIntervalMinutes=720`、`automaticBackupRetentionCount=14`、`cloudBackupProvider=webdav`、`cloudBackupServerUrl=http://nas.local/dav`、`cloudBackupRemotePath=DeskBox/backups`、`cloudBackupUsername=probe-user`、`cloudBackupTodoDataEnabled=true`、`cloudBackupQuickCaptureDataEnabled=false`、`cloudBackupWidgetStyleEnabled=true`、`cloudBackupIntervalMinutes=360`、`cloudBackupRetentionCount=10`+zh-CN+已完成 onboarding。canonical Debug `--open-settings` 启动（启动管线 **35 步（5 critical）、0 degraded、0 failed**），UIA 经左导航"诊断与维护"→"设置与内容备份"卡进入本地备份节：**自动备份开关=关（默认开）、备份间隔下拉选中"12 小时"（默认 1 天）、保留下拉选中"保留 14 份"（默认 7）、目录显示框=Recovery\automatic 生效路径**——四项非默认值经"磁盘→协调器读快照→编辑器→节级 DataContext {Binding}→控件"全链投影；**回写**：TogglePattern 拨"自动备份"开关 Off→On→磁盘 `automaticBackupEnabled=true`（编辑器 setter→`Update(LocalEnabled)`→SaveDebounced 落盘），其余预置项不动。经设置搜索"云备份"进入云备份节：**WebDAV 连接卡整体可见（渠道门投影）、服务器地址=http://nas.local/dav、远端文件夹=DeskBox/backups、用户名=probe-user、待办数据=开/随记数据=关/格子样式=开（三域开关逐项）、HTTP 明文警告行可见、凭据状态行="尚未保存密码。"、最近备份行="还没有成功备份过。"**——探针全程**零真实网络/磁盘备份动作**（未触碰测试连接/立即备份/恢复/删除；凭据状态来自本地 vault 只读查询）。经设置搜索"拖拽诊断"进入兼容性诊断节：**摘要"启动项指向旧版本"+明细+六诊断行（进程完整性 Medium(0x2000)/Explorer/UAC EnableLUA/兼容性/启动项/快捷方式）+一键修复按钮 IsEnabled=True（可修复门推面）+运行健康"后台服务运行正常/生命周期事件：1"**——壳诊断计算→推面→编辑器→{Binding} 全链贯通。探针后已按路径停止本 worktree 实例（主检出实例未触碰），数据根与探针件已清理。
 - `git diff --check` 通过。
 - 遗留风险：①SettingsComboBox 关闭面选中值与 ComboBox 弹层条目在 UIA COM 通道下需 ExpandCollapse+弹层 ListItem 枚举读取（批 48 同款限制；渠道组合框的选中证明由连接卡可见门+编辑器单测覆盖）；②云备份操作按钮（测试连接/立即备份/恢复/删除）的 UIA 侧回写验证刻意不做（真实网络/磁盘动作），其门与状态行投影已由探针+单测覆盖；③General/About/Performance（顺位 11）仍走壳门面（收官批再定去留）。
 
@@ -1297,12 +1297,12 @@ Track A 就此收官：设置页（SettingsViewModel）不再有任何平铺门�
 
 ### 第五十批验证记录
 
-- restore Updater 后 `dotnet build src/DeskBox/DeskBox.csproj -p:Platform=x64`：**0 错误**、11 警告（存量位，与批 46-49 同数）；canonical Debug（非平台，启动用）0 错误。
+- restore Updater 后 `dotnet build src/DeskCue/DeskCue.csproj -p:Platform=x64`：**0 错误**、11 警告（存量位，与批 46-49 同数）；canonical Debug（非平台，启动用）0 错误。
 - 新增 `PerformanceSettingsEditorTests` 15 用例（构造投影=policy 解析/预设应用字段跟随+磁盘往返/自定义明细写入切 Custom+选项表加自定义条目+等值跳过/预算与范围与可见闲置经 Custom 路径/未知值归一化（bogus→Balanced、Huge→Balanced、Deep→AllRecreatable）/装饰开关写派生 legacy 旗标+切 Custom+关/部分/全选三态摘要/三 trim 开关经各自协调器且不切 Custom/外部同步零回写/选项表规范值与本地化名/停止拒写/policy 常量别名钉/壳反射面无残留（21 成员清单）/迁移模式文本钉（XAML 路径、DeferredSections DataContext、两 General 组合框元素级 DataContext、壳桥 33、性能编辑器桥 14）/附件面（FW 编辑器读写穿透+读口+未知值归一化+外部同步+分片键防正则钉））。全量 x64 测试：**4,483/4,483 通过**（批 49 基线 4,468 + 本批 15）。
-- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKBOX_NATIVE_AOT` 以 `%3B` 内码传递、`-getProperty:DefineConstants` 确认生效，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离于 `.aotcheck/`（2.0 GB），DeskBox 与 Updater 均随隔离 restore+构建（隔离产物含 DeskBox.exe/DeskBox.Updater.exe/DeskBox.ThumbnailProxy.exe），`-t:Rebuild` 全量，检查后已清理）：**0 错误**、22 警告（CS8602×14/CS8601×2/CS0414×2/CS0169×2/CS0108×2，码集与批 41-49 同位）。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
-- **绑定实效验证（UIA 探针，System.Windows.Automation COM 通道，探针脚本临时件未入库）**：隔离数据根 `facade-final-50-probe2`（DESKBOX_DEV_DATA_ROOT）的 `data/settings.json` 平铺预置（schemaVersion 9）`performanceMode=Custom`、`hiddenCacheCleanupDelaySeconds=300`、`visibleIdleCacheCleanupDelaySeconds=900`、`performanceCacheBudget=Large`、`hiddenCacheCleanupScope=Warm`、`enableVinylRotationAnimations=false`（其余三装饰开）、`idleWorkingSetTrimEnabled=false`、`immediateHiddenWorkingSetTrimEnabled=true`、`quiescenceWorkingSetTrimEnabled=false`、`attachmentStorageMode=Copy` +zh-CN+已完成 onboarding。canonical Debug `--open-settings` 启动（启动管线 **35 步（5 critical）、0 degraded、0 failed**），UIA 在常规节读到：**附件保存方式=复制到 DeskBox（预置 Copy 经 FeatureWidgets 编辑器元素级 DataContext 投影）、性能模式下拉=自定义（选项表含自定义条目——预置 Custom 经性能编辑器投影）**；drill-down 进入性能节读到：**性能模式=自定义、可见闲置后台维护=15 分钟、隐藏后缓存回收=5 分钟、隐藏后清理范围=保留热缓存、缓存容量=较大、持续装饰动画摘要=文字跑马灯、时光图片自动切换、胶囊光效与粒子（vinyl 预置关被排除、中文顿号连接）、空闲时压缩内存=Off、隐藏后立即裁剪=On（预置投影）；静默期裁剪=Off 且 IsEnabled=False（空闲门按产品语义禁用嵌套开关——门绑定经编辑器 PropertyChanged 跟随）**——14 绑定值全链投影（绑定若死则控件呈编辑器默认）。**回写两链**：①TogglePattern 拨"空闲时压缩内存占用"Off→On→磁盘 `idleWorkingSetTrimEnabled=true`（编辑器 setter→IInteractionSettings→SaveDebounced），且嵌套开关随即解除禁用（门跟随）；②经导航返回键回常规节，附件组合框选"关联原文件"→磁盘 `attachmentStorageMode=Link`（编辑器 setter→FeatureWidgets 协调器→SaveDebounced）。其余预置项（Custom/300/900/Large/Warm/vinyl=false/quiescence=false 等）逐项不动。探针后已按路径停止本 worktree 实例（主检出 D:\project\wingezi 实例未触碰），数据根与探针件已清理。
+- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKCUE_NATIVE_AOT` 以 `%3B` 内码传递、`-getProperty:DefineConstants` 确认生效，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离于 `.aotcheck/`（2.0 GB），DeskCue 与 Updater 均随隔离 restore+构建（隔离产物含 DeskCue.exe/DeskCue.Updater.exe/DeskCue.ThumbnailProxy.exe），`-t:Rebuild` 全量，检查后已清理）：**0 错误**、22 警告（CS8602×14/CS8601×2/CS0414×2/CS0169×2/CS0108×2，码集与批 41-49 同位）。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
+- **绑定实效验证（UIA 探针，System.Windows.Automation COM 通道，探针脚本临时件未入库）**：隔离数据根 `facade-final-50-probe2`（DESKCUE_DEV_DATA_ROOT）的 `data/settings.json` 平铺预置（schemaVersion 9）`performanceMode=Custom`、`hiddenCacheCleanupDelaySeconds=300`、`visibleIdleCacheCleanupDelaySeconds=900`、`performanceCacheBudget=Large`、`hiddenCacheCleanupScope=Warm`、`enableVinylRotationAnimations=false`（其余三装饰开）、`idleWorkingSetTrimEnabled=false`、`immediateHiddenWorkingSetTrimEnabled=true`、`quiescenceWorkingSetTrimEnabled=false`、`attachmentStorageMode=Copy` +zh-CN+已完成 onboarding。canonical Debug `--open-settings` 启动（启动管线 **35 步（5 critical）、0 degraded、0 failed**），UIA 在常规节读到：**附件保存方式=复制到 DeskCue（预置 Copy 经 FeatureWidgets 编辑器元素级 DataContext 投影）、性能模式下拉=自定义（选项表含自定义条目——预置 Custom 经性能编辑器投影）**；drill-down 进入性能节读到：**性能模式=自定义、可见闲置后台维护=15 分钟、隐藏后缓存回收=5 分钟、隐藏后清理范围=保留热缓存、缓存容量=较大、持续装饰动画摘要=文字跑马灯、时光图片自动切换、胶囊光效与粒子（vinyl 预置关被排除、中文顿号连接）、空闲时压缩内存=Off、隐藏后立即裁剪=On（预置投影）；静默期裁剪=Off 且 IsEnabled=False（空闲门按产品语义禁用嵌套开关——门绑定经编辑器 PropertyChanged 跟随）**——14 绑定值全链投影（绑定若死则控件呈编辑器默认）。**回写两链**：①TogglePattern 拨"空闲时压缩内存占用"Off→On→磁盘 `idleWorkingSetTrimEnabled=true`（编辑器 setter→IInteractionSettings→SaveDebounced），且嵌套开关随即解除禁用（门跟随）；②经导航返回键回常规节，附件组合框选"关联原文件"→磁盘 `attachmentStorageMode=Link`（编辑器 setter→FeatureWidgets 协调器→SaveDebounced）。其余预置项（Custom/300/900/Large/Warm/vinyl=false/quiescence=false 等）逐项不动。探针后已按路径停止本 worktree 实例（主检出 D:\project\wingezi 实例未触碰），数据根与探针件已清理。
 - `git diff --check` 通过。
-- 遗留风险：①探针首轮暴露两处实现缺陷并已修复——附件选项表曾以集合表达式直返 IReadOnlyList 致条目 UIA 名呈 `DeskBox.Models.SettingsOption`（DisplayMemberPath 解析失败），改经实数组装载后修复；XAML 附件组合框 Value 路径曾遗留旧名 `SelectedAttachmentStorageMode`（编辑器面名去前缀后路径失配），改 `AttachmentStorageMode` 后修复——两处均为迁移面自检收益，单测+UIA 双通道均有覆盖；②publish-aot-audit.ps1 的 5B4B1 源清单仍有位置索引引用（[5]/[6]/[7]/[8]/[9]/[20]/[22]），本批已修复漂移的一处并注明，位置插入类变更仍需人工核对索引；③装饰动画 flyout 的 UIA 条目面（MenuFlyout）与批 47/48 同类控件级限制，回写由编辑器单测（DecorativeToggle 用例）+代码后置接线钉覆盖；④About 更新卡的 UIA 双向验证刻意不做（真实网络/下载动作），其呈现面零改动；⑤未做真实设置页逐滑杆/组合框操作手感验收（UIA 写入路径已证明提交链贯通）。
+- 遗留风险：①探针首轮暴露两处实现缺陷并已修复——附件选项表曾以集合表达式直返 IReadOnlyList 致条目 UIA 名呈 `DeskCue.Models.SettingsOption`（DisplayMemberPath 解析失败），改经实数组装载后修复；XAML 附件组合框 Value 路径曾遗留旧名 `SelectedAttachmentStorageMode`（编辑器面名去前缀后路径失配），改 `AttachmentStorageMode` 后修复——两处均为迁移面自检收益，单测+UIA 双通道均有覆盖；②publish-aot-audit.ps1 的 5B4B1 源清单仍有位置索引引用（[5]/[6]/[7]/[8]/[9]/[20]/[22]），本批已修复漂移的一处并注明，位置插入类变更仍需人工核对索引；③装饰动画 flyout 的 UIA 条目面（MenuFlyout）与批 47/48 同类控件级限制，回写由编辑器单测（DecorativeToggle 用例）+代码后置接线钉覆盖；④About 更新卡的 UIA 双向验证刻意不做（真实网络/下载动作），其呈现面零改动；⑤未做真实设置页逐滑杆/组合框操作手感验收（UIA 写入路径已证明提交链贯通）。
 
 **门面退役二阶段（批 40-50）就此收官**：设置页 34 个节模板全部按节归属 DataContext（26 个节+两 General 跨域组合框经节级/元素级/类型化 DP 绑 16 个编辑器），壳 ViewModels 从 33 partial/11,495 行到 23 partial/3,941 行；留壳面全部为宿主生命线并在终态对账表注明理由。批 29 清点的 115 个平铺写入点+批 39 登记的 11 处 lambda 漏网族全部归零，设置页新增设置字段的唯一合法入口是各节协调器合同端口。
 
@@ -1312,10 +1312,10 @@ Track A 就此收官：设置页（SettingsViewModel）不再有任何平铺门�
 
 ### 清点：220 个透传的真实消费者分布
 
-清点口径与 `SettingsSliceOwnershipContractTests.FacadePassthroughAccess` 同一正则（大小写不敏感 `settings.<透传名>`，字母后视断言排除 `WidgetSettings.` 等假阳性），扫描范围 src/DeskBox 全部 .cs（排除 bin/obj/AppPackages）+ tests + 全部 XAML。结果：
+清点口径与 `SettingsSliceOwnershipContractTests.FacadePassthroughAccess` 同一正则（大小写不敏感 `settings.<透传名>`，字母后视断言排除 `WidgetSettings.` 等假阳性），扫描范围 src/DeskCue 全部 .cs（排除 bin/obj/AppPackages）+ tests + 全部 XAML。结果：
 
 - **生产侧 129 文件 / 1,786 处访问**，分布（独占归类）：SettingsService 序列化根（加载/保存/归一化/默认值/还原保全映射）594/1 文件；其余 Services（策略/协调器/运行时）357/37 文件；widget ViewModels 179/19 文件；窗口/控件 code-behind 168/30 文件；WidgetManager 布局/表面链 201/7 文件；设置壳 SettingsViewModel*/SettingsWindow/SettingsSections 残面（读投影/同步快照/宿主生命线）97/13 文件；App 宿主/托盘/onboarding 85/12 文件；AOT 冒烟烟囱 App.Aot* 70/9 文件；SettingsMigrationService schema 迁移管线 35/1 文件。
-- **XAML 零直接消费**：SettingsWindow.xaml 等 XAML 里匹配到的 `Settings.X` 全部是本地化资源键字符串（`svc:Localized.HeaderKey="Settings.AutoStart.Title"` 式），`{Binding X}` 路径绑的是设置壳/编辑器 ViewModel 属性而非 AppSettings；`WidgetStyleBackupProjection` 与 `DeskBoxDataBackupService` 走 raw JsonNode/settings.json 文件名，不经门面。
+- **XAML 零直接消费**：SettingsWindow.xaml 等 XAML 里匹配到的 `Settings.X` 全部是本地化资源键字符串（`svc:Localized.HeaderKey="Settings.AutoStart.Title"` 式），`{Binding X}` 路径绑的是设置壳/编辑器 ViewModel 属性而非 AppSettings；`WidgetStyleBackupProjection` 与 `DeskCueDataBackupService` 走 raw JsonNode/settings.json 文件名，不经门面。
 - **220 个透传中 207 个有生产访问**；**13 个零访问形**：CloudBackup 族 12 个 + QuiescenceWorkingSetTrimEnabled——但它们全部经切片路径消费（`Settings.CloudBackup.X`、`Settings.Performance.Quiescence…`），且 CloudBackup 族 10 个还是 SettingsService 还原默认值保全映射的 `nameof(AppSettings.X)` 键（编译级消费）。
 
 ### 三档裁决（逐档证据）
@@ -1329,10 +1329,10 @@ Track A 就此收官：设置页（SettingsViewModel）不再有任何平铺门�
 
 ### 第五十一批验证记录
 
-- 本批运行时代码零改动（AppSettings.cs 仅增 remarks 注释，git diff 证全为文档）；restore Updater 后 `dotnet build src/DeskBox/DeskBox.csproj -p:Platform=x64`：**0 错误**、22 警告（存量位，与批 50 同数）；canonical 非平台 Debug（启动用）0 错误、22 警告。
-- 全量 x64 测试 `dotnet test ./tests/DeskBox.Tests/DeskBox.Tests.csproj --no-restore --verbosity:minimal -p:Platform=x64`：**4,487/4,487 通过**（批 50 基线 4,483 + 本批新增 `AppSettingsFacadeNarrowingContractTests` 4 用例）；**字节等价契约测试原样全绿未改动**（SettingsSliceContractBaselineTests 两用例 + SettingsSliceOwnershipContractTests 往返字节等价用例逐字未动；唯一触碰是 FacadeAccessManifest 预算收紧与清单头注记）。
-- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKBOX_NATIVE_AOT` 以 `%3B` 内码传递、`-getProperty:DefineConstants` 确认生效，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离于 `.aotcheck/`，DeskBox 与 Updater 均随隔离 restore、`-t:Rebuild` 全量，隔离产物含 DeskBox.exe/DeskBox.Updater.exe/DeskBox.ThumbnailProxy.exe，检查后已清理）：**0 错误**、22 警告（码集与批 41-50 同位）。
-- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskBox-Dev/appsettings-narrow-51-022350`（DESKBOX_DEV_DATA_ROOT）预置 59 个非默认值覆盖全部 12 个内容切片组+legacy 键（Core 9/Performance 9/QuickCapture 4/Todo 3/Music 1/WidgetShell 8/FileWidget 4/Backup 3/DesktopOrganization 1/Weather 6/Search 4/CloudBackup 5/legacy 1）。canonical 路径启动 PID 7256，启动管线 **35 步（5 critical）、0 degraded、0 failed**；停机后磁盘 **59 个预置字段中 58 个逐字段原值保持**（schemaVersion 与全部内容值零漂移）。仅有的两处非保持均为既有按设计行为、与本批无关：①`widgetCapsuleModeEnabled=true` 被加载归一化消费（SettingsService.cs:1658-1674 迁移期旧键折叠进 widgetCollapseBehavior 后清空，WhenWritingNull 随之省略——本批 AppSettings 零运行时改动，main 同行为）；②11 个布局键（widgets/widgetGroups/…/featureWidgetEnabledStates）由 2B-3 领养剥离至 widget-layout.json（终态 settings.json 209 成员=221-11 布局键-1 已消费 legacy 键）。探针后已按路径停止本 worktree 实例（主检出 D:\project\wingezi 实例未触碰），数据根已清理。
+- 本批运行时代码零改动（AppSettings.cs 仅增 remarks 注释，git diff 证全为文档）；restore Updater 后 `dotnet build src/DeskCue/DeskCue.csproj -p:Platform=x64`：**0 错误**、22 警告（存量位，与批 50 同数）；canonical 非平台 Debug（启动用）0 错误、22 警告。
+- 全量 x64 测试 `dotnet test ./tests/DeskCue.Tests/DeskCue.Tests.csproj --no-restore --verbosity:minimal -p:Platform=x64`：**4,487/4,487 通过**（批 50 基线 4,483 + 本批新增 `AppSettingsFacadeNarrowingContractTests` 4 用例）；**字节等价契约测试原样全绿未改动**（SettingsSliceContractBaselineTests 两用例 + SettingsSliceOwnershipContractTests 往返字节等价用例逐字未动；唯一触碰是 FacadeAccessManifest 预算收紧与清单头注记）。
+- AOT 定义编译检查（x64、`DefineConstants=TRACE;DEBUG;DESKCUE_NATIVE_AOT` 以 `%3B` 内码传递、`-getProperty:DefineConstants` 确认生效，`ArtifactsPath`/`RestorePackagesPath` 绝对路径隔离于 `.aotcheck/`，DeskCue 与 Updater 均随隔离 restore、`-t:Rebuild` 全量，隔离产物含 DeskCue.exe/DeskCue.Updater.exe/DeskCue.ThumbnailProxy.exe，检查后已清理）：**0 错误**、22 警告（码集与批 41-50 同位）。
+- 隔离 Debug 启动：数据根 `C:/Users/simon/AppData/Local/DeskCue-Dev/appsettings-narrow-51-022350`（DESKCUE_DEV_DATA_ROOT）预置 59 个非默认值覆盖全部 12 个内容切片组+legacy 键（Core 9/Performance 9/QuickCapture 4/Todo 3/Music 1/WidgetShell 8/FileWidget 4/Backup 3/DesktopOrganization 1/Weather 6/Search 4/CloudBackup 5/legacy 1）。canonical 路径启动 PID 7256，启动管线 **35 步（5 critical）、0 degraded、0 failed**；停机后磁盘 **59 个预置字段中 58 个逐字段原值保持**（schemaVersion 与全部内容值零漂移）。仅有的两处非保持均为既有按设计行为、与本批无关：①`widgetCapsuleModeEnabled=true` 被加载归一化消费（SettingsService.cs:1658-1674 迁移期旧键折叠进 widgetCollapseBehavior 后清空，WhenWritingNull 随之省略——本批 AppSettings 零运行时改动，main 同行为）；②11 个布局键（widgets/widgetGroups/…/featureWidgetEnabledStates）由 2B-3 领养剥离至 widget-layout.json（终态 settings.json 209 成员=221-11 布局键-1 已消费 legacy 键）。探针后已按路径停止本 worktree 实例（主检出 D:\project\wingezi 实例未触碰），数据根已清理。
 - `git diff --check` 通过。
 
 
@@ -1365,7 +1365,7 @@ Track A 就此收官：设置页（SettingsViewModel）不再有任何平铺门�
 ## 依赖约束
 
 - `ModuleBoundaryContractTests` 为 Models、ViewModels、Services 的存量 App.Current、App.UiDispatcherQueue 和 IServiceProvider 文本访问建立逐文件清单；新增位置或计数增长会失败。日志兼容调用不计入这条规则。
-- 对新的 `DeskBox.Features.*`、Todo/Search 设置协调器及 Search 设置视图，额外检查编译后的类型引用，包括字段、方法签名、IL 调用和异步状态机。功能业务代码禁止依赖 App、全局容器和具体 Services/Platform 实现；Search 视图保留合法 XAML 框架调用，禁止直接依赖 SettingsService、SearchHotkeyService、EverythingSearchService。
+- 对新的 `DeskCue.Features.*`、Todo/Search 设置协调器及 Search 设置视图，额外检查编译后的类型引用，包括字段、方法签名、IL 调用和异步状态机。功能业务代码禁止依赖 App、全局容器和具体 Services/Platform 实现；Search 视图保留合法 XAML 框架调用，禁止直接依赖 SettingsService、SearchHotkeyService、EverythingSearchService。
 - 当前 WinUI 内容契约仍留在宿主；本批新增的 Todo 设置和提醒会话契约不含 WinUI 类型。
 - 纯规则、UI 行为、文件提交和运行时资源分别声明所有者。扩充旧例外清单不能替代边界修复。
 
@@ -1374,13 +1374,13 @@ Track A 就此收官：设置页（SettingsViewModel）不再有任何平铺门�
 - canonical Debug 最终构建：通过，22 警告、0 错误；警告来自现有控件/可空性等位置。
 - 首轮针对性测试：39/39 通过，覆盖提醒规则、开关串行化、启动失败清理、停止等待、恢复路径和依赖检查。
 - 全量 x64 测试：4,073/4,073 通过。初次全量发现两个属性迁出后旧 AOT 生成属性计数仍为 77，已调整为 75，并另加可读写属性及 AOT 绑定入口保留检查。
-- AOT 条件编译：x64 / win-x64、`DeskBoxAotAudit=true`、`DeskBoxAotSmokeHarness=true`、`DeskBoxRustNative=true` 的 Release build 通过，0 错误。构建报告 890 个警告，包含 WMC1510 等绑定提示；这是条件编译验证，没有执行 Native AOT publish/link 或发布包 smoke。
+- AOT 条件编译：x64 / win-x64、`DeskCueAotAudit=true`、`DeskCueAotSmokeHarness=true`、`DeskCueRustNative=true` 的 Release build 通过，0 错误。构建报告 890 个警告，包含 WMC1510 等绑定提示；这是条件编译验证，没有执行 Native AOT publish/link 或发布包 smoke。
 - AOT 构建使用临时 artifacts 和独立 NuGet lock 路径。普通仓库锁文件不包含 AOT 隐式编译器依赖，初次 locked restore 失败后改用隔离的 AOT restore；仓库锁文件未改动。
-- 最终 canonical Debug 进程：`src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`；2026-09-22 20:01 核验 PID 22844，仓库下只运行这一个 DeskBox 实例，Medium 完整性。
-- 使用独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/todo-architecture-20260922-a82b40bd` 启动，预置空数据和启用的 Todo 提醒。日志确认提醒实例按需创建一次、设置窗口完成构造和加载、启动 35 步中 0 degraded / 0 failed。原安装版进程继续运行。
+- 最终 canonical Debug 进程：`src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`；2026-09-22 20:01 核验 PID 22844，仓库下只运行这一个 DeskCue 实例，Medium 完整性。
+- 使用独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/todo-architecture-20260922-a82b40bd` 启动，预置空数据和启用的 Todo 提醒。日志确认提醒实例按需创建一次、设置窗口完成构造和加载、启动 35 步中 0 degraded / 0 failed。原安装版进程继续运行。
 - `git diff --check`：通过。
 
-可复查的本地证据：`tests/DeskBox.Tests/TestResults/todo-architecture-full-final.trx`，以及 `%TEMP%/deskbox-todo-architecture-full-final.log`、`%TEMP%/deskbox-todo-architecture-aot-build.log`、`%TEMP%/deskbox-todo-architecture-debug-final.log`。日志和构建产物不加入版本控制。
+可复查的本地证据：`tests/DeskCue.Tests/TestResults/todo-architecture-full-final.trx`，以及 `%TEMP%/deskcue-todo-architecture-full-final.log`、`%TEMP%/deskcue-todo-architecture-aot-build.log`、`%TEMP%/deskcue-todo-architecture-debug-final.log`。日志和构建产物不加入版本控制。
 
 自动测试与真实点击、系统通知交互是不同证据。未完成的 UI 验收不能用构建通过代替。
 
@@ -1420,11 +1420,11 @@ Track A 就此收官：设置页（SettingsViewModel）不再有任何平铺门�
 - 针对性测试 53/53 通过，含迟到探测、排队通知、重复访问、运行时更换、失败恢复、禁用状态和快捷键冲突。
 - 最终全量 x64 测试：4,085/4,085 通过。首次全量唯一失败为旧 AOT 源码测试把 `_searchSettingsViewModel.Dispose()` 子串误认成 `ViewModel.Dispose()`；精确匹配主属性后仍保留“先解除绑定、后释放主 ViewModel”的顺序要求。
 - 最终 AOT 条件编译通过，0 错误、888 警告，含 WMC1510 等绑定提示。采用 x64/win-x64、AOT audit 与 smoke 条件编译、隔离 artifacts/lock 路径；未执行 Native AOT publish/link 或发布包运行验证。
-- 最终 canonical Debug 构建：22 警告、0 错误。2026-09-22 20:46 核验进程 PID 23652，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，仓库下唯一 DeskBox 实例，Medium 完整性。
-- 开发数据目录为 `C:/Users/simon/AppData/Local/DeskBox-Dev/search-architecture-20260922-42d41e6f`。预置 Search 功能启用、Everything 查询授权关闭、搜索快捷键关闭；启动日志确认搜索历史/快捷键服务/Everything provider 各初始化一次，设置窗口完成加载，启动 36 步中 0 degraded / 0 failed。未用此启动检查冒充 Search 页或 Everything IPC 实机验收。
+- 最终 canonical Debug 构建：22 警告、0 错误。2026-09-22 20:46 核验进程 PID 23652，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，仓库下唯一 DeskCue 实例，Medium 完整性。
+- 开发数据目录为 `C:/Users/simon/AppData/Local/DeskCue-Dev/search-architecture-20260922-42d41e6f`。预置 Search 功能启用、Everything 查询授权关闭、搜索快捷键关闭；启动日志确认搜索历史/快捷键服务/Everything provider 各初始化一次，设置窗口完成加载，启动 36 步中 0 degraded / 0 failed。未用此启动检查冒充 Search 页或 Everything IPC 实机验收。
 - `git diff --check` 通过；SearchSettingsSection 的 App.Current 和具体设置/搜索运行时类型引用均为 0。
 
-第二批证据使用 `tests/DeskBox.Tests/TestResults/search-architecture-full-final.trx` 及 `%TEMP%/deskbox-search-architecture-*.log`。实际页面点击、快捷键设备行为和 Everything 实例联调仍需人工验收。
+第二批证据使用 `tests/DeskCue.Tests/TestResults/search-architecture-full-final.trx` 及 `%TEMP%/deskcue-search-architecture-*.log`。实际页面点击、快捷键设备行为和 Everything 实例联调仍需人工验收。
 
 ## 第三批：BackupRuntime 与退出资源归属
 
@@ -1473,12 +1473,12 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 - 首轮针对性测试 198/198 通过。
 - 最终全量 x64 测试 4,102/4,102 通过，包含手动/定时重叠、排队取消、提交排空、重试、配置重入、刷盘失败、退出步骤故障、上传确认前/后取消、保留清理取消及观察者异常。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 编译配置，888 警告、0 错误。没有做 Native AOT publish/link 或发布包运行验证。
-- 最终 canonical Debug 构建：22 警告、0 错误。2026-09-22 21:50 核验 PID 33600，仓库下唯一 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性。
-- 独立开发数据为 `C:/Users/simon/AppData/Local/DeskBox-Dev/backup-architecture-20260922-8b0415bf`，仅放入样例配置，启用本地自动备份（5 分钟、保留 2 份），未配置云端。启动生成 21:50 的快照，5 分钟调度又生成 21:55 的快照；读取最新 ZIP，核对 `manifest.json` 所列两个数据文件的长度和 SHA-256 全部一致。启动 35 步中 0 degraded / 0 failed。
+- 最终 canonical Debug 构建：22 警告、0 错误。2026-09-22 21:50 核验 PID 33600，仓库下唯一 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性。
+- 独立开发数据为 `C:/Users/simon/AppData/Local/DeskCue-Dev/backup-architecture-20260922-8b0415bf`，仅放入样例配置，启用本地自动备份（5 分钟、保留 2 份），未配置云端。启动生成 21:50 的快照，5 分钟调度又生成 21:55 的快照；读取最新 ZIP，核对 `manifest.json` 所列两个数据文件的长度和 SHA-256 全部一致。启动 35 步中 0 degraded / 0 failed。
 - `git diff --check` 通过。
 - 使用模拟 WebDAV 传输验证取消边界；真实服务器联调和用户点击退出时的实机表现尚未验收。
 
-证据：`tests/DeskBox.Tests/TestResults/backup-architecture-full-final.trx`，`%TEMP%/deskbox-backup-architecture-full-final.log`、`%TEMP%/deskbox-backup-architecture-aot-build.log`、`%TEMP%/deskbox-backup-architecture-debug-final.log`。
+证据：`tests/DeskCue.Tests/TestResults/backup-architecture-full-final.trx`，`%TEMP%/deskcue-backup-architecture-full-final.log`、`%TEMP%/deskcue-backup-architecture-aot-build.log`、`%TEMP%/deskcue-backup-architecture-debug-final.log`。
 
 ## 第四批：备份设置页与读取操作会话
 
@@ -1506,11 +1506,11 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 - 最终全量 x64 测试：4,110/4,110 通过，含页面重复进入仅保留一条完成事件订阅、可见且端点匹配的后台上传刷新列表。
 - 全量回归后补充的上传完成端点断言，云备份传输定向测试 60/60 通过。
 - AOT 条件编译：x64/win-x64，audit + smoke 编译配置，888 警告、0 错误；未做 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建：22 警告、0 错误。2026-09-23 09:45 最终核验 PID 6632，仓库下只有一个 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`；启动器为 Medium 完整性。
-- 独立开发数据目录：`C:/Users/simon/AppData/Local/DeskBox-Dev/backup-settings-architecture-20260923-c6834218`，关闭自动备份、云端配置和实验开关。启动日志显示设置窗口构造完成、35 个启动步骤中 0 degraded / 0 failed，未见备份设置错误或致命异常。此项只证明启动和默认设置页装配；真实 WebDAV、密码输入、云备份页面与恢复对话框的设备交互仍需人工验收。
+- canonical Debug 构建：22 警告、0 错误。2026-09-23 09:45 最终核验 PID 6632，仓库下只有一个 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`；启动器为 Medium 完整性。
+- 独立开发数据目录：`C:/Users/simon/AppData/Local/DeskCue-Dev/backup-settings-architecture-20260923-c6834218`，关闭自动备份、云端配置和实验开关。启动日志显示设置窗口构造完成、35 个启动步骤中 0 degraded / 0 failed，未见备份设置错误或致命异常。此项只证明启动和默认设置页装配；真实 WebDAV、密码输入、云备份页面与恢复对话框的设备交互仍需人工验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
-测试记录：`tests/DeskBox.Tests/TestResults/backup-settings-full-final3-20260923.trx`；构建与测试日志位于 `%TEMP%/deskbox-backup-settings-*.log`。测试数据使用独立开发目录，不使用正式用户配置或系统凭据。
+测试记录：`tests/DeskCue.Tests/TestResults/backup-settings-full-final3-20260923.trx`；构建与测试日志位于 `%TEMP%/deskcue-backup-settings-*.log`。测试数据使用独立开发目录，不使用正式用户配置或系统凭据。
 
 ## 第五批：QuickCapture 启停与剪贴板监听归属
 
@@ -1532,10 +1532,10 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - QuickCapture、生命周期、模块边界与 Onboarding 定向测试先后 50/50、48/48 通过。首次全量测试发现一条旧 Onboarding 源码断言仍要求设置页直接调用 WidgetManager，已改为检查协调器及窗口锁的实际链路。
-- 最终全量 x64 测试 4,120/4,120 通过，记录在 `tests/DeskBox.Tests/TestResults/quickcapture-architecture-full-final3-20260923.trx`。覆盖新协调器、单监听运行时、迟到读取取消及拒写、停用及重置等待、默认/外部设置归一化和原有功能回归。
+- 最终全量 x64 测试 4,120/4,120 通过，记录在 `tests/DeskCue.Tests/TestResults/quickcapture-architecture-full-final3-20260923.trx`。覆盖新协调器、单监听运行时、迟到读取取消及拒写、停用及重置等待、默认/外部设置归一化和原有功能回归。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误。未执行 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建：22 警告、0 错误。2026-09-23 10:40 最终核验 PID 36108，仓库下只有一个 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`；启动器为 Medium 完整性。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/quickcapture-architecture-20260923-32e4264d` 关闭了录制和实验开关。日志确认设置窗口构造完成、35 个启动步骤中 0 degraded / 0 failed、没有创建剪贴板监听或出现 QuickCapture 错误。此项验证装配与关闭状态，实际系统剪贴板和 QuickCapture 页面交互仍需人工验收。
+- canonical Debug 构建：22 警告、0 错误。2026-09-23 10:40 最终核验 PID 36108，仓库下只有一个 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`；启动器为 Medium 完整性。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/quickcapture-architecture-20260923-32e4264d` 关闭了录制和实验开关。日志确认设置窗口构造完成、35 个启动步骤中 0 degraded / 0 failed、没有创建剪贴板监听或出现 QuickCapture 错误。此项验证装配与关闭状态，实际系统剪贴板和 QuickCapture 页面交互仍需人工验收。
 - `git diff --check` 通过；未提交、推送或混入并行内存实验改动。自动测试不能替代系统剪贴板与真实 UI 的设备交互验收。
 
 ## 第六批：Search 总开关与全局运行时入口
@@ -1557,10 +1557,10 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 第六批验证：
 
 - Search/模块边界/Onboarding/生命周期定向测试 48/48 通过，含关闭顺序、快速开关、启动失败重试、外部设置恢复、旧探测排空及热键冲突回归。
-- 全量 x64 测试 4,125/4,125 通过，记录在 `tests/DeskBox.Tests/TestResults/search-master-architecture-full-20260923.trx`。
+- 全量 x64 测试 4,125/4,125 通过，记录在 `tests/DeskCue.Tests/TestResults/search-master-architecture-full-20260923.trx`。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误。未做 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建：11 警告、0 错误。2026-09-23 10:59 核验 PID 17928，仓库下只有一个 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`；启动器为 Medium 完整性。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/search-master-architecture-20260923-187bf5e4` 关闭 Search 功能与热键。日志确认设置窗口构造完成、35 个启动步骤中 0 degraded / 0 failed，没有建立 Everything provider 或记录 Search 错误。此项只验证装配及禁用状态；测试中的假宿主和启动日志无法替代 Everything IPC、系统热键及真实 Search 页交互验收。
+- canonical Debug 构建：11 警告、0 错误。2026-09-23 10:59 核验 PID 17928，仓库下只有一个 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`；启动器为 Medium 完整性。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/search-master-architecture-20260923-187bf5e4` 关闭 Search 功能与热键。日志确认设置窗口构造完成、35 个启动步骤中 0 degraded / 0 failed，没有建立 Everything provider 或记录 Search 错误。此项只验证装配及禁用状态；测试中的假宿主和启动日志无法替代 Everything IPC、系统热键及真实 Search 页交互验收。
 - `git diff --check` 通过；未提交、推送或混入并行内存实验改动。
 
 ## 第七批：WidgetManager 内容窗口注册与清理
@@ -1576,10 +1576,10 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - 内容注册、模块边界、Surface 分组/提升及呈现链路定向测试 81/81 通过，含重复 ID/HWND、创建失败清理、旧关闭回调、分组重绑与冲突不改状态。
-- 全量 x64 测试 4,130/4,130 通过，记录在 `tests/DeskBox.Tests/TestResults/window-registration-full-20260923.trx`；包含内容注册身份边界及原有分组、Surface、文件窗口回归。
+- 全量 x64 测试 4,130/4,130 通过，记录在 `tests/DeskCue.Tests/TestResults/window-registration-full-20260923.trx`；包含内容注册身份边界及原有分组、Surface、文件窗口回归。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误。未执行 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建：11 警告、0 错误。2026-09-23 11:31 核验 PID 41836，仓库下只有一个 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`；启动器为 Medium 完整性。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/window-registration-20260923-2716c2d1` 不创建可见格子，也关闭剪贴板录制和热键。日志确认 WidgetManager 与设置窗口构造完成，35 个启动步骤中 0 degraded / 0 failed，没有窗口注册错误或致命异常。此项只验证装配与空窗口启动；真实分组切换、文件拖拽及动画仍需设备验收。
+- canonical Debug 构建：11 警告、0 错误。2026-09-23 11:31 核验 PID 41836，仓库下只有一个 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`；启动器为 Medium 完整性。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/window-registration-20260923-2716c2d1` 不创建可见格子，也关闭剪贴板录制和热键。日志确认 WidgetManager 与设置窗口构造完成，35 个启动步骤中 0 degraded / 0 failed，没有窗口注册错误或致命异常。此项只验证装配与空窗口启动；真实分组切换、文件拖拽及动画仍需设备验收。
 - `git diff --check` 通过；未提交、推送或混入并行内存实验改动。
 
 ## 第八批：文件格子会话的身份与清理
@@ -1595,10 +1595,10 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - 文件会话、内容窗口、模块边界、文件宿主诊断、Surface/分组及存储清理定向测试 100/100 通过，覆盖幂等、同宿主内容更换、同 ID 宿主替换、旧宿主迟到关闭、重复别名拒绝和退回独立窗口。
-- 全量 x64 测试 4,134/4,134 通过，记录在 `tests/DeskBox.Tests/TestResults/file-session-architecture-full-20260923.trx`，包含文件会话身份边界与原有 Surface、分组、存储清理回归。
+- 全量 x64 测试 4,134/4,134 通过，记录在 `tests/DeskCue.Tests/TestResults/file-session-architecture-full-20260923.trx`，包含文件会话身份边界与原有 Surface、分组、存储清理回归。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误。未执行 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建：11 警告、0 错误。2026-09-23 11:58 核验 PID 24452，仓库下只有一个 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`；启动器为 Medium 完整性。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/file-session-architecture-20260923-5364728d` 未创建可见格子，也关闭剪贴板录制与热键。日志确认 WidgetManager 与设置窗口构造完成，35 个启动步骤中 0 degraded / 0 failed，没有文件会话错误或致命异常。此项只验证装配与空窗口启动；实际文件拖拽和组切换仍需设备验收。
+- canonical Debug 构建：11 警告、0 错误。2026-09-23 11:58 核验 PID 24452，仓库下只有一个 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`；启动器为 Medium 完整性。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/file-session-architecture-20260923-5364728d` 未创建可见格子，也关闭剪贴板录制与热键。日志确认 WidgetManager 与设置窗口构造完成，35 个启动步骤中 0 degraded / 0 failed，没有文件会话错误或致命异常。此项只验证装配与空窗口启动；实际文件拖拽和组切换仍需设备验收。
 - `git diff --check` 通过；未提交、推送或混入并行内存实验改动。
 
 ## 第九批：Surface 宿主声明的提交与回滚
@@ -1612,10 +1612,10 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - Surface、候选事务、切换矩阵、窗口呈现与模块边界定向测试 74/74 通过。补充假宿主测试覆盖重复候选、取消后同组重试、已有分组失败保留旧宿主、新分组提交时转移成员声明、拆组回滚、迟到关闭和退出清空。
-- 最终全量 x64 测试 4,139/4,139 通过，记录在 `tests/DeskBox.Tests/TestResults/surface-registry-full-final2-20260923.trx`。
+- 最终全量 x64 测试 4,139/4,139 通过，记录在 `tests/DeskCue.Tests/TestResults/surface-registry-full-final2-20260923.trx`。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；没有执行 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建：22 警告、0 错误。2026-09-23 12:25 最终核验 PID 7860，仓库下只有一个 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，进程为 Medium 完整性。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/surface-registry-20260923-d299a602` 使用空格子布局并关闭功能热键、剪贴板录制和自动备份。日志确认 WidgetManager 和设置窗口构造完成，35 个启动步骤中 0 degraded / 0 failed。此项只验证空布局启动装配；真实分组提升、拆离和首帧动画仍需设备验收。
+- canonical Debug 构建：22 警告、0 错误。2026-09-23 12:25 最终核验 PID 7860，仓库下只有一个 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，进程为 Medium 完整性。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/surface-registry-20260923-d299a602` 使用空格子布局并关闭功能热键、剪贴板录制和自动备份。日志确认 WidgetManager 和设置窗口构造完成，35 个启动步骤中 0 degraded / 0 failed。此项只验证空布局启动装配；真实分组提升、拆离和首帧动画仍需设备验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十批：Surface 成员声明转移与拓扑对账
@@ -1631,10 +1631,10 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - Surface、分组、呈现与模块边界定向测试 222/222 通过。新增假宿主测试覆盖多源组完整转移、重复/部分/过期声明拒绝、捕获后宿主或活动成员改变、待提交候选拒绝、保存失败保留源声明、旧组退役后的迟到关闭；gate 测试覆盖多 Surface 等待与取消释放。
-- 最终全量 x64 测试 4,154/4,154 通过，记录在 `tests/DeskBox.Tests/TestResults/surface-claim-transfer-full-final-20260923.trx`。
+- 最终全量 x64 测试 4,154/4,154 通过，记录在 `tests/DeskCue.Tests/TestResults/surface-claim-transfer-full-final-20260923.trx`。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；没有执行 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建：22 警告、0 错误。2026-09-23 13:05 最终核验 PID 12192，仓库下只有一个 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，进程为 Medium 完整性。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/surface-claim-transfer-20260923-27ff52b1` 使用空格子布局并关闭功能热键、剪贴板录制和自动备份。日志确认 WidgetManager 和设置窗口构造完成，35 个启动步骤中 0 degraded / 0 failed。未得到真实分组合并、拆离或解散的设备日志；自动化假宿主测试与空布局启动不能代替实际窗口、拖动及动画验收。
+- canonical Debug 构建：22 警告、0 错误。2026-09-23 13:05 最终核验 PID 12192，仓库下只有一个 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，进程为 Medium 完整性。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/surface-claim-transfer-20260923-27ff52b1` 使用空格子布局并关闭功能热键、剪贴板录制和自动备份。日志确认 WidgetManager 和设置窗口构造完成，35 个启动步骤中 0 degraded / 0 failed。未得到真实分组合并、拆离或解散的设备日志；自动化假宿主测试与空布局启动不能代替实际窗口、拖动及动画验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十一批：分组持久化后窗口失败的补偿
@@ -1648,24 +1648,24 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - 分组持久化回滚、Surface、呈现与模块边界定向测试 226/226 通过。新增纯事务测试覆盖回写成功、返回失败和抛错后的内存/磁盘状态选择；呈现契约测试检查非复用拆离、解散均在替换窗口首帧失败时进入补偿。既有迟到 Closed 与 Surface 身份测试继续通过。WinUI 窗口创建和真实首帧失败尚未做设备级故障注入。
-- 首次全量测试 4,157/4,158：唯一失败是设置切片访问门禁发现新增 2 处平铺访问。新代码已改为通过 `WidgetLayout` 切片写入，门禁单测通过；最终全量 x64 测试 4,158/4,158 通过，记录在 `tests/DeskBox.Tests/TestResults/group-replacement-recovery-full-final2-20260923.trx`。未扩张旧访问清单。
+- 首次全量测试 4,157/4,158：唯一失败是设置切片访问门禁发现新增 2 处平铺访问。新代码已改为通过 `WidgetLayout` 切片写入，门禁单测通过；最终全量 x64 测试 4,158/4,158 通过，记录在 `tests/DeskCue.Tests/TestResults/group-replacement-recovery-full-final2-20260923.trx`。未扩张旧访问清单。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；没有执行 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建：22 警告、0 错误。2026-09-23 14:06 最终核验 PID 9484，仓库下只有一个 DeskBox 实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，进程为 Medium 完整性。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/group-recovery-20260923-78703819` 使用空格子布局并关闭功能热键、剪贴板录制和自动备份。日志确认设置窗口完成构造、35 个启动步骤中 0 degraded / 0 failed。此项只验证装配；真实分组窗口的创建、首帧、拖动和动画仍需设备验收。
+- canonical Debug 构建：22 警告、0 错误。2026-09-23 14:06 最终核验 PID 9484，仓库下只有一个 DeskCue 实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，进程为 Medium 完整性。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/group-recovery-20260923-78703819` 使用空格子布局并关闭功能热键、剪贴板录制和自动备份。日志确认设置窗口完成构造、35 个启动步骤中 0 degraded / 0 failed。此项只验证装配；真实分组窗口的创建、首帧、拖动和动画仍需设备验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十二批：复用拆离的持久化回滚与设备检查
 
 实施基线：`44e7a0d4` 加前十一批未提交的工作区改动，分支仍为 `experiment/memory-probe-destroy-hidden`。本批只修复复用原 HWND 拆离时的回滚写盘边界，并在独立开发数据目录检查真实窗口。并行内存探针、用户文件操作、磁盘 schema 和窗口动画策略未改。
 
-原复用路径先把新拓扑写盘，再将活动 HWND 改为独立成员并创建剩余成员的替换宿主。失败时旧代码无论回滚写盘是否成功，都会把原 HWND 重新登记为旧组；若写盘失败，磁盘已拆离而内存和 Registry 却恢复为旧组。现在用已提交状态的快照调用 `WidgetGroupPersistedTopologyRecovery`：只有旧拓扑回写成功才关闭替换宿主、恢复旧组声明和原 HWND；回写被拒绝或抛错时，内存保持已保存的拆离状态，原 HWND 维持独立成员声明，存活的替换宿主继续保留，缺失时尝试补建并记录失败。复用路径的创建、首帧和回滚写盘故障点只在带独立 `DESKBOX_DEV_DATA_ROOT` 的 Debug 构建下可单次触发。为自动执行设备检查临时加入的启动动作入口已在验证后移除；常规 Debug 启动不执行分组动作。
+原复用路径先把新拓扑写盘，再将活动 HWND 改为独立成员并创建剩余成员的替换宿主。失败时旧代码无论回滚写盘是否成功，都会把原 HWND 重新登记为旧组；若写盘失败，磁盘已拆离而内存和 Registry 却恢复为旧组。现在用已提交状态的快照调用 `WidgetGroupPersistedTopologyRecovery`：只有旧拓扑回写成功才关闭替换宿主、恢复旧组声明和原 HWND；回写被拒绝或抛错时，内存保持已保存的拆离状态，原 HWND 维持独立成员声明，存活的替换宿主继续保留，缺失时尝试补建并记录失败。复用路径的创建、首帧和回滚写盘故障点只在带独立 `DESKCUE_DEV_DATA_ROOT` 的 Debug 构建下可单次触发。为自动执行设备检查临时加入的启动动作入口已在验证后移除；常规 Debug 启动不执行分组动作。
 
 验证记录：
 
-- Surface、分组、呈现、设置访问门禁及故障探针定向测试 235/235 通过；最终移除临时启动动作入口后，全量 x64 测试 4,166/4,166 通过，记录在 `tests/DeskBox.Tests/TestResults/reused-detach-rollback-final-clean-20260923.trx`。用例覆盖回滚写盘成功与失败时的内存/Registry 归属，以及写盘确认前不恢复旧组声明。
+- Surface、分组、呈现、设置访问门禁及故障探针定向测试 235/235 通过；最终移除临时启动动作入口后，全量 x64 测试 4,166/4,166 通过，记录在 `tests/DeskCue.Tests/TestResults/reused-detach-rollback-final-clean-20260923.trx`。用例覆盖回滚写盘成功与失败时的内存/Registry 归属，以及写盘确认前不恢复旧组声明。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。canonical Debug 构建 22 警告、0 错误。
 - 独立配置中的真实 HWND 检查：正常复用拆离从 1 个组宿主变为 2 个可见独立宿主，原 HWND `0x9B0E5C` 保留；替换创建失败时旧组与原 HWND `0xE610DA` 保留；替换首帧失败时回滚写盘成功，旧组与原 HWND `0x420210` 保留，替换窗口不再可见；首帧失败且注入回滚写盘拒绝时磁盘组数为 0、Registry 有 2 个 Surface，两个实际 HWND 均可见。合并检查中源 HWND 关闭、目标 HWND 保留，2 个窗口归为 1 个组 Surface；解散检查中旧组 HWND 关闭，出现 2 个可见独立窗口。上述操作由隔离 Debug 诊断入口自动触发，完成后入口已移除；它验证了 Win32 HWND/注册关系，不等同于用户拖拽手势、视觉动画或窗口层级的人工验收。
-- 最终空布局 Debug 使用 `C:/Users/simon/AppData/Local/DeskBox-Dev/reused-detach-final-20260923-80ffe2f9`，2026-09-23 15:07 核验 PID 39020，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed。`git diff --check` 通过，未提交或推送。
+- 最终空布局 Debug 使用 `C:/Users/simon/AppData/Local/DeskCue-Dev/reused-detach-final-20260923-80ffe2f9`，2026-09-23 15:07 核验 PID 39020，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed。`git diff --check` 通过，未提交或推送。
 
 ## 第十三批：Todo 布局设置的单一写入入口
 
@@ -1676,9 +1676,9 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - Todo 协调器、设置切片/模块边界和 AOT 定向测试在最终小幅时序调整后 529/529 通过。新增用例覆盖布局模式与旧兼容字段同时写入、宽布局自动选中、外部变化刷新、默认值重置、持久化往返和协调器停止后的失败回退。
-- 最终全量 x64 测试 4,169/4,169 通过，记录在 `tests/DeskBox.Tests/TestResults/todo-layout-writer-full-final-20260923.trx`。既有 JSON 默认值、序列化、设置绑定与 Surface 回归均通过。
+- 最终全量 x64 测试 4,169/4,169 通过，记录在 `tests/DeskCue.Tests/TestResults/todo-layout-writer-full-final-20260923.trx`。既有 JSON 默认值、序列化、设置绑定与 Surface 回归均通过。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。canonical Debug 构建 22 警告、0 错误。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/todo-layout-final-20260923-ad163b26` 预置 `SinglePane`、兼容宽布局关闭、自动选中关闭及空格子布局。2026-09-23 15:28 核验 PID 3964，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性。设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，三个磁盘字段保持一致。此项验证装配与既有状态加载；Todo 设置页实际点击、运行中宽窄布局切换仍需设备交互验收。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/todo-layout-final-20260923-ad163b26` 预置 `SinglePane`、兼容宽布局关闭、自动选中关闭及空格子布局。2026-09-23 15:28 核验 PID 3964，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性。设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，三个磁盘字段保持一致。此项验证装配与既有状态加载；Todo 设置页实际点击、运行中宽窄布局切换仍需设备交互验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十四批：Todo 默认筛选与标签可见性的联动写入
@@ -1692,9 +1692,9 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - 最终无效外部配置边界修复后的定向 x64 测试 657/657 通过，覆盖选择隐藏筛选时自动显示标签、隐藏当前默认标签后的顺序回退、最后一个标签不能消失、标签栏开关、外部刷新、默认重置与持久化往返。
-- 最终全量 x64 测试 4,173/4,173 通过，记录在 `tests/DeskBox.Tests/TestResults/todo-tab-writer-full-final-20260923.trx`；原设置、绑定、AOT 契约及 Surface 回归通过。
+- 最终全量 x64 测试 4,173/4,173 通过，记录在 `tests/DeskCue.Tests/TestResults/todo-tab-writer-full-final-20260923.trx`；原设置、绑定、AOT 契约及 Surface 回归通过。
 - AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。canonical Debug 构建 22 警告、0 错误。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/todo-tab-writer-20260923-8e4dec31` 预置 `ThisWeek` 为默认筛选及唯一可见标签，其他功能与热键关闭、格子布局为空。2026-09-23 15:54 核验 PID 36904，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘筛选/标签组合保持一致。此项只验证装配与已保存状态加载；Todo 设置页实际点击和运行中格子切换仍需设备验收。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/todo-tab-writer-20260923-8e4dec31` 预置 `ThisWeek` 为默认筛选及唯一可见标签，其他功能与热键关闭、格子布局为空。2026-09-23 15:54 核验 PID 36904，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘筛选/标签组合保持一致。此项只验证装配与已保存状态加载；Todo 设置页实际点击和运行中格子切换仍需设备验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十五批：Todo 内容密度与文字大小设置
@@ -1708,8 +1708,8 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - Todo、SettingsService、设置切片/模块边界、AOT 与设置同步定向 x64 测试 677/677 通过，新增用例覆盖字号 `0` 继承全局值、显式字号覆盖后的独立保持、半点归一化、预览行数上下界、默认恢复、持久化往返与停止后拒写。
-- 全量 x64 测试 4,176/4,176 通过，记录在 `tests/DeskBox.Tests/TestResults/todo-density-writer-full-20260923.trx`。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 最终构建 22 警告、0 错误。独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/todo-density-20260923-93839b4b` 预置全局字号 12.5、Todo 预览 4 行、列表字号覆盖值 0、正文覆盖值 13.5 及空格子布局。2026-09-23 17:47 核验 PID 38288，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性。设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘字段保持原值。此项验证装配与加载，未代替 Todo 设置页滑块拖动和运行中格子字号变化的设备验收。
+- 全量 x64 测试 4,176/4,176 通过，记录在 `tests/DeskCue.Tests/TestResults/todo-density-writer-full-20260923.trx`。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。
+- canonical Debug 最终构建 22 警告、0 错误。独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/todo-density-20260923-93839b4b` 预置全局字号 12.5、Todo 预览 4 行、列表字号覆盖值 0、正文覆盖值 13.5 及空格子布局。2026-09-23 17:47 核验 PID 38288，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性。设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘字段保持原值。此项验证装配与加载，未代替 Todo 设置页滑块拖动和运行中格子字号变化的设备验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十六批：Todo 输入行为设置的写入归属
@@ -1721,8 +1721,8 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 验证记录：
 
 - Todo 协调器、Todo 运行时、SettingsService、设置切片/模块边界和 AOT 定向 x64 测试 734/734 通过。新增用例覆盖 Bottom/EnterSaves 写入与持久化、Enter 和 Ctrl+Enter 原按键规则、非法值回退、外部刷新、默认重置与停止后的拒写。
-- 全量 x64 测试 4,179/4,179 通过，记录在 `tests/DeskBox.Tests/TestResults/todo-input-writer-full-20260923.trx`。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。
-- canonical Debug 构建 22 警告、0 错误。独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/todo-input-20260923-a49138a2` 预置 Bottom、EnterSaves 与空格子布局。2026-09-23 17:59 核验 PID 32308，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘字段保持原值。此项验证装配与加载；真实 Todo 编辑器按键输入、新任务插入位置仍需设备交互验收。
+- 全量 x64 测试 4,179/4,179 通过，记录在 `tests/DeskCue.Tests/TestResults/todo-input-writer-full-20260923.trx`。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。
+- canonical Debug 构建 22 警告、0 错误。独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/todo-input-20260923-a49138a2` 预置 Bottom、EnterSaves 与空格子布局。2026-09-23 17:59 核验 PID 32308，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘字段保持原值。此项验证装配与加载；真实 Todo 编辑器按键输入、新任务插入位置仍需设备交互验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十七批：Todo 显示开关与标签样式的写入归属
@@ -1735,7 +1735,7 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 
 - Todo 协调器、SettingsService、设置切片/模块边界、设置同步与 AOT 定向 x64 测试 682/682 通过。新增用例覆盖四项设置的持久化往返、外部刷新、无效标签样式只读归一化及重置写回、协调器停止后的拒写与状态回退。
 - 全量 x64 测试 4,181/4,181 通过。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。canonical Debug 构建 22 警告、0 错误。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/todo-display-20260923-1d244a8d` 预置“隐藏已完成、显示页脚统计、隐藏清除按钮、Pivot 标签”和空格子布局。2026-09-23 18:13 核验 PID 32900，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，四个磁盘字段保持原值。这验证装配与已存配置加载，不代替 Todo 设置页实际点击、运行中列表过滤和页脚呈现的设备验收。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/todo-display-20260923-1d244a8d` 预置“隐藏已完成、显示页脚统计、隐藏清除按钮、Pivot 标签”和空格子布局。2026-09-23 18:13 核验 PID 32900，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，四个磁盘字段保持原值。这验证装配与已存配置加载，不代替 Todo 设置页实际点击、运行中列表过滤和页脚呈现的设备验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十八批：Todo 功能默认恢复中的提醒写入收尾
@@ -1748,7 +1748,7 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 
 - Todo 协调器、提醒运行时、SettingsService、设置边界和 AOT 定向 x64 测试 691/691 通过；补充真实 `TodoReminderRuntime` 假会话联测后，相关最终定向测试 44/44 通过。用例覆盖默认值快照、外层保存前零刷新、保存后仅一次协调、会话创建与关闭、显式恢复的 `checkNow`、重复重置不重复通知、停止后的拒写、外部保存恢复及持久化往返。
 - 最终全量 x64 测试 4,186/4,186 通过。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。canonical Debug 构建 22 警告、0 错误。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/todo-reminder-reset-20260923-30f36340` 预置提醒关闭、提前 30 分钟、Todo 关闭及空格子布局。2026-09-23 20:05 最终核验 PID 44552，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘提醒值保持原样。该检查证明装配和已有设置加载，未在真实 UI 中执行清空 Todo 数据的功能重置，也不等同于系统通知投递验收。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/todo-reminder-reset-20260923-30f36340` 预置提醒关闭、提前 30 分钟、Todo 关闭及空格子布局。2026-09-23 20:05 最终核验 PID 44552，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘提醒值保持原样。该检查证明装配和已有设置加载，未在真实 UI 中执行清空 Todo 数据的功能重置，也不等同于系统通知投递验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第十九批：QuickCapture 默认视图与标签可见性的联动写入
@@ -1763,7 +1763,7 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 
 - QuickCapture 协调器、SettingsService、设置同步/复制、模块边界和 AOT 定向 x64 测试 667/667 通过；补充导航与剪贴板监听隔离用例后，相关最终定向测试 28/28 通过。新增用例覆盖选择隐藏默认视图的一次提交、隐藏当前默认标签后的顺序回退、最后一个标签的保底、无效外部组合的只读展示、默认恢复与持久化、协调器停止后的拒写，以及标签变动不刷新剪贴板会话。
 - 最终全量 x64 测试 4,192/4,192 通过。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。canonical Debug 构建 22 警告、0 错误。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/quickcapture-tabs-20260923-8137ed76` 预置默认 Recent、只显示 Recent 标签、隐藏标签栏及空格子布局。2026-09-23 20:40 核验 PID 40120，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，五个磁盘字段保持预置值。这验证装配与已保存状态加载，实际点击标签、运行中 QuickCapture 格子切换及视觉呈现仍需设备交互验收。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/quickcapture-tabs-20260923-8137ed76` 预置默认 Recent、只显示 Recent 标签、隐藏标签栏及空格子布局。2026-09-23 20:40 核验 PID 40120，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，五个磁盘字段保持预置值。这验证装配与已保存状态加载，实际点击标签、运行中 QuickCapture 格子切换及视觉呈现仍需设备交互验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第二十批：QuickCapture 标签样式与内容预览偏好
@@ -1776,7 +1776,7 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 
 - QuickCapture 协调器、SettingsService、设置同步/复制、模块边界和 AOT 定向 x64 测试 672/672 通过。新增用例覆盖非法样式与越界行数的只读展示、用户写入归一化和持久化往返、默认值重置时不提前保存、外部呈现变化通知且不刷新剪贴板会话，以及停止后的拒写。
 - 全量 x64 测试 4,196/4,196 通过。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，888 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。canonical Debug 构建 22 警告、0 错误。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/quickcapture-presentation-20260923-76c3d5ba` 预置 Pivot、隐藏创建时间、预览 7 行及空格子布局。2026-09-23 21:02 核验 PID 16628，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，三个磁盘字段保持预置值。这验证装配和已保存状态加载；实际设置页点击、QuickCapture 内容卡片样式及运行中切换仍需设备交互验收。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/quickcapture-presentation-20260923-76c3d5ba` 预置 Pivot、隐藏创建时间、预览 7 行及空格子布局。2026-09-23 21:02 核验 PID 16628，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，三个磁盘字段保持预置值。这验证装配和已保存状态加载；实际设置页点击、QuickCapture 内容卡片样式及运行中切换仍需设备交互验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 第二十一批：QuickCapture 最近记录容量与裁剪归属
@@ -1791,7 +1791,7 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 
 - QuickCapture 协调器、剪贴板运行时/服务、SettingsService、设置同步、模块边界和 AOT 定向 x64 测试 678/678 通过；调整通知顺序后相关最终定向测试 39/39 通过。新增用例覆盖快速设置仅执行最后的待裁剪值、默认恢复取消待执行请求、停止等待活动裁剪并拒绝新写入、失败报告后下一次仍可运行、外部配置改变不刷新剪贴板监听。真实隔离 `QuickCaptureStore` 中的 25 条最近记录按新容量裁为 10 条，重新加载仍为 10 条。
 - 最终全量 x64 测试 4,203/4,203 通过。AOT 条件编译通过：x64/win-x64、audit + smoke 配置，890 警告、0 错误；未执行 Native AOT publish/link 或发布包运行验证。canonical Debug 构建 22 警告、0 错误。
-- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskBox-Dev/quickcapture-limit-20260923-5731a4ff` 预置容量 80、功能关闭及空格子布局。2026-09-23 22:54 核验 PID 39980，仓库下唯一实例，路径为 `src/DeskBox/bin/Debug/net10.0-windows10.0.22621.0/DeskBox.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘容量保持 80。该启动检查验证装配与加载；真实设置页数字输入交互、运行中剪贴板采集仍需设备验收。
+- 独立开发数据目录 `C:/Users/simon/AppData/Local/DeskCue-Dev/quickcapture-limit-20260923-5731a4ff` 预置容量 80、功能关闭及空格子布局。2026-09-23 22:54 核验 PID 39980，仓库下唯一实例，路径为 `src/DeskCue/bin/Debug/net10.0-windows10.0.22621.0/DeskCue.exe`，Medium 完整性；设置窗口构造完成，启动 35 步中 0 degraded / 0 failed，磁盘容量保持 80。该启动检查验证装配与加载；真实设置页数字输入交互、运行中剪贴板采集仍需设备验收。
 - `git diff --check` 通过；未提交、推送或合并并行实验改动。
 
 ## 历史下一批（第 22 批现已完成）：QuickCapture 列表与正文字号的写入归属
@@ -1812,15 +1812,15 @@ Generic Host、程序集拆分、WidgetManager 的 Z-order/托盘动画拆分继
 
 ## 2026-09-24：A+B/C/D 与第 22 批统一候选收口
 
-当前隔离候选在 `C:/Users/simon/.codex/worktrees/deskbox-surface-group/wingezi`，包含第 1–22 批架构改动及评审核实后的 A+B/C/D 修复；原共享目录 `D:/project/wingezi` 和 `MemoryDestroyProbe` 未并入。候选 HEAD 仍是本地检查点 `f3f357f1`，本轮增量均未提交、推送或创建 PR。
+当前隔离候选在 `C:/Users/simon/.codex/worktrees/deskcue-surface-group/wingezi`，包含第 1–22 批架构改动及评审核实后的 A+B/C/D 修复；原共享目录 `D:/project/wingezi` 和 `MemoryDestroyProbe` 未并入。候选 HEAD 仍是本地检查点 `f3f357f1`，本轮增量均未提交、推送或创建 PR。
 
 - QuickCapture 最近记录裁剪贯通退出取消令牌，15 秒退出步骤上限兜底；不可取消的原子持久化仍可能在超时后运行，退出会记录该情况。随记格子内启用剪贴板捕获改为先保存设置、后刷新监听，避免额外显示格子；协调器测试钉住该行为。
 - Todo 列表/正文非有限字号输入在协调器和编辑门面均拒写。第 22 批 QuickCapture 两个字号覆盖值已单独提取到候选：原始 `0` 继续继承全局字号，设置页由协调器写入；增加实际设置门面的继承、保存、再显式覆盖往返测试。
 - D 段补充仅在 Debug 且隔离数据根下启用的无目标窗口故障点。用户实测合并双故障后无可用窗口：5 个故障点命中，磁盘仍保留 1 组 2 成员，两份样例文件完好；去掉故障重启恢复同一组合且切换正常，Registry 仅 1 条有效声明。复用拆离的首次窗口外拖动命中 `reused-detach-first-frame`，真实回滚写盘和窗口边界恢复均成功；之后的正常拖动又完成拆离。具体日志、HWND 和数据根见 `surface-group-recovery-segment-20260924.md`。
-- 最终统一候选全量 x64 测试 **4,226/4,226 通过**，本地 TRX 为 `tests/DeskBox.Tests/TestResults/architecture-final-x64-20260924.trx`（按仓库规则被忽略）；Release AOT audit+smoke 条件构建 888 警告、0 错误，canonical Debug 构建 22 警告、0 错误。
+- 最终统一候选全量 x64 测试 **4,226/4,226 通过**，本地 TRX 为 `tests/DeskCue.Tests/TestResults/architecture-final-x64-20260924.trx`（按仓库规则被忽略）；Release AOT audit+smoke 条件构建 888 警告、0 错误，canonical Debug 构建 22 警告、0 错误。
 - x64 Native AOT publish/link 与完整 `publish-aot-audit.ps1` 审计通过，产物 44 个文件、约 95.7 MiB，`AlwaysThrowCount=0`，源码快照审计前后一致。真实 AOT 程序在独立数据根启动，36 步 0 degraded / 0 failed。审计中发现两处旧源码形态匹配误报（主 ViewModel `Dispose` 子串匹配、Todo 提醒异步入口改为包装+核心方法），已收紧对应审计条件；两次失败的原始产物和摘要均保留在 `.artifacts/aot-audit/` 下。
-- x64 Native AOT 测试 MSIX `1.5.5.0` 构建完成，原始包 73 文件、签名副本 75 文件的静态包审计均通过。未签名包被 `0x80073CFF` 拒绝；当前用户 TrustedPeople/Root 信任仍被 `0x800B0109` 拒绝，符合微软文档对 `LocalMachine\TrustedPeople` 的要求。经用户另行授权后，短期测试证书仅临时加入整机 TrustedPeople：MSIX 成功安装，状态 `Ok`。从包入口启动的 PID 13096 位于 `WindowsApps`，`GetPackageFullName` 与安装包身份完全一致，exe SHA-256 与审计解包文件一致，完整性级别为 Medium；“DeskBox 设置”窗口可响应，导航按钮实际切换并恢复。随后结束该进程、卸载包并移除整机证书信任；当前用户/整机均无该证书，包与进程均为 0。包内启动证据保存在 `.artifacts/architecture-final-sideload-test-x64-20260924/packaged-run-evidence.json`。正式双架构安装包、商店合并上传包与发布不属于这次架构候选。
-- 隔离 Debug 数据根 `C:/Users/simon/AppData/Local/DeskBox-Dev/architecture-final-quickcapture-ui-20260924` 预置全局字号 12.5、随记列表原始覆盖值 `0`、正文覆盖值 13.5。用户在真实设置页看到列表 12.5pt/正文 13.5pt，调列表滑块到 13pt 正常；磁盘只将列表原始值改为 13，正文仍为 13.5。用户开启随记格子并在「最近」页点击「开启记录」，界面仍只有 1 个随记窗口、最近页正常；磁盘记录功能与剪贴板记录均启用，布局仅 1 个随记格子，日志有监听启动与一次文本捕获、无相关错误。强制结束测试进程后重启同一目录，1 个随记格子和字号/记录设置保持不变，启动 35 步 0 degraded / 0 failed，监听恢复。测试实例最后已结束，不影响生产数据根。
+- x64 Native AOT 测试 MSIX `1.5.5.0` 构建完成，原始包 73 文件、签名副本 75 文件的静态包审计均通过。未签名包被 `0x80073CFF` 拒绝；当前用户 TrustedPeople/Root 信任仍被 `0x800B0109` 拒绝，符合微软文档对 `LocalMachine\TrustedPeople` 的要求。经用户另行授权后，短期测试证书仅临时加入整机 TrustedPeople：MSIX 成功安装，状态 `Ok`。从包入口启动的 PID 13096 位于 `WindowsApps`，`GetPackageFullName` 与安装包身份完全一致，exe SHA-256 与审计解包文件一致，完整性级别为 Medium；“DeskCue 设置”窗口可响应，导航按钮实际切换并恢复。随后结束该进程、卸载包并移除整机证书信任；当前用户/整机均无该证书，包与进程均为 0。包内启动证据保存在 `.artifacts/architecture-final-sideload-test-x64-20260924/packaged-run-evidence.json`。正式双架构安装包、商店合并上传包与发布不属于这次架构候选。
+- 隔离 Debug 数据根 `C:/Users/simon/AppData/Local/DeskCue-Dev/architecture-final-quickcapture-ui-20260924` 预置全局字号 12.5、随记列表原始覆盖值 `0`、正文覆盖值 13.5。用户在真实设置页看到列表 12.5pt/正文 13.5pt，调列表滑块到 13pt 正常；磁盘只将列表原始值改为 13，正文仍为 13.5。用户开启随记格子并在「最近」页点击「开启记录」，界面仍只有 1 个随记窗口、最近页正常；磁盘记录功能与剪贴板记录均启用，布局仅 1 个随记格子，日志有监听启动与一次文本捕获、无相关错误。强制结束测试进程后重启同一目录，1 个随记格子和字号/记录设置保持不变，启动 35 步 0 degraded / 0 failed，监听恢复。测试实例最后已结束，不影响生产数据根。
 
 ### 下一批
 
@@ -1841,7 +1841,7 @@ A+B 工作树已补齐最终 QuickCapture 退出/快捷入口和 Todo 非有限�
 
 ## 2026-09-25：分段提交与远程审阅
 
-在用户明确授权“发”之后，A+B 已提交并推送 `c966a9a0`，创建 [PR #423](https://github.com/Tianyu199509/DeskBox/pull/423)；C 从该提交叠加 `6728c2e4`，创建 [PR #424](https://github.com/Tianyu199509/DeskBox/pull/424)；D 再叠加 `a3809579`，创建 [PR #425](https://github.com/Tianyu199509/DeskBox/pull/425)。第 22 批使用独立 `codex/architecture-quickcapture-text-size-review` 分支，以 D 提交为基线。前三段本地全量 x64 分别为 4,167、4,177、4,224 全绿；最终叠加态 **4,229/4,229** 通过，完整 Native AOT publish/link 与审计通过。最终 canonical Debug 从独立数据根恢复 1 个随记格子，原始字号 13/13.5 与剪贴板记录状态保持，启动 35 步 0 degraded / 0 failed；测试进程已退出。最终源码、测试与脚本和先前已实测的统一候选逐文件一致，内存探针未进入提交链。
+在用户明确授权“发”之后，A+B 已提交并推送 `c966a9a0`，创建 [PR #423](https://github.com/CyberShadowX/DeskCue/pull/423)；C 从该提交叠加 `6728c2e4`，创建 [PR #424](https://github.com/CyberShadowX/DeskCue/pull/424)；D 再叠加 `a3809579`，创建 [PR #425](https://github.com/CyberShadowX/DeskCue/pull/425)。第 22 批使用独立 `codex/architecture-quickcapture-text-size-review` 分支，以 D 提交为基线。前三段本地全量 x64 分别为 4,167、4,177、4,224 全绿；最终叠加态 **4,229/4,229** 通过，完整 Native AOT publish/link 与审计通过。最终 canonical Debug 从独立数据根恢复 1 个随记格子，原始字号 13/13.5 与剪贴板记录状态保持，启动 35 步 0 degraded / 0 failed；测试进程已退出。最终源码、测试与脚本和先前已实测的统一候选逐文件一致，内存探针未进入提交链。
 
 **下一批**：核对四个 PR 各自 CI 及审阅反馈，按依赖顺序处理合并；合并动作和正式版本发布另行授权。云同步设备层、contribution descriptor、Generic Host 或物理拆工程仍遵照原路线图的触发条件，不混入当前 PR 链。具体范围见 `architecture-final-candidate-review-20260924.md`。
 
@@ -1865,13 +1865,13 @@ A+B 工作树已补齐最终 QuickCapture 退出/快捷入口和 Todo 非有限�
 
 实现：`ShutdownSequence.RunAsync` 返回完整清理是否执行。`ShutdownStep.Bounded` 期限届满抛出专用 `ShutdownStepDeadlineExceededException`；后端自身的超时或失败仍按普通失败记录并继续，不触发中止。带 `abortFollowingStepsOnTimeout` 的步骤超时后中止其余步骤并返回 false——超时后仍会运行的操作不得与随后关闭窗口、释放服务和容器的步骤竞争。三步均以 15 秒期限启用该语义。`ShutdownApplicationAsync` 的 finally 成为兜底：托盘窗关闭、单实例互斥释放并置空（正常路径由 `single-instance` 步执行并置空，null 传播防止双重释放）。`SearchSettingsCoordinator` 停止时移除内部 5 秒上限，改为排空全部在途请求：期限由 App 层统一持有，协调器报告完成即代表没有请求再使用连接；超时则不释放借用的搜索运行时，交由进程退出接管。
 
-测量与故障注入（隔离 Debug，数据根含 `architecture-shutdown-ownership-20260925`，`DESKBOX_DEV_SHUTDOWN_PROBE`）：`clean-exit` 全序列执行、2 秒退出；`hang-todo` 在 15 秒整抛出期限并跳过依赖清理。测量发现：跳过依赖清理时 `Application.Exit()` 返回后 XAML 消息循环继续泵送（dotnet-stack 证实 UI 线程空转于 Main、无前台线程阻塞、`ShutdownApplicationAsync` 已完成），进程无限存活。修复：deadline 路径在 `Exit()` 前布置 3 秒 `Environment.Exit(0)` 看门狗，仅该路径武装。修复后 `hang-todo` 20 秒退出（15 秒期限 + 3 秒看门狗 + 余量），`clean-exit` 仍 2 秒且不触及看门狗；契约测试钉住看门狗与跳过日志。注意本批首次尝试用 `BaseIntermediateOutputPath` 隔离 AOT 构建会破坏 XamlCompiler 状态（WMC9999），隔离应使用 SDK `ArtifactsPath`。
+测量与故障注入（隔离 Debug，数据根含 `architecture-shutdown-ownership-20260925`，`DESKCUE_DEV_SHUTDOWN_PROBE`）：`clean-exit` 全序列执行、2 秒退出；`hang-todo` 在 15 秒整抛出期限并跳过依赖清理。测量发现：跳过依赖清理时 `Application.Exit()` 返回后 XAML 消息循环继续泵送（dotnet-stack 证实 UI 线程空转于 Main、无前台线程阻塞、`ShutdownApplicationAsync` 已完成），进程无限存活。修复：deadline 路径在 `Exit()` 前布置 3 秒 `Environment.Exit(0)` 看门狗，仅该路径武装。修复后 `hang-todo` 20 秒退出（15 秒期限 + 3 秒看门狗 + 余量），`clean-exit` 仍 2 秒且不触及看门狗；契约测试钉住看门狗与跳过日志。注意本批首次尝试用 `BaseIntermediateOutputPath` 隔离 AOT 构建会破坏 XamlCompiler 状态（WMC9999），隔离应使用 SDK `ArtifactsPath`。
 
 验证记录：
 
 - 定向测试 56/56 通过，含所有权期限中止与共享完成结果、后端超时区分、挂起的 Todo 窗口操作/提醒排空/搜索探测分别中止依赖清理。
 - 全量 x64 测试 4,235/4,235 通过（合并态 4,230 + 本批 5 个新用例）。
-- AOT 条件编译（x64/win-x64、DeskBoxAotAudit + DeskBoxAotSmokeHarness + DeskBoxRustNative、`ArtifactsPath` 隔离）通过：888 警告、0 错误。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
+- AOT 条件编译（x64/win-x64、DeskCueAotAudit + DeskCueAotSmokeHarness + DeskCueRustNative、`ArtifactsPath` 隔离）通过：888 警告、0 错误。未执行 Native AOT publish/link 或发布包运行，仍为发版门禁。
 - Debug 构建 0 错误；`git diff --check` 通过。
 - 真实挂起仅经探针模拟；生产三步后端均自带取消与排空，期限属于最后防线。未提交推送。
 
@@ -1904,7 +1904,7 @@ A+B 工作树已补齐最终 QuickCapture 退出/快捷入口和 Todo 非有限�
 
 ## 第二十六批（部分）：P0 归因与日志队列评估
 
-- **P0 全应用内存归因已完成**（报告 `residency-p0-attribution-20260926.md`）：framework Release、3 组×9 格子同进程差分——组缓存树增量 3~5MB、占稳态私有 2~3%，**命中 <10% 停止线：跳过 Cold 档**。两个意外发现：冷启动缓存为空（按需物化+Small 预算封顶，"缓存常驻"前提已不成立）；P2（Warm TTL）价值降级为 CPU/订阅冻结，降为低优先级待真实反馈，**P1-c 维持无条件执行**。测量用临时解除 `DESKBOX_DEV_DATA_ROOT` Release 门控的本地构建，改动已全部还原（一次真实数据误写疑云经快照比对确认为虚惊、零影响，如实记录）。
+- **P0 全应用内存归因已完成**（报告 `residency-p0-attribution-20260926.md`）：framework Release、3 组×9 格子同进程差分——组缓存树增量 3~5MB、占稳态私有 2~3%，**命中 <10% 停止线：跳过 Cold 档**。两个意外发现：冷启动缓存为空（按需物化+Small 预算封顶，"缓存常驻"前提已不成立）；P2（Warm TTL）价值降级为 CPU/订阅冻结，降为低优先级待真实反馈，**P1-c 维持无条件执行**。测量用临时解除 `DESKCUE_DEV_DATA_ROOT` Release 门控的本地构建，改动已全部还原（一次真实数据误写疑云经快照比对确认为虚惊、零影响，如实记录）。
 - **日志队列迁移评估结案：不迁移**。理由：日志队列与单实例锁同属进程生命周期基础设施，必须活到所有服务释放之后（退出序列中 log-drain 在 service-container 之后）；移入 DI 容器会倒置依赖，移入协调器只换边界无行为收益；模块边界立法本就将日志兼容调用豁免在外。重开触发条件：日志需要可配置 sink/级别（结构化日志功能立项）时，抽 Contracts 接口、App 为默认实现。第 3 批起的"待评估"就此关闭。
 
 ## 第二十七批：外部审计对照（#427/#428 复审）

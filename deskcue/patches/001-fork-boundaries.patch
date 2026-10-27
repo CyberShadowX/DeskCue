@@ -1,0 +1,1357 @@
+diff --git a/src/DeskCue/DeskCue.csproj b/src/DeskCue/DeskCue.csproj
+index eee86dcc..fbc2fb3f 100644
+--- a/src/DeskCue/DeskCue.csproj
++++ b/src/DeskCue/DeskCue.csproj
+@@ -39,6 +39,11 @@
+     <ApplicationIcon>Assets\deskcue.ico</ApplicationIcon>
+   </PropertyGroup>
+ 
++  <ItemGroup>
++    <Content Include="..\..\LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
++    <Content Include="..\..\UPSTREAM.md" Link="UPSTREAM.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
++  </ItemGroup>
++
+   <!--
+     Opt-in Native AOT audit profile. Keep ordinary Debug/Release behavior
+     unchanged until the application-level AOT compatibility work is complete.
+diff --git a/src/DeskCue/Services/AppUpdateService.cs b/src/DeskCue/Services/AppUpdateService.cs
+index b73383e9..8b317b3c 100644
+--- a/src/DeskCue/Services/AppUpdateService.cs
++++ b/src/DeskCue/Services/AppUpdateService.cs
+@@ -593,9 +593,12 @@ public sealed partial class AppUpdateService : IAppUpdateService
+             !string.IsNullOrWhiteSpace(manifest.Version) &&
+             Uri.TryCreate(manifest.DownloadUrl, UriKind.Absolute, out Uri? downloadUri) &&
+             IsTrustedInstallerDownloadUri(downloadUri) &&
++            (IsInstallerAssetName(Path.GetFileName(downloadUri.LocalPath), "x64") ||
++             IsInstallerAssetName(Path.GetFileName(downloadUri.LocalPath), "arm64")) &&
+             (string.IsNullOrWhiteSpace(manifest.Arm64DownloadUrl) ||
+                 (Uri.TryCreate(manifest.Arm64DownloadUrl, UriKind.Absolute, out Uri? arm64Uri) &&
+-                    IsTrustedInstallerDownloadUri(arm64Uri)));
++                    IsTrustedInstallerDownloadUri(arm64Uri) &&
++                    IsInstallerAssetName(Path.GetFileName(arm64Uri.LocalPath), "arm64")));
+     }
+ 
+     /// <summary>
+@@ -671,16 +674,12 @@ public sealed partial class AppUpdateService : IAppUpdateService
+     /// </summary>
+     private static bool IsTrustedInstallerDownloadUri(Uri uri)
+     {
+-        if (!string.Equals(uri.Scheme, "https", StringComparison.OrdinalIgnoreCase))
++        if (!string.Equals(uri.Scheme, "https", StringComparison.OrdinalIgnoreCase) ||
++            !uri.IsDefaultPort || !string.IsNullOrEmpty(uri.UserInfo))
+         {
+             return false;
+         }
+ 
+-        if (IsHostOrSubdomain(uri, "deskbox.fun"))
+-        {
+-            return true;
+-        }
+-
+         // GitHub hosts third-party repositories, so trusting the whole domain
+         // would let a tampered manifest point at any attacker repository with
+         // a matching hash. Only this project's own release downloads count;
+@@ -689,16 +688,10 @@ public sealed partial class AppUpdateService : IAppUpdateService
+         // which therefore must never be trusted as a manifest origin itself.
+         return string.Equals(uri.Host, "github.com", StringComparison.OrdinalIgnoreCase) &&
+             uri.AbsolutePath.StartsWith(
+-                "/Tianyu199509/DeskCue/releases/download/",
++                "/CyberShadowX/DeskCue/releases/download/",
+                 StringComparison.OrdinalIgnoreCase);
+     }
+ 
+-    private static bool IsHostOrSubdomain(Uri uri, string domain)
+-    {
+-        return uri.Host.Equals(domain, StringComparison.OrdinalIgnoreCase) ||
+-            uri.Host.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase);
+-    }
+-
+     internal static bool TrySelectInstallerForArchitecture(
+         AppUpdateManifest manifest,
+         string architectureSuffix)
+@@ -884,15 +877,7 @@ public sealed partial class AppUpdateService : IAppUpdateService
+         }
+ 
+         string fileName = Path.GetFileName(uri.LocalPath);
+-        if (!fileName.StartsWith("DeskCue_Setup_", StringComparison.OrdinalIgnoreCase))
+-        {
+-            // Keep compatibility with a server endpoint that returns a
+-            // redirect or content-disposition filename instead of exposing
+-            // the final installer name in the URL.
+-            return true;
+-        }
+-
+-        return fileName.EndsWith($"_{architectureSuffix}.exe", StringComparison.OrdinalIgnoreCase);
++        return IsInstallerAssetName(fileName, architectureSuffix);
+     }
+ 
+     private static string ExtractSha256FromDigest(string? digest)
+diff --git a/src/DeskCue/Services/FeedbackService.cs b/src/DeskCue/Services/FeedbackService.cs
+index d5bef92c..2b783078 100644
+--- a/src/DeskCue/Services/FeedbackService.cs
++++ b/src/DeskCue/Services/FeedbackService.cs
+@@ -62,7 +62,10 @@ public sealed record DeskCueFeedbackMineResult(bool Ok, IReadOnlyList<DeskCueFee
+ /// </summary>
+ public sealed partial class FeedbackService
+ {
+-    public const string DefaultApiBaseUrl = "https://deskbox.fun/stats/api/";
++    // DeskCue feedback is user-directed to its GitHub Issues page. There is no
++    // DeskCue anonymous feedback/diagnostics server. Explicit injected endpoints
++    // remain available to the retained service tests and future owned adapters.
++    public const string DefaultApiBaseUrl = "";
+     private const int MinContentLength = 10;
+     private const int MaxContentLength = 2000;
+     private const int MaxDiagnosticsBytes = 5 * 1024 * 1024;
+@@ -120,12 +123,19 @@ public sealed partial class FeedbackService
+     /// persisted next to the app data so reinstall keeps a new identity.</summary>
+     public string ClientId => _clientId ??= LoadOrCreateClientId();
+ 
++    public bool IsConfigured => !string.IsNullOrWhiteSpace(_apiBaseUrl);
++
+     public async Task<DeskCueFeedbackSubmissionResult> SubmitAsync(
+         DeskCueFeedbackKind kind,
+         string content,
+         bool includeDiagnostics = false,
+         CancellationToken cancellationToken = default)
+     {
++        if (!IsConfigured)
++        {
++            return DeskCueFeedbackSubmissionResult.Rejected("github_issues");
++        }
++
+         string trimmed = (content ?? string.Empty).Trim();
+         if (trimmed.Length < MinContentLength || trimmed.Length > MaxContentLength)
+         {
+@@ -236,6 +246,11 @@ public sealed partial class FeedbackService
+         string archivePath,
+         CancellationToken cancellationToken = default)
+     {
++        if (!IsConfigured)
++        {
++            return DeskCueFeedbackDiagnosticsStatus.Failed;
++        }
++
+         byte[] bytes;
+         try
+         {
+@@ -280,6 +295,11 @@ public sealed partial class FeedbackService
+ 
+     public async Task<DeskCueFeedbackMineResult> GetMyFeedbackAsync(CancellationToken cancellationToken = default)
+     {
++        if (!IsConfigured)
++        {
++            return DeskCueFeedbackMineResult.Failure();
++        }
++
+         string json = JsonSerializer.Serialize(
+             new DeskCueFeedbackMinePayload(ClientId),
+             FeedbackJsonContext.Default.FeedbackMinePayload);
+diff --git a/src/DeskCue/Strings/ar-SA.json b/src/DeskCue/Strings/ar-SA.json
+index 438d8ec8..e7fdb538 100644
+--- a/src/DeskCue/Strings/ar-SA.json
++++ b/src/DeskCue/Strings/ar-SA.json
+@@ -1299,18 +1299,18 @@
+   "Startup.Fatal.EnvironmentIssuesHeader": "مشكلات البيئة المكتشفة (أسباب محتملة):",
+   "Settings.Section.About": "حول",
+   "Settings.About.Description": "أداة تخزين وتنظيم سطح المكتب",
+-  "Settings.About.AboutMeTitle": "نبذة عني",
+-  "Settings.About.AboutMeButton": "نبذة عني",
++  "Settings.About.AboutMeTitle": "مصادر المشروع",
++  "Settings.About.AboutMeButton": "مصادر المشروع",
+   "Settings.About.Website": "الموقع الرسمي",
+   "Settings.About.WebsiteDescription": "عرض التنزيلات وسجلات التغيير وملاحظات المنتج",
+   "Settings.About.FeedbackTitle": "الملاحظات",
+-  "Settings.About.FeedbackDescription": "ملاحظات مجهولة — دون تسجيل دخول ودون بيانات تواصل.",
+-  "Settings.About.FeedbackDescription.InfoTip.Title": "جدار الملاحظات العام",
+-  "Settings.About.FeedbackDescription.InfoTip.Description": "**deskbox.fun**: يمكنك أيضًا تصفّح جدار الملاحظات العام على deskbox.fun.",
++  "Settings.About.FeedbackDescription": "أبلغ عن مشكلة أو اقتراح عبر GitHub. سيكون المحتوى الذي ترسله متاحًا للعامة.",
++  "Settings.About.FeedbackDescription.InfoTip.Title": "مشكلات GitHub",
++  "Settings.About.FeedbackDescription.InfoTip.Description": "الملاحظات: github.com/CyberShadowX/DeskCue/issues",
+   "Common.Close": "إغلاق",
+   "Common.GotIt": "فهمت",
+-  "Settings.About.FeedbackSendButton": "إرسال ملاحظات",
+-  "Settings.About.FeedbackMineButton": "ملاحظاتي",
++  "Settings.About.FeedbackSendButton": "الإبلاغ عن مشكلة",
++  "Settings.About.FeedbackMineButton": "عرض البلاغات",
+   "Feedback.Dialog.Title": "إرسال ملاحظات",
+   "Feedback.Dialog.AnonymousNotice": "لا حاجة لتسجيل الدخول أو البريد الإلكتروني. يُخزَّن فقط معرّف عشوائي وتجزئة IP مملّحة، لمنع إساءة الاستخدام.",
+   "Feedback.Dialog.TypeSuggestion": "اقتراح",
+@@ -1360,7 +1360,7 @@
+   "Settings.About.VersionWithChannel": "الإصدار {0} · {1} · WinUI 3 / .NET 10",
+   "Settings.About.Channel.Direct": "مباشر",
+   "Settings.About.Channel.Store": "متجر مايكروسوفت",
+-  "Settings.About.Developer": "المطور: تشو تيانيو · GitHub: {0}",
++  "Settings.About.Developer": "الصيانة: CyberShadowX · GitHub: {0}",
+   "Settings.Dialog.AccentTitle": "لون مميز مخصص",
+   "Settings.Dialog.MigrateTitle": "نقل مسار التخزين الافتراضي",
+   "Settings.Dialog.OpenStorageFailedTitle": "تعذّر فتح مجلد التخزين",
+@@ -1394,10 +1394,10 @@
+   "Settings.Dialog.UnpinQuickAccessFailedBody": "تعذر على DeskCue إزالة المجلد من الوصول السريع.\n\n{0}",
+   "Settings.Dialog.RestoreTitle": "استعادة التفضيلات الافتراضية",
+   "Settings.Dialog.RestoreBody": "ستتم استعادة تفضيلات المظهر والعرض والتفاعل ومفتاح التشغيل السريع وتفضيلات الأدوات الوظيفية. سيتم الحفاظ على اللغة وبدء التشغيل ومفاتيح الأدوات الوظيفية والأدوات والمواضع الموجودة ومسارات التخزين ومحتوى الالتقاط السريع ومهام Todo والملفات.",
+-  "Settings.Dialog.AboutMeName": "Tianyu Zhu",
+-  "Settings.Dialog.AboutMeRole": "مدير منتج · منشئ DeskCue",
+-  "Settings.Dialog.AboutMeP1": "أحب المظهر الأصلي لتطبيقات Microsoft والأدوات المصغرة التي تُبقي المعلومات والأدوات المفيدة قريبة على سطح المكتب.",
+-  "Settings.Dialog.AboutMeP2": "لم تجعل Microsoft هذا النوع من أدوات سطح المكتب أولوية مستمرة، لذلك بدأت في إنشاء DeskCue. أريده أن ينسجم طبيعيًا مع Windows ويساعد في تنظيم سطح المكتب والاستخدام اليومي.",
++  "Settings.Dialog.AboutMeName": "DeskCue",
++  "Settings.Dialog.AboutMeRole": "نسخة مشتقة مفتوحة المصدر يتولى CyberShadowX صيانتها",
++  "Settings.Dialog.AboutMeP1": "يستند DeskCue إلى DeskBox الذي طوّره Tianyu Zhu. نحافظ على ميزات المشروع الأصلي وإشعارات حقوق المؤلف.",
++  "Settings.Dialog.AboutMeP2": "يتولى CyberShadowX الصيانة بموجب GPL-3.0-only. الشفرة والتحديثات والإبلاغ عن المشكلات: github.com/CyberShadowX/DeskCue.",
+   "Settings.Dialog.AboutMeClose": "إغلاق",
+   "Onboarding.WindowTitle": "التعريف بـ DeskCue",
+   "Onboarding.Back": "العودة",
+diff --git a/src/DeskCue/Strings/bn-BD.json b/src/DeskCue/Strings/bn-BD.json
+index 243810aa..494a8ea7 100644
+--- a/src/DeskCue/Strings/bn-BD.json
++++ b/src/DeskCue/Strings/bn-BD.json
+@@ -1299,18 +1299,18 @@
+   "Startup.Fatal.EnvironmentIssuesHeader": "সনাক্ত করা পরিবেশগত সমস্যা (সম্ভাব্য কারণ):",
+   "Settings.Section.About": "সম্পর্কে",
+   "Settings.About.Description": "ডেস্কটপ স্টোরেজ এবং সংগঠন টুল",
+-  "Settings.About.AboutMeTitle": "আমার সম্পর্কে",
+-  "Settings.About.AboutMeButton": "আমার সম্পর্কে",
++  "Settings.About.AboutMeTitle": "প্রকল্পের কৃতিত্ব",
++  "Settings.About.AboutMeButton": "প্রকল্পের কৃতিত্ব",
+   "Settings.About.Website": "অফিসিয়াল ওয়েবসাইট",
+   "Settings.About.WebsiteDescription": "ডাউনলোড, চেঞ্জলগ এবং পণ্য নোট দেখুন",
+   "Settings.About.FeedbackTitle": "প্রতিক্রিয়া",
+-  "Settings.About.FeedbackDescription": "বেনামী মতামত — সাইন-ইন লাগে না, যোগাযোগের তথ্যও রাখা হয় না।",
+-  "Settings.About.FeedbackDescription.InfoTip.Title": "প্রকাশ্য মতামত প্রাচীর",
+-  "Settings.About.FeedbackDescription.InfoTip.Description": "**deskbox.fun**: প্রকাশ্য মতামত প্রাচীর deskbox.fun-এও দেখতে পারেন।",
++  "Settings.About.FeedbackDescription": "GitHub-এ সমস্যা বা পরামর্শ জানান। জমা দেওয়া বিষয়বস্তু সর্বসাধারণ দেখতে পাবেন।",
++  "Settings.About.FeedbackDescription.InfoTip.Title": "GitHub-এর সমস্যা প্রতিবেদন",
++  "Settings.About.FeedbackDescription.InfoTip.Description": "মতামত: github.com/CyberShadowX/DeskCue/issues",
+   "Common.Close": "বন্ধ করুন",
+   "Common.GotIt": "বুঝেছি",
+-  "Settings.About.FeedbackSendButton": "মতামত পাঠান",
+-  "Settings.About.FeedbackMineButton": "আমার মতামত",
++  "Settings.About.FeedbackSendButton": "সমস্যা জানান",
++  "Settings.About.FeedbackMineButton": "প্রতিবেদন দেখুন",
+   "Feedback.Dialog.Title": "মতামত পাঠান",
+   "Feedback.Dialog.AnonymousNotice": "সাইন-ইন বা ইমেল লাগবে না। অপব্যবহার ঠেকাতে শুধু একটি এলোমেলো আইডি ও লবণযুক্ত IP হ্যাশ সংরক্ষণ করা হয়।",
+   "Feedback.Dialog.TypeSuggestion": "পরামর্শ",
+@@ -1360,7 +1360,7 @@
+   "Settings.About.VersionWithChannel": "সংস্করণ {0} · {1} · WinUI 3 / .NET 10",
+   "Settings.About.Channel.Direct": "সরাসরি",
+   "Settings.About.Channel.Store": "মাইক্রোসফট স্টোর",
+-  "Settings.About.Developer": "বিকাশকারী: ঝু তিয়ানু · গিটহাব: {0}",
++  "Settings.About.Developer": "রক্ষণাবেক্ষণ: CyberShadowX · GitHub: {0}",
+   "Settings.Dialog.AccentTitle": "কাস্টম অ্যাকসেন্ট রঙ",
+   "Settings.Dialog.MigrateTitle": "ডিফল্ট স্টোরেজ পাথ সরান",
+   "Settings.Dialog.OpenStorageFailedTitle": "স্টোরেজ ফোল্ডার খোলা যায়নি",
+@@ -1394,10 +1394,10 @@
+   "Settings.Dialog.UnpinQuickAccessFailedBody": "DeskCue দ্রুত অ্যাক্সেস থেকে ফোল্ডার সরাতে পারেনি।\n\n{0}",
+   "Settings.Dialog.RestoreTitle": "ডিফল্ট পছন্দগুলি পুনরুদ্ধার করুন",
+   "Settings.Dialog.RestoreBody": "চেহারা, প্রদর্শন, মিথস্ক্রিয়া, হটকি এবং ফিচার উইজেট পছন্দগুলি পুনরুদ্ধার করা হবে। ভাষা, স্টার্টআপ, ফিচার উইজেট সুইচ, বিদ্যমান উইজেট এবং অবস্থান, স্টোরেজ পাথ, দ্রুত ক্যাপচারের বিষয়বস্তু, Todo-র কাজ এবং ফাইল সংরক্ষণ করা হবে।",
+-  "Settings.Dialog.AboutMeName": "Tianyu Zhu",
+-  "Settings.Dialog.AboutMeRole": "প্রোডাক্ট ম্যানেজার · DeskCue-এর নির্মাতা",
+-  "Settings.Dialog.AboutMeP1": "Microsoft অ্যাপের নেটিভ অনুভূতি এবং ডেস্কটপে দরকারি তথ্য ও টুল কাছে রাখা উইজেট আমার ভালো লাগে।",
+-  "Settings.Dialog.AboutMeP2": "Microsoft কখনো এই ধরনের ডেস্কটপ উইজেটকে ধারাবাহিক অগ্রাধিকার দেয়নি, তাই আমি DeskCue তৈরি শুরু করি। আমি চাই এটি Windows-এর সঙ্গে স্বাভাবিকভাবে মিশে যাক এবং প্রতিদিনের ডেস্কটপ গুছিয়ে রাখতে সাহায্য করুক।",
++  "Settings.Dialog.AboutMeName": "DeskCue",
++  "Settings.Dialog.AboutMeRole": "CyberShadowX-এর রক্ষণাবেক্ষণে থাকা ওপেন-সোর্স সংস্করণ",
++  "Settings.Dialog.AboutMeP1": "DeskCue, Tianyu Zhu-এর DeskBox-এর ওপর ভিত্তি করে তৈরি। মূল প্রকল্পের সুবিধা ও কপিরাইট বিজ্ঞপ্তি সংরক্ষিত আছে।",
++  "Settings.Dialog.AboutMeP2": "GPL-3.0-only-এর অধীনে CyberShadowX রক্ষণাবেক্ষণ করেন। সোর্স কোড, আপডেট ও সমস্যার প্রতিবেদন: github.com/CyberShadowX/DeskCue.",
+   "Settings.Dialog.AboutMeClose": "বন্ধ করুন",
+   "Onboarding.WindowTitle": "DeskCue পরিচিতি",
+   "Onboarding.Back": "পিছনে",
+diff --git a/src/DeskCue/Strings/de-DE.json b/src/DeskCue/Strings/de-DE.json
+index c121ea06..31688a5f 100644
+--- a/src/DeskCue/Strings/de-DE.json
++++ b/src/DeskCue/Strings/de-DE.json
+@@ -1296,18 +1296,18 @@
+   "Startup.Fatal.EnvironmentIssuesHeader": "Erkannte Umgebungsprobleme (mögliche Ursachen):",
+   "Settings.Section.About": "Über",
+   "Settings.About.Description": "Desktop-Speicher- und Organisations-Tool",
+-  "Settings.About.AboutMeTitle": "Über mich",
+-  "Settings.About.AboutMeButton": "Über mich",
++  "Settings.About.AboutMeTitle": "Projektinformationen",
++  "Settings.About.AboutMeButton": "Projektinformationen",
+   "Settings.About.Website": "Offizielle Website",
+   "Settings.About.WebsiteDescription": "Downloads, Changelogs und Produkt-Notes anzeigen",
+   "Settings.About.FeedbackTitle": "Feedback",
+-  "Settings.About.FeedbackDescription": "Anonymes Feedback – ohne Anmeldung, ohne Kontaktdaten.",
+-  "Settings.About.FeedbackDescription.InfoTip.Title": "Öffentliche Feedback-Wand",
+-  "Settings.About.FeedbackDescription.InfoTip.Description": "**deskbox.fun**: Die öffentliche Feedback-Wand können Sie auch auf deskbox.fun einsehen.",
++  "Settings.About.FeedbackDescription": "Melden Sie Probleme oder Vorschläge auf GitHub. Eingereichte Beiträge sind öffentlich.",
++  "Settings.About.FeedbackDescription.InfoTip.Title": "GitHub-Problemmeldungen",
++  "Settings.About.FeedbackDescription.InfoTip.Description": "Rückmeldungen: github.com/CyberShadowX/DeskCue/issues",
+   "Common.Close": "Schließen",
+   "Common.GotIt": "Verstanden",
+-  "Settings.About.FeedbackSendButton": "Feedback senden",
+-  "Settings.About.FeedbackMineButton": "Mein Feedback",
++  "Settings.About.FeedbackSendButton": "Problem melden",
++  "Settings.About.FeedbackMineButton": "Meldungen ansehen",
+   "Feedback.Dialog.Title": "Feedback senden",
+   "Feedback.Dialog.AnonymousNotice": "Keine Anmeldung und keine E-Mail nötig. Zur Missbrauchsabwehr werden nur eine Zufallskennung und ein gesalzener IP-Hash gespeichert.",
+   "Feedback.Dialog.TypeSuggestion": "Vorschlag",
+@@ -1357,7 +1357,7 @@
+   "Settings.About.VersionWithChannel": "Version {0} · {1} · WinUI 3 / .NET 10",
+   "Settings.About.Channel.Direct": "Direkt",
+   "Settings.About.Channel.Store": "Microsoft Store",
+-  "Settings.About.Developer": "Entwickler: Zhu Tianyu · GitHub: {0}",
++  "Settings.About.Developer": "Betreuung: CyberShadowX · GitHub: {0}",
+   "Settings.Dialog.AccentTitle": "Benutzerdefinierte Akzentfarbe",
+   "Settings.Dialog.MigrateTitle": "Standard-Speicherpfad verschieben",
+   "Settings.Dialog.OpenStorageFailedTitle": "Speicherordner konnte nicht geöffnet werden",
+@@ -1391,10 +1391,10 @@
+   "Settings.Dialog.UnpinQuickAccessFailedBody": "DeskCue konnte den Ordner nicht aus dem Schnellzugriff entfernen.\n\n{0}",
+   "Settings.Dialog.RestoreTitle": "Standardeinstellungen wiederherstellen",
+   "Settings.Dialog.RestoreBody": "Erscheinungsbild, Anzeige, Interaktion, Tastenkombination und Funktions-Widget-Einstellungen werden wiederhergestellt. Sprache, Start, Funktions-Widget-Schalter, bestehende Widgets und Positionen, Speicherpfade, Quick-Capture-Inhalte, Todo-Aufgaben und Dateien bleiben erhalten.",
+-  "Settings.Dialog.AboutMeName": "Tianyu Zhu",
+-  "Settings.Dialog.AboutMeRole": "Produktmanager · Entwickler von DeskCue",
+-  "Settings.Dialog.AboutMeP1": "Ich mag die native Anmutung von Microsoft-Apps und Widgets, die nützliche Inhalte und Werkzeuge direkt auf dem Desktop bereithalten.",
+-  "Settings.Dialog.AboutMeP2": "Microsoft hat solche Desktop-Widgets nie dauerhaft in den Mittelpunkt gestellt. Deshalb habe ich DeskCue begonnen. Es soll sich natürlich in Windows einfügen und bei der Organisation des Desktops im Alltag helfen.",
++  "Settings.Dialog.AboutMeName": "DeskCue",
++  "Settings.Dialog.AboutMeRole": "Von CyberShadowX betreute Open-Source-Abspaltung",
++  "Settings.Dialog.AboutMeP1": "DeskCue basiert auf DeskBox von Tianyu Zhu. Die Funktionen des Ursprungsprojekts und die ursprünglichen Urheberrechtshinweise bleiben erhalten.",
++  "Settings.Dialog.AboutMeP2": "Von CyberShadowX unter GPL-3.0-only betreut. Quellcode, Updates und Fehlermeldungen: github.com/CyberShadowX/DeskCue.",
+   "Settings.Dialog.AboutMeClose": "Schließen",
+   "Onboarding.WindowTitle": "DeskCue-Onboarding",
+   "Onboarding.Back": "Zurück",
+diff --git a/src/DeskCue/Strings/en-US.json b/src/DeskCue/Strings/en-US.json
+index 5ef4780b..c6a7146e 100644
+--- a/src/DeskCue/Strings/en-US.json
++++ b/src/DeskCue/Strings/en-US.json
+@@ -1299,18 +1299,18 @@
+   "Startup.Fatal.EnvironmentIssuesHeader": "Detected environment issues (possible causes):",
+   "Settings.Section.About": "About",
+   "Settings.About.Description": "Desktop storage and organization tool",
+-  "Settings.About.AboutMeTitle": "About me",
+-  "Settings.About.AboutMeButton": "About me",
++  "Settings.About.AboutMeTitle": "Project credits",
++  "Settings.About.AboutMeButton": "Project credits",
+   "Settings.About.Website": "Official website",
+   "Settings.About.WebsiteDescription": "View downloads, changelogs, and product notes",
+   "Settings.About.FeedbackTitle": "Feedback",
+-  "Settings.About.FeedbackDescription": "Anonymous feedback — no sign-in, no contact details.",
+-  "Settings.About.FeedbackDescription.InfoTip.Title": "Public feedback wall",
+-  "Settings.About.FeedbackDescription.InfoTip.Description": "**deskbox.fun**: You can also browse the public feedback wall at deskbox.fun.",
++  "Settings.About.FeedbackDescription": "Report a problem or suggestion on GitHub. Submitted issues are public.",
++  "Settings.About.FeedbackDescription.InfoTip.Title": "GitHub Issues",
++  "Settings.About.FeedbackDescription.InfoTip.Description": "Feedback: github.com/CyberShadowX/DeskCue/issues",
+   "Common.Close": "Close",
+   "Common.GotIt": "Got it",
+-  "Settings.About.FeedbackSendButton": "Send feedback",
+-  "Settings.About.FeedbackMineButton": "My feedback",
++  "Settings.About.FeedbackSendButton": "Open an issue",
++  "Settings.About.FeedbackMineButton": "Browse issues",
+   "Feedback.Dialog.Title": "Send feedback",
+   "Feedback.Dialog.AnonymousNotice": "No sign-in and no email required. Only a random identifier and a salted IP hash are stored, to prevent abuse.",
+   "Feedback.Dialog.TypeSuggestion": "Suggestion",
+@@ -1360,7 +1360,7 @@
+   "Settings.About.VersionWithChannel": "Version {0} · {1} · WinUI 3 / .NET 10",
+   "Settings.About.Channel.Direct": "Direct",
+   "Settings.About.Channel.Store": "Microsoft Store",
+-  "Settings.About.Developer": "Developer: Zhu Tianyu · GitHub: {0}",
++  "Settings.About.Developer": "Maintainer: CyberShadowX · GitHub: {0}",
+   "Settings.Dialog.AccentTitle": "Custom accent color",
+   "Settings.Dialog.MigrateTitle": "Move default storage path",
+   "Settings.Dialog.OpenStorageFailedTitle": "Couldn't open the storage folder",
+@@ -1394,10 +1394,10 @@
+   "Settings.Dialog.UnpinQuickAccessFailedBody": "DeskCue could not remove the folder from Quick Access.\n\n{0}",
+   "Settings.Dialog.RestoreTitle": "Restore default preferences",
+   "Settings.Dialog.RestoreBody": "Appearance, display, interaction, hotkey, and feature widget preferences will be restored. Language, startup, feature widget switches, existing widgets and positions, storage paths, Quick Capture content, Todo tasks, and files will be preserved.",
+-  "Settings.Dialog.AboutMeName": "Tianyu Zhu",
+-  "Settings.Dialog.AboutMeRole": "Product manager · Creator of DeskCue",
+-  "Settings.Dialog.AboutMeP1": "I like the native feel of Microsoft apps, and I like widgets that keep useful information and tools close on the desktop.",
+-  "Settings.Dialog.AboutMeP2": "Microsoft has never made this kind of desktop widget a sustained focus, so I started building DeskCue. I want it to feel at home on Windows while solving practical desktop organization and everyday-use problems.",
++  "Settings.Dialog.AboutMeName": "DeskCue",
++  "Settings.Dialog.AboutMeRole": "Open-source fork maintained by CyberShadowX",
++  "Settings.Dialog.AboutMeP1": "DeskCue is based on DeskBox by Tianyu Zhu. Upstream features and original copyright notices are retained.",
++  "Settings.Dialog.AboutMeP2": "Maintained by CyberShadowX under GPL-3.0-only. Source, updates and issue reporting: github.com/CyberShadowX/DeskCue.",
+   "Settings.Dialog.AboutMeClose": "Close",
+   "Onboarding.WindowTitle": "DeskCue Onboarding",
+   "Onboarding.Back": "Back",
+diff --git a/src/DeskCue/Strings/es-ES.json b/src/DeskCue/Strings/es-ES.json
+index 49c31df5..1603f7b5 100644
+--- a/src/DeskCue/Strings/es-ES.json
++++ b/src/DeskCue/Strings/es-ES.json
+@@ -1299,18 +1299,18 @@
+   "Startup.Fatal.EnvironmentIssuesHeader": "Problemas del entorno detectados (posibles causas):",
+   "Settings.Section.About": "Acerca de",
+   "Settings.About.Description": "Herramienta de organización y almacenamiento de escritorio.",
+-  "Settings.About.AboutMeTitle": "Sobre mí",
+-  "Settings.About.AboutMeButton": "Sobre mí",
++  "Settings.About.AboutMeTitle": "Créditos del proyecto",
++  "Settings.About.AboutMeButton": "Créditos del proyecto",
+   "Settings.About.Website": "Sitio web oficial",
+   "Settings.About.WebsiteDescription": "Ver descargas, registros de cambios y notas de productos",
+   "Settings.About.FeedbackTitle": "Comentarios",
+-  "Settings.About.FeedbackDescription": "Comentarios anónimos — sin iniciar sesión ni datos de contacto.",
+-  "Settings.About.FeedbackDescription.InfoTip.Title": "Muro público de comentarios",
+-  "Settings.About.FeedbackDescription.InfoTip.Description": "**deskbox.fun**: también puedes ver el muro público de comentarios en deskbox.fun.",
++  "Settings.About.FeedbackDescription": "Comunica problemas o sugerencias en GitHub. El contenido enviado será público.",
++  "Settings.About.FeedbackDescription.InfoTip.Title": "Incidencias de GitHub",
++  "Settings.About.FeedbackDescription.InfoTip.Description": "Comentarios: github.com/CyberShadowX/DeskCue/issues",
+   "Common.Close": "Cerrar",
+   "Common.GotIt": "Entendido",
+-  "Settings.About.FeedbackSendButton": "Enviar comentarios",
+-  "Settings.About.FeedbackMineButton": "Mis comentarios",
++  "Settings.About.FeedbackSendButton": "Comunicar un problema",
++  "Settings.About.FeedbackMineButton": "Ver incidencias",
+   "Feedback.Dialog.Title": "Enviar comentarios",
+   "Feedback.Dialog.AnonymousNotice": "No hace falta iniciar sesión ni dar un correo. Solo se guardan un identificador aleatorio y un hash de IP con sal, para evitar abusos.",
+   "Feedback.Dialog.TypeSuggestion": "Sugerencia",
+@@ -1360,7 +1360,7 @@
+   "Settings.About.VersionWithChannel": "Versión {0} · {1} · WinUI 3 / .NET 10",
+   "Settings.About.Channel.Direct": "Directo",
+   "Settings.About.Channel.Store": "Tienda Microsoft",
+-  "Settings.About.Developer": "Desarrollador: Zhu Tianyu · GitHub: {0}",
++  "Settings.About.Developer": "Mantenimiento: CyberShadowX · GitHub: {0}",
+   "Settings.Dialog.AccentTitle": "Color de acento personalizado",
+   "Settings.Dialog.MigrateTitle": "Mover ruta de almacenamiento predeterminada",
+   "Settings.Dialog.OpenStorageFailedTitle": "No se pudo abrir la carpeta de almacenamiento",
+@@ -1394,10 +1394,10 @@
+   "Settings.Dialog.UnpinQuickAccessFailedBody": "DeskCue no pudo eliminar la carpeta de Acceso Rápido.\n\n{0}",
+   "Settings.Dialog.RestoreTitle": "Restaurar preferencias predeterminadas",
+   "Settings.Dialog.RestoreBody": "Se restaurarán las preferencias de apariencia, visualización, interacción, teclas de acceso rápido y widgets de funciones. Se conservarán el idioma, el inicio, los cambios de widgets de funciones, los widgets y posiciones existentes, las rutas de almacenamiento, el contenido de Quick Capture, las tareas pendientes y los archivos.",
+-  "Settings.Dialog.AboutMeName": "Tianyu Zhu",
+-  "Settings.Dialog.AboutMeRole": "Gerente de producto · Creador de DeskCue",
+-  "Settings.Dialog.AboutMeP1": "Me gusta el aspecto nativo de las aplicaciones de Microsoft y los widgets que mantienen información y herramientas útiles cerca en el escritorio.",
+-  "Settings.Dialog.AboutMeP2": "Microsoft nunca ha mantenido este tipo de widgets de escritorio como una prioridad. Por eso empecé a crear DeskCue. Quiero que se integre de forma natural en Windows y ayude a organizar y usar el escritorio cada día.",
++  "Settings.Dialog.AboutMeName": "DeskCue",
++  "Settings.Dialog.AboutMeRole": "Versión derivada de código abierto mantenida por CyberShadowX",
++  "Settings.Dialog.AboutMeP1": "DeskCue se basa en DeskBox, de Tianyu Zhu. Se conservan las funciones del proyecto original y sus avisos de derechos de autor.",
++  "Settings.Dialog.AboutMeP2": "Mantenido por CyberShadowX bajo GPL-3.0-only. Código fuente, actualizaciones e informes: github.com/CyberShadowX/DeskCue.",
+   "Settings.Dialog.AboutMeClose": "Cerrar",
+   "Onboarding.WindowTitle": "Introducción a DeskCue",
+   "Onboarding.Back": "Atrás",
+diff --git a/src/DeskCue/Strings/fr-FR.json b/src/DeskCue/Strings/fr-FR.json
+index 9b1c24df..3a93d75a 100644
+--- a/src/DeskCue/Strings/fr-FR.json
++++ b/src/DeskCue/Strings/fr-FR.json
+@@ -1299,18 +1299,18 @@
+   "Startup.Fatal.EnvironmentIssuesHeader": "Problèmes d'environnement détectés (causes possibles) :",
+   "Settings.Section.About": "À propos",
+   "Settings.About.Description": "Outil de stockage et d'organisation de bureau",
+-  "Settings.About.AboutMeTitle": "À propos de moi",
+-  "Settings.About.AboutMeButton": "À propos de moi",
++  "Settings.About.AboutMeTitle": "Crédits du projet",
++  "Settings.About.AboutMeButton": "Crédits du projet",
+   "Settings.About.Website": "Site officiel",
+   "Settings.About.WebsiteDescription": "Afficher les téléchargements, les journaux de modifications et les notes de produit",
+   "Settings.About.FeedbackTitle": "Commentaires",
+-  "Settings.About.FeedbackDescription": "Commentaires anonymes — sans connexion, sans coordonnées.",
+-  "Settings.About.FeedbackDescription.InfoTip.Title": "Mur public de commentaires",
+-  "Settings.About.FeedbackDescription.InfoTip.Description": "**deskbox.fun** : vous pouvez aussi consulter le mur public de commentaires sur deskbox.fun.",
++  "Settings.About.FeedbackDescription": "Signalez un problème ou une suggestion sur GitHub. Le contenu envoyé sera public.",
++  "Settings.About.FeedbackDescription.InfoTip.Title": "Signalements GitHub",
++  "Settings.About.FeedbackDescription.InfoTip.Description": "Retours : github.com/CyberShadowX/DeskCue/issues",
+   "Common.Close": "Fermer",
+   "Common.GotIt": "Compris",
+-  "Settings.About.FeedbackSendButton": "Envoyer un retour",
+-  "Settings.About.FeedbackMineButton": "Mes retours",
++  "Settings.About.FeedbackSendButton": "Signaler un problème",
++  "Settings.About.FeedbackMineButton": "Voir les signalements",
+   "Feedback.Dialog.Title": "Envoyer un retour",
+   "Feedback.Dialog.AnonymousNotice": "Aucune connexion ni e-mail requis. Seuls un identifiant aléatoire et un hachage d’IP salé sont stockés, pour prévenir les abus.",
+   "Feedback.Dialog.TypeSuggestion": "Suggestion",
+@@ -1360,7 +1360,7 @@
+   "Settings.About.VersionWithChannel": "Version {0} · {1} · WinUI 3 / .NET 10",
+   "Settings.About.Channel.Direct": "Direct",
+   "Settings.About.Channel.Store": "Microsoft Store",
+-  "Settings.About.Developer": "Développeur : Zhu Tianyu · GitHub : {0}",
++  "Settings.About.Developer": "Maintenance : CyberShadowX · GitHub : {0}",
+   "Settings.Dialog.AccentTitle": "Couleur d'accent personnalisée",
+   "Settings.Dialog.MigrateTitle": "Déplacer le chemin de stockage par défaut",
+   "Settings.Dialog.OpenStorageFailedTitle": "Impossible d'ouvrir le dossier de stockage",
+@@ -1394,10 +1394,10 @@
+   "Settings.Dialog.UnpinQuickAccessFailedBody": "DeskCue n'a pas pu supprimer le dossier de l'accès rapide.\n\n{0}",
+   "Settings.Dialog.RestoreTitle": "Restaurer les préférences par défaut",
+   "Settings.Dialog.RestoreBody": "Les préférences d’apparence, d’affichage, d’interaction, de raccourci clavier et de widget de fonctionnalités seront restaurées. La langue, le démarrage, les commutateurs de widgets de fonctionnalités, les widgets et positions existants, les chemins de stockage, le contenu Quick Capture, les tâches Todo et les fichiers seront conservés.",
+-  "Settings.Dialog.AboutMeName": "Tianyu Zhu",
+-  "Settings.Dialog.AboutMeRole": "Chef de produit · Créateur de DeskCue",
+-  "Settings.Dialog.AboutMeP1": "J'aime l'aspect natif des applications Microsoft et les widgets qui gardent les informations et les outils utiles à portée de main sur le bureau.",
+-  "Settings.Dialog.AboutMeP2": "Microsoft n'a jamais fait de ce type de widgets de bureau une priorité durable. J'ai donc commencé à créer DeskCue. Je souhaite qu'il s'intègre naturellement à Windows et facilite l'organisation et l'usage quotidien du bureau.",
++  "Settings.Dialog.AboutMeName": "DeskCue",
++  "Settings.Dialog.AboutMeRole": "Version dérivée libre maintenue par CyberShadowX",
++  "Settings.Dialog.AboutMeP1": "DeskCue est basé sur DeskBox, de Tianyu Zhu. Les fonctionnalités du projet d’origine et les mentions de droits d’auteur sont conservées.",
++  "Settings.Dialog.AboutMeP2": "Maintenu par CyberShadowX sous GPL-3.0-only. Code source, mises à jour et signalements : github.com/CyberShadowX/DeskCue.",
+   "Settings.Dialog.AboutMeClose": "Fermer",
+   "Onboarding.WindowTitle": "Découverte de DeskCue",
+   "Onboarding.Back": "Retour",
+diff --git a/src/DeskCue/Strings/hi-IN.json b/src/DeskCue/Strings/hi-IN.json
+index 18630e72..8c4d38d1 100644
+--- a/src/DeskCue/Strings/hi-IN.json
++++ b/src/DeskCue/Strings/hi-IN.json
+@@ -1299,18 +1299,18 @@
+   "Startup.Fatal.EnvironmentIssuesHeader": "पाए गए पर्यावरण संबंधी समस्याएँ (संभावित कारण):",
+   "Settings.Section.About": "के बारे में",
+   "Settings.About.Description": "डेस्कटॉप भंडारण और संगठन उपकरण",
+-  "Settings.About.AboutMeTitle": "मेरे बारे में",
+-  "Settings.About.AboutMeButton": "मेरे बारे में",
++  "Settings.About.AboutMeTitle": "परियोजना का श्रेय",
++  "Settings.About.AboutMeButton": "परियोजना का श्रेय",
+   "Settings.About.Website": "आधिकारिक वेबसाइट",
+   "Settings.About.WebsiteDescription": "डाउनलोड, चेंजलॉग और उत्पाद नोट्स देखें",
+   "Settings.About.FeedbackTitle": "फ़ीडबैक",
+-  "Settings.About.FeedbackDescription": "गुमनाम फ़ीडबैक — न साइन-इन, न संपर्क विवरण।",
+-  "Settings.About.FeedbackDescription.InfoTip.Title": "सार्वजनिक फ़ीडबैक वॉल",
+-  "Settings.About.FeedbackDescription.InfoTip.Description": "**deskbox.fun**: सार्वजनिक फ़ीडबैक वॉल deskbox.fun पर भी देख सकते हैं।",
++  "Settings.About.FeedbackDescription": "समस्या या सुझाव GitHub पर भेजें। भेजी गई सामग्री सार्वजनिक होगी।",
++  "Settings.About.FeedbackDescription.InfoTip.Title": "GitHub पर समस्या रिपोर्ट",
++  "Settings.About.FeedbackDescription.InfoTip.Description": "प्रतिक्रिया: github.com/CyberShadowX/DeskCue/issues",
+   "Common.Close": "बंद करें",
+   "Common.GotIt": "समझ गया",
+-  "Settings.About.FeedbackSendButton": "फ़ीडबैक भेजें",
+-  "Settings.About.FeedbackMineButton": "मेरा फ़ीडबैक",
++  "Settings.About.FeedbackSendButton": "समस्या भेजें",
++  "Settings.About.FeedbackMineButton": "रिपोर्ट देखें",
+   "Feedback.Dialog.Title": "फ़ीडबैक भेजें",
+   "Feedback.Dialog.AnonymousNotice": "साइन-इन या ईमेल की ज़रूरत नहीं। दुरुपयोग रोकने के लिए केवल एक यादृच्छिक पहचानकर्ता और salted IP हैश संग्रहीत किया जाता है।",
+   "Feedback.Dialog.TypeSuggestion": "सुझाव",
+@@ -1360,7 +1360,7 @@
+   "Settings.About.VersionWithChannel": "संस्करण {0} · {1} · WinUI 3 / .NET 10",
+   "Settings.About.Channel.Direct": "प्रत्यक्ष",
+   "Settings.About.Channel.Store": "माइक्रोसॉफ्ट स्टोर",
+-  "Settings.About.Developer": "डेवलपर: झू तियान्यू · GitHub: {0}",
++  "Settings.About.Developer": "रखरखाव: CyberShadowX · GitHub: {0}",
+   "Settings.Dialog.AccentTitle": "कस्टम एक्सेंट रंग",
+   "Settings.Dialog.MigrateTitle": "डिफ़ॉल्ट संग्रहण पथ को स्थानांतरित करें",
+   "Settings.Dialog.OpenStorageFailedTitle": "स्टोरेज फ़ोल्डर नहीं खुल सका",
+@@ -1394,10 +1394,10 @@
+   "Settings.Dialog.UnpinQuickAccessFailedBody": "डेस्कबॉक्स क्विक एक्सेस से फ़ोल्डर को नहीं हटा सका।\n\n{0}",
+   "Settings.Dialog.RestoreTitle": "डिफ़ॉल्ट प्राथमिकताएँ पुनर्स्थापित करें",
+   "Settings.Dialog.RestoreBody": "उपस्थिति, प्रदर्शन, इंटरैक्शन, हॉटकी और फ़ीचर विजेट प्राथमिकताएं बहाल की जाएंगी। भाषा, स्टार्टअप, फ़ीचर विजेट स्विच, मौजूदा विजेट और स्थिति, भंडारण पथ, त्वरित कैप्चर सामग्री, टोडो कार्य और फ़ाइलें संरक्षित की जाएंगी।",
+-  "Settings.Dialog.AboutMeName": "Tianyu Zhu",
+-  "Settings.Dialog.AboutMeRole": "उत्पाद प्रबंधक · DeskCue के निर्माता",
+-  "Settings.Dialog.AboutMeP1": "मुझे Microsoft ऐप्स का मूल अनुभव और ऐसे विजेट पसंद हैं जो उपयोगी जानकारी और टूल को डेस्कटॉप पर पास रखते हैं।",
+-  "Settings.Dialog.AboutMeP2": "Microsoft ने इस तरह के डेस्कटॉप विजेट को कभी लगातार प्राथमिकता नहीं दी, इसलिए मैंने DeskCue बनाना शुरू किया। मैं चाहता हूँ कि यह Windows में स्वाभाविक लगे और डेस्कटॉप को व्यवस्थित करने तथा रोज़मर्रा के उपयोग में मदद करे।",
++  "Settings.Dialog.AboutMeName": "DeskCue",
++  "Settings.Dialog.AboutMeRole": "CyberShadowX द्वारा अनुरक्षित ओपन-सोर्स संस्करण",
++  "Settings.Dialog.AboutMeP1": "DeskCue, Tianyu Zhu के DeskBox पर आधारित है। मूल परियोजना की सुविधाएँ और कॉपीराइट सूचनाएँ सुरक्षित रखी गई हैं।",
++  "Settings.Dialog.AboutMeP2": "CyberShadowX द्वारा GPL-3.0-only के अंतर्गत अनुरक्षित। स्रोत कोड, अपडेट और समस्या रिपोर्ट: github.com/CyberShadowX/DeskCue.",
+   "Settings.Dialog.AboutMeClose": "बंद करें",
+   "Onboarding.WindowTitle": "DeskCue परिचय",
+   "Onboarding.Back": "वापस",
+diff --git a/src/DeskCue/Strings/ja-JP.json b/src/DeskCue/Strings/ja-JP.json
+index f8f86355..c8daa0fa 100644
+--- a/src/DeskCue/Strings/ja-JP.json
++++ b/src/DeskCue/Strings/ja-JP.json
+@@ -1296,18 +1296,18 @@
+   "Startup.Fatal.EnvironmentIssuesHeader": "検出された環境の問題（考えられる原因）:",
+   "Settings.Section.About": "情報",
+   "Settings.About.Description": "デスクトップストレージと整理ツール",
+-  "Settings.About.AboutMeTitle": "私について",
+-  "Settings.About.AboutMeButton": "私について",
++  "Settings.About.AboutMeTitle": "プロジェクト情報",
++  "Settings.About.AboutMeButton": "プロジェクト情報",
+   "Settings.About.Website": "公式ウェブサイト",
+   "Settings.About.WebsiteDescription": "ダウンロード、変更履歴、製品ノートを表示",
+   "Settings.About.FeedbackTitle": "フィードバック",
+-  "Settings.About.FeedbackDescription": "匿名のフィードバックです。ログインも連絡先も不要です。",
+-  "Settings.About.FeedbackDescription.InfoTip.Title": "公開フィードバック一覧",
+-  "Settings.About.FeedbackDescription.InfoTip.Description": "**deskbox.fun**：deskbox.fun で公開フィードバック一覧を閲覧することもできます。",
++  "Settings.About.FeedbackDescription": "GitHub で問題や提案を報告できます。投稿した内容は公開されます。",
++  "Settings.About.FeedbackDescription.InfoTip.Title": "GitHub の問題報告",
++  "Settings.About.FeedbackDescription.InfoTip.Description": "報告先：github.com/CyberShadowX/DeskCue/issues",
+   "Common.Close": "閉じる",
+   "Common.GotIt": "OK",
+-  "Settings.About.FeedbackSendButton": "フィードバックを送信",
+-  "Settings.About.FeedbackMineButton": "自分のフィードバック",
++  "Settings.About.FeedbackSendButton": "問題を報告",
++  "Settings.About.FeedbackMineButton": "報告を見る",
+   "Feedback.Dialog.Title": "フィードバックを送信",
+   "Feedback.Dialog.AnonymousNotice": "ログインもメールアドレスも不要です。不正防止のため、ランダムな識別子とソルト付き IP ハッシュのみを保存します。",
+   "Feedback.Dialog.TypeSuggestion": "ご要望",
+@@ -1357,7 +1357,7 @@
+   "Settings.About.VersionWithChannel": "バージョン {0} · {1} · WinUI 3 / .NET 10",
+   "Settings.About.Channel.Direct": "公式サイト版",
+   "Settings.About.Channel.Store": "Microsoft Store",
+-  "Settings.About.Developer": "開発者: 朱天雨 · GitHub: {0}",
++  "Settings.About.Developer": "保守担当：CyberShadowX · GitHub：{0}",
+   "Settings.Dialog.AccentTitle": "カスタムアクセントカラー",
+   "Settings.Dialog.MigrateTitle": "デフォルトストレージパスを移動",
+   "Settings.Dialog.OpenStorageFailedTitle": "収納フォルダーを開けませんでした",
+@@ -1391,10 +1391,10 @@
+   "Settings.Dialog.UnpinQuickAccessFailedBody": "DeskCue はフォルダーをクイックアクセスから削除できませんでした。\n\n{0}",
+   "Settings.Dialog.RestoreTitle": "デフォルト設定を復元",
+   "Settings.Dialog.RestoreBody": "外観、表示、インタラクション、ホットキー、機能ウィジェットの設定が復元されます。言語、スタートアップ、機能ウィジェットの切り替え、既存のウィジェットと位置、ストレージパス、クイックキャプチャの内容、タスク、ファイルは保持されます。",
+-  "Settings.Dialog.AboutMeName": "Tianyu Zhu",
+-  "Settings.Dialog.AboutMeRole": "プロダクトマネージャー · DeskCue 作者",
+-  "Settings.Dialog.AboutMeP1": "Microsoft のネイティブアプリらしい質感と、よく使う情報やツールをデスクトップに置けるウィジェットが好きです。",
+-  "Settings.Dialog.AboutMeP2": "Microsoft はこのようなデスクトップウィジェットを継続的な重点分野としてこなかったため、DeskCue を作り始めました。Windows に自然になじみ、デスクトップ整理と日々の作業に役立つ道具にしたいと考えています。",
++  "Settings.Dialog.AboutMeName": "DeskCue",
++  "Settings.Dialog.AboutMeRole": "CyberShadowX が保守するオープンソースの派生版",
++  "Settings.Dialog.AboutMeP1": "DeskCue は朱天雨（Tianyu Zhu）が開発した DeskBox を基にしています。上流の機能と原著作者の著作権表示を保持します。",
++  "Settings.Dialog.AboutMeP2": "CyberShadowX が GPL-3.0-only の下で保守しています。ソースコード、更新、問題の報告先は GitHub の CyberShadowX/DeskCue です。",
+   "Settings.Dialog.AboutMeClose": "閉じる",
+   "Onboarding.WindowTitle": "DeskCue オンボーディング",
+   "Onboarding.Back": "戻る",
+diff --git a/src/DeskCue/Strings/ko-KR.json b/src/DeskCue/Strings/ko-KR.json
+index 995c5a97..d9b4f17e 100644
+--- a/src/DeskCue/Strings/ko-KR.json
++++ b/src/DeskCue/Strings/ko-KR.json
+@@ -1299,18 +1299,18 @@
+   "Startup.Fatal.EnvironmentIssuesHeader": "다음 환경 문제가 감지되었습니다(시작 실패의 원인일 수 있음):",
+   "Settings.Section.About": "정보",
+   "Settings.About.Description": "바탕 화면 정리 및 보관 도구",
+-  "Settings.About.AboutMeTitle": "개발자 소개",
+-  "Settings.About.AboutMeButton": "개발자 소개",
++  "Settings.About.AboutMeTitle": "프로젝트 출처",
++  "Settings.About.AboutMeButton": "프로젝트 출처",
+   "Settings.About.Website": "공식 웹 사이트",
+   "Settings.About.WebsiteDescription": "다운로드, 업데이트 로그, 제품 안내를 확인합니다",
+   "Settings.About.FeedbackTitle": "피드백",
+-  "Settings.About.FeedbackDescription": "익명 피드백이며 로그인이나 연락처가 필요하지 않습니다.",
+-  "Settings.About.FeedbackDescription.InfoTip.Title": "공개 피드백 게시판",
+-  "Settings.About.FeedbackDescription.InfoTip.Description": "**deskbox.fun**: deskbox.fun에서 공개 피드백 게시판도 볼 수 있습니다.",
++  "Settings.About.FeedbackDescription": "GitHub에서 문제나 제안을 제출하세요. 제출한 내용은 공개됩니다.",
++  "Settings.About.FeedbackDescription.InfoTip.Title": "GitHub 문제 신고",
++  "Settings.About.FeedbackDescription.InfoTip.Description": "의견: github.com/CyberShadowX/DeskCue/issues",
+   "Common.Close": "닫기",
+   "Common.GotIt": "확인",
+-  "Settings.About.FeedbackSendButton": "피드백 보내기",
+-  "Settings.About.FeedbackMineButton": "내 피드백",
++  "Settings.About.FeedbackSendButton": "문제 신고",
++  "Settings.About.FeedbackMineButton": "신고 보기",
+   "Feedback.Dialog.Title": "피드백 보내기",
+   "Feedback.Dialog.AnonymousNotice": "로그인과 연락처 없이 보낼 수 있으며, 남용 방지를 위해 임의 식별자와 솔트가 적용된 IP 해시만 기록됩니다.",
+   "Feedback.Dialog.TypeSuggestion": "기능 제안",
+@@ -1360,7 +1360,7 @@
+   "Settings.About.VersionWithChannel": "버전 {0} · {1} · WinUI 3 / .NET 10",
+   "Settings.About.Channel.Direct": "공식 웹 사이트 버전",
+   "Settings.About.Channel.Store": "Microsoft Store",
+-  "Settings.About.Developer": "개발자: Zhu Tianyu · GitHub: {0}",
++  "Settings.About.Developer": "유지관리: CyberShadowX · GitHub: {0}",
+   "Settings.Dialog.AccentTitle": "사용자 지정 강조색",
+   "Settings.Dialog.MigrateTitle": "기본 보관 경로 이동",
+   "Settings.Dialog.OpenStorageFailedTitle": "보관 폴더를 열 수 없음",
+@@ -1394,10 +1394,10 @@
+   "Settings.Dialog.UnpinQuickAccessFailedBody": "빠른 액세스에서 DeskCue 폴더의 고정을 해제할 수 없습니다.\n\n{0}",
+   "Settings.Dialog.RestoreTitle": "기본 설정 복원",
+   "Settings.Dialog.RestoreBody": "모양, 표시, 상호 작용, 바로 가기 키 및 기능 위젯 기본 설정이 복원됩니다. 언어, 시작 시 자동 실행, 기능 위젯 스위치, 기존 위젯과 위치, 보관 경로, 빠른 메모 내용, 할 일, 파일은 유지됩니다.",
+-  "Settings.Dialog.AboutMeName": "Zhu Tianyu",
+-  "Settings.Dialog.AboutMeRole": "프로덕트 매니저 · DeskCue 제작자",
+-  "Settings.Dialog.AboutMeP1": "저는 Microsoft 기본 앱의 질감을 좋아하고, 자주 쓰는 콘텐츠와 도구를 바탕 화면에 가까이 두는 위젯 방식도 좋아합니다.",
+-  "Settings.Dialog.AboutMeP2": "Microsoft는 이런 종류의 바탕 화면 위젯을 꾸준히 다듬지 않았고, 그래서 제가 직접 DeskCue를 만들기 시작했습니다. Windows에 자연스럽게 어우러지면서 바탕 화면 정리와 일상 사용의 실질적인 문제를 해결하는 도구가 되기를 바랍니다.",
++  "Settings.Dialog.AboutMeName": "DeskCue",
++  "Settings.Dialog.AboutMeRole": "CyberShadowX가 유지관리하는 오픈 소스 파생 버전",
++  "Settings.Dialog.AboutMeP1": "DeskCue는 Tianyu Zhu가 개발한 DeskBox를 기반으로 합니다. 원본 프로젝트의 기능과 저작권 고지를 유지합니다.",
++  "Settings.Dialog.AboutMeP2": "CyberShadowX가 GPL-3.0-only에 따라 유지관리합니다. 소스 코드, 업데이트, 문제 신고: github.com/CyberShadowX/DeskCue.",
+   "Settings.Dialog.AboutMeClose": "닫기",
+   "Onboarding.WindowTitle": "DeskCue 시작 가이드",
+   "Onboarding.Back": "이전",
+diff --git a/src/DeskCue/Strings/pt-BR.json b/src/DeskCue/Strings/pt-BR.json
+index 00c72c30..aa70f3e2 100644
+--- a/src/DeskCue/Strings/pt-BR.json
++++ b/src/DeskCue/Strings/pt-BR.json
+@@ -1296,18 +1296,18 @@
+   "Startup.Fatal.EnvironmentIssuesHeader": "Problemas de ambiente detectados (possíveis causas):",
+   "Settings.Section.About": "Sobre",
+   "Settings.About.Description": "Ferramenta de armazenamento e organização da área de trabalho",
+-  "Settings.About.AboutMeTitle": "Sobre mim",
+-  "Settings.About.AboutMeButton": "Sobre mim",
++  "Settings.About.AboutMeTitle": "Créditos do projeto",
++  "Settings.About.AboutMeButton": "Créditos do projeto",
+   "Settings.About.Website": "Site oficial",
+   "Settings.About.WebsiteDescription": "Ver downloads, changelogs e notas do produto",
+   "Settings.About.FeedbackTitle": "Feedback",
+-  "Settings.About.FeedbackDescription": "Feedback anônimo — sem login e sem dados de contato.",
+-  "Settings.About.FeedbackDescription.InfoTip.Title": "Mural público de feedback",
+-  "Settings.About.FeedbackDescription.InfoTip.Description": "**deskbox.fun**: você também pode ver o mural público de feedback em deskbox.fun.",
++  "Settings.About.FeedbackDescription": "Relate problemas ou sugestões no GitHub. O conteúdo enviado será público.",
++  "Settings.About.FeedbackDescription.InfoTip.Title": "Relatos no GitHub",
++  "Settings.About.FeedbackDescription.InfoTip.Description": "Comentários: github.com/CyberShadowX/DeskCue/issues",
+   "Common.Close": "Fechar",
+   "Common.GotIt": "Entendi",
+-  "Settings.About.FeedbackSendButton": "Enviar feedback",
+-  "Settings.About.FeedbackMineButton": "Meu feedback",
++  "Settings.About.FeedbackSendButton": "Relatar problema",
++  "Settings.About.FeedbackMineButton": "Ver relatos",
+   "Feedback.Dialog.Title": "Enviar feedback",
+   "Feedback.Dialog.AnonymousNotice": "Sem login e sem e-mail. Apenas um identificador aleatório e um hash de IP com sal são armazenados, para evitar abusos.",
+   "Feedback.Dialog.TypeSuggestion": "Sugestão",
+@@ -1357,7 +1357,7 @@
+   "Settings.About.VersionWithChannel": "Versão {0} · {1} · WinUI 3 / .NET 10",
+   "Settings.About.Channel.Direct": "Direto",
+   "Settings.About.Channel.Store": "Microsoft Store",
+-  "Settings.About.Developer": "Desenvolvedor: Zhu Tianyu · GitHub: {0}",
++  "Settings.About.Developer": "Manutenção: CyberShadowX · GitHub: {0}",
+   "Settings.Dialog.AccentTitle": "Cor de Destaque Personalizada",
+   "Settings.Dialog.MigrateTitle": "Mover Caminho de Armazenamento Padrão",
+   "Settings.Dialog.OpenStorageFailedTitle": "Não foi possível abrir a pasta de armazenamento",
+@@ -1391,10 +1391,10 @@
+   "Settings.Dialog.UnpinQuickAccessFailedBody": "O DeskCue não conseguiu remover a pasta do Acesso Rápido.\n\n{0}",
+   "Settings.Dialog.RestoreTitle": "Restaurar Preferências Padrão",
+   "Settings.Dialog.RestoreBody": "As preferências de aparência, exibição, interação, tecla de atalho e Widget de recurso serão restauradas. Idioma, inicialização, botões de Widget de recurso, Widgets existentes e posições, caminhos de armazenamento, conteúdo da Captura Rápida, tarefas do Todo e arquivos serão preservados.",
+-  "Settings.Dialog.AboutMeName": "Tianyu Zhu",
+-  "Settings.Dialog.AboutMeRole": "Gerente de produto · Criador do DeskCue",
+-  "Settings.Dialog.AboutMeP1": "Gosto da aparência nativa dos aplicativos da Microsoft e de widgets que mantêm informações e ferramentas úteis por perto na área de trabalho.",
+-  "Settings.Dialog.AboutMeP2": "A Microsoft nunca manteve esse tipo de widget de desktop como prioridade. Por isso comecei a criar o DeskCue. Quero que ele se integre naturalmente ao Windows e ajude na organização e no uso diário da área de trabalho.",
++  "Settings.Dialog.AboutMeName": "DeskCue",
++  "Settings.Dialog.AboutMeRole": "Derivação de código aberto mantida por CyberShadowX",
++  "Settings.Dialog.AboutMeP1": "O DeskCue é baseado no DeskBox, de Tianyu Zhu. Os recursos do projeto original e seus avisos de direitos autorais são preservados.",
++  "Settings.Dialog.AboutMeP2": "Mantido por CyberShadowX sob GPL-3.0-only. Código-fonte, atualizações e relatos de problemas: github.com/CyberShadowX/DeskCue.",
+   "Settings.Dialog.AboutMeClose": "Fechar",
+   "Onboarding.WindowTitle": "Introdução ao DeskCue",
+   "Onboarding.Back": "Voltar",
+diff --git a/src/DeskCue/Strings/ru-RU.json b/src/DeskCue/Strings/ru-RU.json
+index 2c8efbee..25c8d49c 100644
+--- a/src/DeskCue/Strings/ru-RU.json
++++ b/src/DeskCue/Strings/ru-RU.json
+@@ -1299,18 +1299,18 @@
+   "Startup.Fatal.EnvironmentIssuesHeader": "Обнаруженные проблемы среды (возможные причины):",
+   "Settings.Section.About": "О программе",
+   "Settings.About.Description": "Инструмент для хранения и организации рабочего стола",
+-  "Settings.About.AboutMeTitle": "Обо мне",
+-  "Settings.About.AboutMeButton": "Обо мне",
++  "Settings.About.AboutMeTitle": "Об авторах проекта",
++  "Settings.About.AboutMeButton": "Об авторах проекта",
+   "Settings.About.Website": "Официальный сайт",
+   "Settings.About.WebsiteDescription": "Просмотр загрузок, журналов изменений и примечаний к продукту",
+   "Settings.About.FeedbackTitle": "Обратная связь",
+-  "Settings.About.FeedbackDescription": "Анонимный отзыв — без входа и без контактных данных.",
+-  "Settings.About.FeedbackDescription.InfoTip.Title": "Публичная стена отзывов",
+-  "Settings.About.FeedbackDescription.InfoTip.Description": "**deskbox.fun**: публичную стену отзывов можно также посмотреть на deskbox.fun.",
++  "Settings.About.FeedbackDescription": "Сообщайте о проблемах и предложениях на GitHub. Отправленные сообщения будут общедоступны.",
++  "Settings.About.FeedbackDescription.InfoTip.Title": "Проблемы на GitHub",
++  "Settings.About.FeedbackDescription.InfoTip.Description": "Обратная связь: github.com/CyberShadowX/DeskCue/issues",
+   "Common.Close": "Закрыть",
+   "Common.GotIt": "Понятно",
+-  "Settings.About.FeedbackSendButton": "Отправить отзыв",
+-  "Settings.About.FeedbackMineButton": "Мои отзывы",
++  "Settings.About.FeedbackSendButton": "Сообщить о проблеме",
++  "Settings.About.FeedbackMineButton": "Посмотреть сообщения",
+   "Feedback.Dialog.Title": "Отправить отзыв",
+   "Feedback.Dialog.AnonymousNotice": "Вход и электронная почта не требуются. Для защиты от злоупотреблений сохраняются только случайный идентификатор и хеш IP с солью.",
+   "Feedback.Dialog.TypeSuggestion": "Предложение",
+@@ -1360,7 +1360,7 @@
+   "Settings.About.VersionWithChannel": "Версия {0} · {1} · WinUI 3/.NET 10",
+   "Settings.About.Channel.Direct": "Прямой",
+   "Settings.About.Channel.Store": "Магазин Майкрософт",
+-  "Settings.About.Developer": "Разработчик: Чжу Тяньюй · GitHub: {0}",
++  "Settings.About.Developer": "Поддержка: CyberShadowX · GitHub: {0}",
+   "Settings.Dialog.AccentTitle": "Пользовательский акцентный цвет",
+   "Settings.Dialog.MigrateTitle": "Переместить путь к хранилищу по умолчанию",
+   "Settings.Dialog.OpenStorageFailedTitle": "Не удалось открыть папку хранения",
+@@ -1394,10 +1394,10 @@
+   "Settings.Dialog.UnpinQuickAccessFailedBody": "DeskCue не удалось открепить папку от быстрого доступа.\n\n{0}",
+   "Settings.Dialog.RestoreTitle": "Восстановить настройки по умолчанию",
+   "Settings.Dialog.RestoreBody": "Настройки внешнего вида, отображения, взаимодействия, горячих клавиш и виджетов функций будут восстановлены. Язык, запуск, переключатели виджетов функций, существующие виджеты и их расположение, пути хранения, содержимое быстрого захвата, задачи Todo и файлы будут сохранены.",
+-  "Settings.Dialog.AboutMeName": "Tianyu Zhu",
+-  "Settings.Dialog.AboutMeRole": "Менеджер продукта · Автор DeskCue",
+-  "Settings.Dialog.AboutMeP1": "Мне нравится нативный облик приложений Microsoft и виджеты, которые держат полезную информацию и инструменты рядом на рабочем столе.",
+-  "Settings.Dialog.AboutMeP2": "Microsoft никогда не делала такие виджеты рабочего стола постоянным приоритетом, поэтому я начал создавать DeskCue. Я хочу, чтобы он естественно вписывался в Windows и помогал организовать рабочий стол в повседневной работе.",
++  "Settings.Dialog.AboutMeName": "DeskCue",
++  "Settings.Dialog.AboutMeRole": "Открытая производная версия, поддерживаемая CyberShadowX",
++  "Settings.Dialog.AboutMeP1": "DeskCue основан на DeskBox, разработанном Tianyu Zhu. Функции исходного проекта и уведомления об авторских правах сохранены.",
++  "Settings.Dialog.AboutMeP2": "Поддерживается CyberShadowX на условиях GPL-3.0-only. Исходный код, обновления и сообщения о проблемах: github.com/CyberShadowX/DeskCue.",
+   "Settings.Dialog.AboutMeClose": "Закрыть",
+   "Onboarding.WindowTitle": "Знакомство с DeskCue",
+   "Onboarding.Back": "Назад",
+diff --git a/src/DeskCue/Strings/zh-CN.json b/src/DeskCue/Strings/zh-CN.json
+index 8fb59936..7c747e94 100644
+--- a/src/DeskCue/Strings/zh-CN.json
++++ b/src/DeskCue/Strings/zh-CN.json
+@@ -190,7 +190,7 @@
+   "Widget.MoveToDesktop": "移到桌面",
+   "Settings.FileStacks.Status.On": "自动将散落文件归入叠放",
+   "Settings.About.Channel.Store": "Microsoft Store",
+-  "Settings.About.AboutMeButton": "关于我",
++  "Settings.About.AboutMeButton": "项目来源",
+   "QuickCapture.AddImage": "添加图片",
+   "Settings.Update.Check": "检查更新",
+   "Settings.Update.Detail.StoreReady": "此版本由 Microsoft Store 管理更新，也可以在这里手动检查。",
+@@ -217,7 +217,7 @@
+   "Settings.DataBackup.RestoreFailedBody": "备份未通过校验或无法暂存，当前数据没有变化。\n\n{0}",
+   "Settings.DataBackup.RestoreFailedSchemaVersion": "此备份的格式版本({0})不受当前 DeskCue 版本支持。",
+   "Settings.DataBackup.RestoreFailedInvalidManifest": "所选文件不是有效的 DeskCue 备份(清单缺失或已损坏)。",
+-  "Settings.About.Developer": "开发者: 朱天雨 · GitHub: {0}",
++  "Settings.About.Developer": "维护者: CyberShadowX · GitHub: {0}",
+   "Settings.Capsule.AnimationDuration.Description": "控制展开与收起过渡的持续时间",
+   "Widget.SelectedCount": "已选择 {0} 项",
+   "Widget.LockPosition": "锁定位置",
+@@ -278,13 +278,13 @@
+   "Widget.AddedFile": "已添加文件",
+   "Settings.About.StoreSupportTitle": "支持 DeskCue",
+   "Settings.About.FeedbackTitle": "问题反馈",
+-  "Settings.About.FeedbackDescription": "匿名反馈，无需登录、不留联系方式。",
+-  "Settings.About.FeedbackDescription.InfoTip.Title": "公开反馈墙",
+-  "Settings.About.FeedbackDescription.InfoTip.Description": "**deskbox.fun**: 也可以在 deskbox.fun 查看公开反馈墙。",
++  "Settings.About.FeedbackDescription": "在 GitHub 提交问题或建议，提交的内容公开可见。",
++  "Settings.About.FeedbackDescription.InfoTip.Title": "GitHub 问题反馈",
++  "Settings.About.FeedbackDescription.InfoTip.Description": "反馈入口：github.com/CyberShadowX/DeskCue/issues",
+   "Common.Close": "关闭",
+   "Common.GotIt": "知道了",
+-  "Settings.About.FeedbackSendButton": "发送反馈",
+-  "Settings.About.FeedbackMineButton": "我的反馈",
++  "Settings.About.FeedbackSendButton": "提交反馈",
++  "Settings.About.FeedbackMineButton": "查看反馈",
+   "Feedback.Dialog.Title": "发送反馈",
+   "Feedback.Dialog.AnonymousNotice": "无需登录、不留联系方式；仅记录随机标识与加盐 IP 哈希用于防滥用。",
+   "Feedback.Dialog.TypeSuggestion": "需求建议",
+@@ -481,7 +481,7 @@
+   "Widget.Compact.Expand": "展开格子",
+   "Widget.Compact.ExpansionDirection.FollowGlobal": "跟随全局({0})",
+   "Settings.Todo.ShowFooterStats.Title": "剩余待办数量",
+-  "Settings.About.AboutMeTitle": "关于我",
++  "Settings.About.AboutMeTitle": "项目来源",
+   "Settings.AttachmentHealth.CheckTooltip": "检查待办和随记中的附件是否仍可用",
+   "Widget.TitlePlaceholder": "输入格子名称",
+   "Settings.Animation.Effect.SlideLeftFade": "左滑淡入",
+@@ -710,7 +710,7 @@
+   "WidgetTitleIcon.Label.QuickCapture": "随记",
+   "Settings.ContentEditor.EnterBehavior.CtrlEnterSaves": "Enter 换行，Ctrl+Enter 保存",
+   "Settings.HideShortcutExtension.Description": "显示后缀名时，快捷方式仍保持原来的名称",
+-  "Settings.Dialog.AboutMeP2": "微软一直没有着重完善这类桌面小组件，于是我开始做 DeskCue。我希望它能自然地融入 Windows，也能真正解决桌面收纳和日常使用中的问题。",
++  "Settings.Dialog.AboutMeP2": "本项目由 CyberShadowX 维护，采用 GPL-3.0-only 许可。源代码、更新和问题反馈位于 GitHub 的 CyberShadowX/DeskCue。",
+   "Settings.Tabs.ShowBar": "显示 Tab 栏",
+   "Settings.Tabs.VisibleCategories": "显示的分类",
+   "Todo.Undo.DeletedSelected": "已删除 {0} 个待办",
+@@ -1613,9 +1613,9 @@
+   "QuickCapture.Empty.SearchTitle": "没有匹配内容",
+   "Settings.Weather.ShowHumidity.Description": "显示当前空气湿度",
+   "Widget.DeleteFolderNoteOne": "这是文件夹，里面的内容也会一起进入回收站",
+-  "Settings.Dialog.AboutMeName": "朱天雨",
+-  "Settings.Dialog.AboutMeRole": "产品经理 · DeskCue 作者",
+-  "Settings.Dialog.AboutMeP1": "我喜欢微软原生应用的质感，也喜欢小组件这种把常用内容和工具留在桌面上的方式。",
++  "Settings.Dialog.AboutMeName": "DeskCue",
++  "Settings.Dialog.AboutMeRole": "CyberShadowX 维护的开源衍生版",
++  "Settings.Dialog.AboutMeP1": "DeskCue 基于朱天雨（Tianyu Zhu）开发的 DeskBox，保留上游功能与原作者版权声明。",
+   "QuickCapture.CopiedCount": "已复制 {0} 项",
+   "QuickCapture.DropTab.Records": "松开以保存到随记",
+   "Settings.QuickCapture.ClipboardReason.Enabled": "等待复制内容",
+diff --git a/src/DeskCue/Strings/zh-TW.json b/src/DeskCue/Strings/zh-TW.json
+index 5c30a440..5d89bc72 100644
+--- a/src/DeskCue/Strings/zh-TW.json
++++ b/src/DeskCue/Strings/zh-TW.json
+@@ -190,7 +190,7 @@
+   "Widget.MoveToDesktop": "移到桌面",
+   "Settings.FileStacks.Status.On": "自動將散落檔案歸入疊放",
+   "Settings.About.Channel.Store": "Microsoft Store",
+-  "Settings.About.AboutMeButton": "關於我",
++  "Settings.About.AboutMeButton": "專案來源",
+   "QuickCapture.AddImage": "新增圖片",
+   "Settings.Update.Check": "檢查更新",
+   "Settings.Update.Detail.StoreReady": "此版本由 Microsoft Store 管理更新，也可以在這裡手動檢查。",
+@@ -217,7 +217,7 @@
+   "Settings.DataBackup.RestoreFailedBody": "備份未通過驗證或無法暫存，目前資料沒有變更。\n\n{0}",
+   "Settings.DataBackup.RestoreFailedSchemaVersion": "此備份的格式版本（{0}）不受目前 DeskCue 版本支援。",
+   "Settings.DataBackup.RestoreFailedInvalidManifest": "所選檔案不是有效的 DeskCue 備份（清單缺失或已損毀）。",
+-  "Settings.About.Developer": "開發者：朱天雨 · GitHub：{0}",
++  "Settings.About.Developer": "維護者：CyberShadowX · GitHub：{0}",
+   "Settings.Capsule.AnimationDuration.Description": "控制展開與收起過渡的持續時間",
+   "Widget.SelectedCount": "已選擇 {0} 項",
+   "Widget.LockPosition": "鎖定位置",
+@@ -278,13 +278,13 @@
+   "Widget.AddedFile": "已新增檔案",
+   "Settings.About.StoreSupportTitle": "支援 DeskCue",
+   "Settings.About.FeedbackTitle": "問題回報",
+-  "Settings.About.FeedbackDescription": "匿名回饋，無需登入、不留聯絡方式。",
+-  "Settings.About.FeedbackDescription.InfoTip.Title": "公開回饋牆",
+-  "Settings.About.FeedbackDescription.InfoTip.Description": "**deskbox.fun**：也可以在 deskbox.fun 檢視公開回饋牆。",
++  "Settings.About.FeedbackDescription": "在 GitHub 提交問題或建議，提交的內容將公開顯示。",
++  "Settings.About.FeedbackDescription.InfoTip.Title": "GitHub 問題回報",
++  "Settings.About.FeedbackDescription.InfoTip.Description": "回報入口：github.com/CyberShadowX/DeskCue/issues",
+   "Common.Close": "關閉",
+   "Common.GotIt": "知道了",
+-  "Settings.About.FeedbackSendButton": "一鍵回饋",
+-  "Settings.About.FeedbackMineButton": "我的回饋",
++  "Settings.About.FeedbackSendButton": "提交回報",
++  "Settings.About.FeedbackMineButton": "查看回報",
+   "Feedback.Dialog.Title": "傳送回饋",
+   "Feedback.Dialog.AnonymousNotice": "無需登入、不留聯絡方式；僅記錄隨機識別碼與加鹽 IP 雜湊用於防濫用。",
+   "Feedback.Dialog.TypeSuggestion": "需求建議",
+@@ -481,7 +481,7 @@
+   "Widget.Compact.Expand": "展開格子",
+   "Widget.Compact.ExpansionDirection.FollowGlobal": "跟隨全域（{0}）",
+   "Settings.Todo.ShowFooterStats.Title": "剩餘待辦數量",
+-  "Settings.About.AboutMeTitle": "關於我",
++  "Settings.About.AboutMeTitle": "專案來源",
+   "Settings.AttachmentHealth.CheckTooltip": "檢查待辦和隨記中的附件是否仍可用",
+   "Widget.TitlePlaceholder": "輸入格子名稱",
+   "Settings.Animation.Effect.SlideLeftFade": "左滑淡入",
+@@ -710,7 +710,7 @@
+   "WidgetTitleIcon.Label.QuickCapture": "隨記",
+   "Settings.ContentEditor.EnterBehavior.CtrlEnterSaves": "Enter 換行，Ctrl+Enter 儲存",
+   "Settings.HideShortcutExtension.Description": "顯示副檔名時，捷徑仍保持原來的名稱",
+-  "Settings.Dialog.AboutMeP2": "微軟一直沒有著重完善這類桌面小工具，於是我開始做 DeskCue。我希望它能自然地融入 Windows，也能真正解決桌面收納和日常使用中的問題。",
++  "Settings.Dialog.AboutMeP2": "本專案由 CyberShadowX 維護，採用 GPL-3.0-only 授權。原始碼、更新與問題回報位於 GitHub 的 CyberShadowX/DeskCue。",
+   "Settings.Tabs.ShowBar": "顯示 Tab 欄",
+   "Settings.Tabs.VisibleCategories": "顯示的分類",
+   "Todo.Undo.DeletedSelected": "已刪除 {0} 個待辦任務",
+@@ -1613,9 +1613,9 @@
+   "QuickCapture.Empty.SearchTitle": "沒有符合內容",
+   "Settings.Weather.ShowHumidity.Description": "顯示目前空氣濕度",
+   "Widget.DeleteFolderNoteOne": "這是資料夾，其中的內容也會一起進入資源回收筒",
+-  "Settings.Dialog.AboutMeName": "朱天雨",
+-  "Settings.Dialog.AboutMeRole": "產品經理 · DeskCue 作者",
+-  "Settings.Dialog.AboutMeP1": "我喜歡 Microsoft 原生應用程式的質感，也喜歡小工具這種把常用內容和工具留在桌面上的方式。",
++  "Settings.Dialog.AboutMeName": "DeskCue",
++  "Settings.Dialog.AboutMeRole": "由 CyberShadowX 維護的開源衍生版本",
++  "Settings.Dialog.AboutMeP1": "DeskCue 以朱天雨（Tianyu Zhu）開發的 DeskBox 為基礎，保留上游功能與原作者的著作權聲明。",
+   "QuickCapture.CopiedCount": "已複製 {0} 項",
+   "QuickCapture.DropTab.Records": "放開以儲存到隨記",
+   "Settings.QuickCapture.ClipboardReason.Enabled": "等待複製內容",
+diff --git a/src/DeskCue/ViewModels/SettingsViewModel.AboutAndUpdates.cs b/src/DeskCue/ViewModels/SettingsViewModel.AboutAndUpdates.cs
+index de8c6ffe..890170ac 100644
+--- a/src/DeskCue/ViewModels/SettingsViewModel.AboutAndUpdates.cs
++++ b/src/DeskCue/ViewModels/SettingsViewModel.AboutAndUpdates.cs
+@@ -21,14 +21,14 @@ public partial class SettingsViewModel
+     public string OfficialWebsiteLink => OfficialWebsiteUrl;
+     public string MicrosoftStoreLink => MicrosoftStoreUrl;
+     public string MicrosoftStoreAppLink => MicrosoftStoreAppUrl;
+-    public Visibility StoreSupportCardVisibility => IsDirectInstallerUpdateDelivery ? Visibility.Visible : Visibility.Collapsed;
++    public Visibility StoreSupportCardVisibility => Visibility.Collapsed;
+ 
+     /// <summary>
+     /// Donation QR assets ship only in Direct builds; Store policy forbids
+     /// payment QR codes in the package, so every surface that shows one must
+     /// collapse under the Store channel.
+     /// </summary>
+-    public Visibility DonationQrCodeVisibility => IsDirectInstallerUpdateDelivery ? Visibility.Visible : Visibility.Collapsed;
++    public Visibility DonationQrCodeVisibility => Visibility.Collapsed;
+     public string OpenSourceRepositoryDisplayText =>
+         _localizationService.Format(
+             "Settings.About.Developer",
+diff --git a/src/DeskCue/ViewModels/SettingsViewModel.cs b/src/DeskCue/ViewModels/SettingsViewModel.cs
+index 1fec32a4..9fd99082 100644
+--- a/src/DeskCue/ViewModels/SettingsViewModel.cs
++++ b/src/DeskCue/ViewModels/SettingsViewModel.cs
+@@ -45,12 +45,8 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
+     private const string AnimationPresetCustom = "Custom";
+     private const string RepositoryUrl = "https://github.com/CyberShadowX/DeskCue";
+     private const string OfficialWebsiteUrl = "https://github.com/CyberShadowX/DeskCue";
+-    private const string MicrosoftStoreProductId = "9PBZSNB4D69H";
+-    private const string MicrosoftStoreCampaignId = "deskcue_about_support";
+-    private const string MicrosoftStoreUrl =
+-        "https://apps.microsoft.com/detail/" + MicrosoftStoreProductId + "?cid=" + MicrosoftStoreCampaignId;
+-    private const string MicrosoftStoreAppUrl =
+-        "ms-windows-store://pdp/?ProductId=" + MicrosoftStoreProductId + "&cid=" + MicrosoftStoreCampaignId;
++    private const string MicrosoftStoreUrl = RepositoryUrl + "/releases/latest";
++    private const string MicrosoftStoreAppUrl = MicrosoftStoreUrl;
+ 
+     private readonly SettingsService _settingsService;
+     private readonly ThemeService _themeService;
+diff --git a/src/DeskCue/Views/SettingsWindow.Feedback.cs b/src/DeskCue/Views/SettingsWindow.Feedback.cs
+index bd2fe7c8..58f04f94 100644
+--- a/src/DeskCue/Views/SettingsWindow.Feedback.cs
++++ b/src/DeskCue/Views/SettingsWindow.Feedback.cs
+@@ -8,30 +8,23 @@ namespace DeskCue.Views;
+ 
+ public sealed partial class SettingsWindow
+ {
+-    private const string FeedbackWallUrl = "https://deskbox.fun/feedback/";
++    private const string FeedbackWallUrl = "https://github.com/CyberShadowX/DeskCue/issues";
+     private const string FeedbackTempDirectoryName = "DeskCueFeedback";
+ 
+     private FeedbackService? _feedbackService;
+-    private bool _feedbackDialogShowing;
+ 
+     private FeedbackService FeedbackService => _feedbackService ??= new FeedbackService(
+         localeProvider: () => _localizationService.CurrentCultureName);
+ 
+     private async void ShowFeedbackDialogButton_Click(object sender, RoutedEventArgs e)
+     {
+-        if (SettingsRoot.XamlRoot is null || _feedbackDialogShowing)
+-        {
+-            return;
+-        }
+-
+-        _feedbackDialogShowing = true;
+         try
+         {
+-            await ShowFeedbackDialogAsync();
++            await Launcher.LaunchUriAsync(new Uri(FeedbackWallUrl + "/new"));
+         }
+-        finally
++        catch (Exception ex)
+         {
+-            _feedbackDialogShowing = false;
++            App.Log($"[Feedback] Could not open DeskCue Issues: {ex.GetType().Name}");
+         }
+     }
+ 
+@@ -371,19 +364,13 @@ public sealed partial class SettingsWindow
+ 
+     private async void ShowMyFeedbackButton_Click(object sender, RoutedEventArgs e)
+     {
+-        if (SettingsRoot.XamlRoot is null || _feedbackDialogShowing)
+-        {
+-            return;
+-        }
+-
+-        _feedbackDialogShowing = true;
+         try
+         {
+-            await ShowMyFeedbackDialogAsync();
++            await Launcher.LaunchUriAsync(new Uri(FeedbackWallUrl));
+         }
+-        finally
++        catch (Exception ex)
+         {
+-            _feedbackDialogShowing = false;
++            App.Log($"[Feedback] Could not open DeskCue Issues: {ex.GetType().Name}");
+         }
+     }
+ 
+diff --git a/src/DeskCue/Views/SettingsWindow.xaml b/src/DeskCue/Views/SettingsWindow.xaml
+index d23a04bc..08123ad3 100644
+--- a/src/DeskCue/Views/SettingsWindow.xaml
++++ b/src/DeskCue/Views/SettingsWindow.xaml
+@@ -3693,6 +3693,7 @@ Text="DeskCue" />
+                     </StackPanel>
+ 
+                     <Border
++                        Visibility="{Binding DonationQrCodeVisibility}"
+                         Padding="14"
+                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+diff --git a/tests/DeskCue.Tests/AppUpdateServiceTests.cs b/tests/DeskCue.Tests/AppUpdateServiceTests.cs
+index 4f7f9358..5240a01d 100644
+--- a/tests/DeskCue.Tests/AppUpdateServiceTests.cs
++++ b/tests/DeskCue.Tests/AppUpdateServiceTests.cs
+@@ -25,12 +25,12 @@ public sealed class AppUpdateServiceTests : IDisposable
+         Assert.False(AppUpdateService.IsInstallerAssetName("DeskCue_Setup_1.4.3_x64_Full.exe", "x64"));
+         Assert.False(AppUpdateService.IsInstallerAssetName("DeskCue_Setup_1.4.3_arm64_Full.exe", "arm64"));
+         Assert.True(AppUpdateService.IsInstallerDownloadCompatibleWithArchitecture(
+-            "https://deskbox.fun/DeskBox_Setup_1.2.4_arm64.exe",
++            "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_arm64.exe",
+             "arm64"));
+         Assert.False(AppUpdateService.IsInstallerDownloadCompatibleWithArchitecture(
+-            "https://deskbox.fun/DeskBox_Setup_1.2.4_x64.exe",
++            "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_x64.exe",
+             "arm64"));
+-        Assert.True(AppUpdateService.IsInstallerDownloadCompatibleWithArchitecture(
++        Assert.False(AppUpdateService.IsInstallerDownloadCompatibleWithArchitecture(
+             "https://example.com/download/latest",
+             "arm64"));
+         Assert.Equal(
+@@ -44,10 +44,10 @@ public sealed class AppUpdateServiceTests : IDisposable
+         var manifest = new AppUpdateManifest
+         {
+             Version = "1.3.8",
+-            DownloadUrl = "https://deskbox.fun/DeskBox_Setup_1.3.8_x64.exe",
++            DownloadUrl = "https://github.com/CyberShadowX/DeskCue/releases/download/v1.3.8/DeskCue_Setup_1.3.8_x64.exe",
+             Sha256 = new string('A', 64),
+             Size = 101,
+-            Arm64DownloadUrl = "https://deskbox.fun/DeskBox_Setup_1.3.8_arm64.exe",
++            Arm64DownloadUrl = "https://github.com/CyberShadowX/DeskCue/releases/download/v1.3.8/DeskCue_Setup_1.3.8_arm64.exe",
+             Arm64Sha256 = new string('B', 64),
+             Arm64Size = 202
+         };
+@@ -64,10 +64,10 @@ public sealed class AppUpdateServiceTests : IDisposable
+         var manifest = new AppUpdateManifest
+         {
+             Version = "1.3.8",
+-            DownloadUrl = "https://deskbox.fun/DeskBox_Setup_1.3.8_x64.exe",
++            DownloadUrl = "https://github.com/CyberShadowX/DeskCue/releases/download/v1.3.8/DeskCue_Setup_1.3.8_x64.exe",
+             Sha256 = new string('A', 64),
+             Size = 101,
+-            Arm64DownloadUrl = "https://deskbox.fun/DeskBox_Setup_1.3.8_arm64.exe",
++            Arm64DownloadUrl = "https://github.com/CyberShadowX/DeskCue/releases/download/v1.3.8/DeskCue_Setup_1.3.8_arm64.exe",
+             Arm64Sha256 = new string('B', 64),
+             Arm64Size = 202
+         };
+@@ -122,6 +122,9 @@ public sealed class AppUpdateServiceTests : IDisposable
+     [InlineData("1.2.1", "1.2.1", false)]
+     [InlineData("1.2.1", "1.2.0", false)]
+     [InlineData("1.2.1", "not-a-version", false)]
++    [InlineData("1.5.9.1", "v1.5.9.2", true)]
++    [InlineData("1.5.9.1", "v1.5.10.1", true)]
++    [InlineData("1.5.9.2", "1.5.9.1", false)]
+     public void IsRemoteVersionNewer_ComparesSemanticVersionPrefix(string currentVersion, string remoteVersion, bool expected)
+     {
+         Assert.Equal(expected, AppUpdateService.IsRemoteVersionNewer(currentVersion, remoteVersion));
+@@ -137,7 +140,7 @@ public sealed class AppUpdateServiceTests : IDisposable
+                 {
+                   "ScHeMaVeRsIoN": "1",
+                   "version": "1.2.2",
+-                  "downloadUrl": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskBox_Setup_1.2.2_x64.exe",
++                  "downloadUrl": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_x64.exe",
+                   "manualDownloadUrl": "https://pan.quark.cn/s/version-specific",
+                   "sha256": "abc",
+                   "SiZe": "1234",
+@@ -186,7 +189,7 @@ public sealed class AppUpdateServiceTests : IDisposable
+                       "assets": [
+                         {
+                           "name": "DeskCue_Setup_1.2.4_x64.exe",
+-                          "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskBox_Setup_1.2.4_x64.exe",
++                          "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_x64.exe",
+                           "size": 23423211,
+                           "digest": "sha256:8ecb3092ae5bd6883f8a75bbea03d9800251e0c23fdbe1bf4d91fd3a62565561"
+                         }
+@@ -209,7 +212,7 @@ public sealed class AppUpdateServiceTests : IDisposable
+         Assert.Equal(AppUpdateCheckStatus.UpdateAvailable, result.Status);
+         Assert.NotNull(result.Manifest);
+         Assert.Equal("1.2.4", result.Manifest.Version);
+-        Assert.Equal("https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskBox_Setup_1.2.4_x64.exe", result.Manifest.DownloadUrl);
++        Assert.Equal("https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_x64.exe", result.Manifest.DownloadUrl);
+         Assert.Equal("8ECB3092AE5BD6883F8A75BBEA03D9800251E0C23FDBE1BF4D91FD3A62565561", result.Manifest.Sha256);
+         Assert.Equal(23423211, result.Manifest.Size);
+         Assert.Equal("https://github.com/CyberShadowX/DeskCue/releases/tag/v1.2.4", result.Manifest.ReleaseNotesUrl);
+@@ -248,12 +251,12 @@ public sealed class AppUpdateServiceTests : IDisposable
+                       "assets": [
+                         {
+                           "name": "DeskCue_Setup_1.2.4_x64.exe",
+-                          "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskBox_Setup_1.2.4_x64.exe",
++                          "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_x64.exe",
+                           "size": 23423211
+                         },
+                         {
+                           "name": "DeskCue_Setup_1.2.4_x64.exe.sha256",
+-                          "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskBox_Setup_1.2.4_x64.exe.sha256",
++                          "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_x64.exe.sha256",
+                           "size": 95
+                         }
+                       ]
+@@ -289,7 +292,7 @@ public sealed class AppUpdateServiceTests : IDisposable
+         var result = await service.DownloadUpdateAsync(new AppUpdateManifest
+         {
+             Version = "1.2.2",
+-            DownloadUrl = "https://deskbox.fun/DeskBox_Setup_1.2.2_x64.exe"
++            DownloadUrl = "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_x64.exe"
+         });
+ 
+         Assert.False(result.Success);
+@@ -310,7 +313,7 @@ public sealed class AppUpdateServiceTests : IDisposable
+         var result = await service.DownloadUpdateAsync(new AppUpdateManifest
+         {
+             Version = "1.2.2",
+-            DownloadUrl = "https://deskbox.fun/DeskBox_Setup_1.2.2_x64.exe",
++            DownloadUrl = "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_x64.exe",
+             Sha256 = sha256,
+             Size = payload.Length
+         });
+@@ -337,7 +340,7 @@ public sealed class AppUpdateServiceTests : IDisposable
+         var result = await service.DownloadUpdateAsync(new AppUpdateManifest
+         {
+             Version = "1.2.2",
+-            DownloadUrl = $"https://deskbox.fun/DeskBox_Setup_1.2.2_{otherArchitecture}.exe",
++            DownloadUrl = $"https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_{otherArchitecture}.exe",
+             Sha256 = sha256,
+             Size = payload.Length
+         });
+@@ -360,7 +363,7 @@ public sealed class AppUpdateServiceTests : IDisposable
+         var result = await service.DownloadUpdateAsync(new AppUpdateManifest
+         {
+             Version = "1.2.2",
+-            DownloadUrl = $"https://deskbox.fun/DeskBox_Setup_1.2.2_{AppUpdateService.CurrentInstallerArchitectureSuffix}.exe",
++            DownloadUrl = $"https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_{AppUpdateService.CurrentInstallerArchitectureSuffix}.exe",
+             Sha256 = "00"
+         }, cancellationToken: cancellation.Token);
+ 
+@@ -481,9 +484,9 @@ public sealed class AppUpdateServiceTests : IDisposable
+     }
+ 
+     [Theory]
+-    [InlineData("https://deskbox.fun/update/DeskBox_Setup.exe", true)]
+-    [InlineData("https://cdn.deskbox.fun/DeskBox_Setup.exe", true)]
+-    [InlineData("https://github.com/CyberShadowX/DeskCue/releases/download/v1.5.2/DeskBox_Setup.exe", true)]
++    [InlineData("https://deskbox.fun/update/DeskBox_Setup.exe", false)]
++    [InlineData("https://cdn.deskbox.fun/DeskBox_Setup.exe", false)]
++    [InlineData("https://github.com/CyberShadowX/DeskCue/releases/download/v1.5.2/DeskCue_Setup_1.5.2_x64.exe", true)]
+     [InlineData("http://deskbox.fun/update/DeskBox_Setup.exe", false)]
+     [InlineData("https://evil.example.com/DeskBox_Setup.exe", false)]
+     [InlineData("https://deskbox.fun.evil.example.com/DeskBox_Setup.exe", false)]
+@@ -510,8 +513,8 @@ public sealed class AppUpdateServiceTests : IDisposable
+         var manifest = new AppUpdateManifest
+         {
+             Version = "1.5.2.0",
+-            DownloadUrl = "https://deskbox.fun/update/DeskBox_Setup_x64.exe",
+-            Arm64DownloadUrl = "http://evil.example.com/DeskBox_Setup_arm64.exe"
++            DownloadUrl = "https://deskbox.fun/update/DeskCue_Setup_x64.exe",
++            Arm64DownloadUrl = "http://evil.example.com/DeskCue_Setup_arm64.exe"
+         };
+ 
+         Assert.False(AppUpdateService.IsManifestUsable(manifest));
+diff --git a/tests/DeskCue.Tests/CloudBackupTransportTests.cs b/tests/DeskCue.Tests/CloudBackupTransportTests.cs
+index f465927e..eff321ac 100644
+--- a/tests/DeskCue.Tests/CloudBackupTransportTests.cs
++++ b/tests/DeskCue.Tests/CloudBackupTransportTests.cs
+@@ -125,8 +125,8 @@ public sealed class CloudBackupTransportTests : IDisposable
+ 
+         Assert.Equal(2, handler.Requests.Count);
+         Assert.All(handler.Requests, r => Assert.Equal("MKCOL", r.Method));
+-        Assert.Equal("https://dav.example.com/dav/DeskBox", handler.Requests[0].Uri);
+-        Assert.Equal("https://dav.example.com/dav/DeskBox/backups", handler.Requests[1].Uri);
++        Assert.Equal("https://dav.example.com/dav/DeskCue", handler.Requests[0].Uri);
++        Assert.Equal("https://dav.example.com/dav/DeskCue/backups", handler.Requests[1].Uri);
+     }
+ 
+     [Fact]
+@@ -140,7 +140,7 @@ public sealed class CloudBackupTransportTests : IDisposable
+ 
+         RecordingHandler.Captured request = Assert.Single(handler.Requests);
+         Assert.Equal("PUT", request.Method);
+-        Assert.Equal("https://dav.example.com/dav/DeskBox/backups/my%20file.zip", request.Uri);
++        Assert.Equal("https://dav.example.com/dav/DeskCue/backups/my%20file.zip", request.Uri);
+         Assert.Equal(payload, request.ContentBytes);
+     }
+ 
+diff --git a/tests/DeskCue.Tests/DeskCueForkBoundaryTests.cs b/tests/DeskCue.Tests/DeskCueForkBoundaryTests.cs
+new file mode 100644
+index 00000000..23080906
+--- /dev/null
++++ b/tests/DeskCue.Tests/DeskCueForkBoundaryTests.cs
+@@ -0,0 +1,121 @@
++using System.Net;
++using System.Security.Cryptography;
++using DeskCue.Models;
++using DeskCue.Services;
++
++namespace DeskCue.Tests;
++
++public sealed class DeskCueForkBoundaryTests
++{
++    private const string OwnRelease = "https://github.com/CyberShadowX/DeskCue/releases/download/v1.5.10.1/";
++
++    [Fact]
++    public void Manifest_AcceptsOnlyForkOwnedProductInstallers()
++    {
++        Assert.True(AppUpdateService.IsManifestUsable(Manifest(OwnRelease + "DeskCue_Setup_1.5.10.1_x64.exe")));
++    }
++
++    [Theory]
++    [InlineData("https://github.com/Tianyu199509/DeskBox/releases/download/v1.5.10/DeskBox_Setup_1.5.10_x64.exe")]
++    [InlineData("https://deskbox.fun/DeskCue_Setup_1.5.10.1_x64.exe")]
++    [InlineData("https://github.com/someone/DeskCue/releases/download/v1/DeskCue_Setup_1.5.10.1_x64.exe")]
++    [InlineData(OwnRelease + "DeskBox_Setup_1.5.10.1_x64.exe")]
++    [InlineData(OwnRelease + "other.exe")]
++    [InlineData("http://github.com/CyberShadowX/DeskCue/releases/download/v1/DeskCue_Setup_1.5.10.1_x64.exe")]
++    [InlineData("https://github.com/CyberShadowX/DeskCue-other/releases/download/v1/DeskCue_Setup_1.5.10.1_x64.exe")]
++    public void Manifest_RejectsForeignOriginOrProduct(string url)
++    {
++        Assert.False(AppUpdateService.IsManifestUsable(Manifest(url)));
++    }
++
++    [Theory]
++    [InlineData("DeskBox_Setup_1.5.10.1_x64.exe")]
++    [InlineData("unknown.exe")]
++    [InlineData("DeskCue_Setup_1.5.10.1_arm64.exe")]
++    public void DownloadCompatibility_RejectsUnknownProductAndWrongArchitecture(string name)
++    {
++        Assert.False(AppUpdateService.IsInstallerDownloadCompatibleWithArchitecture(OwnRelease + name, "x64"));
++    }
++
++    [Fact]
++    public async Task DefaultFeedback_DoesNotSendContentOrDiagnosticsToAnotherPublisher()
++    {
++        var handler = new CountRequestsHandler();
++        using var client = new HttpClient(handler);
++        string root = Path.Combine(Path.GetTempPath(), "DeskCue.ForkBoundary", Guid.NewGuid().ToString("N"));
++        var service = new FeedbackService(httpClient: client,
++            clientStateFilePath: Path.Combine(root, "id.txt"),
++            cooldownStateFilePath: Path.Combine(root, "cooldown.txt"));
++        try
++        {
++            var result = await service.SubmitAsync(DeskCueFeedbackKind.Bug, "A sufficiently detailed fork feedback report.", true);
++            await service.GetMyFeedbackAsync();
++            await service.UploadDiagnosticsAsync(42, Path.Combine(root, "missing.zip"));
++            Assert.False(result.Ok);
++            Assert.Equal(0, handler.RequestCount);
++            Assert.False(Directory.Exists(root));
++        }
++        finally
++        {
++            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
++        }
++    }
++
++    private static AppUpdateManifest Manifest(string url) => new()
++    {
++        SchemaVersion = 1,
++        Version = "1.5.10.1",
++        DownloadUrl = url,
++        Sha256 = new string('A', 64)
++    };
++
++    [Fact]
++    public async Task HashMismatch_DiscardsPartialDownloadAndPreservesPriorInstaller()
++    {
++        string root = Path.Combine(Path.GetTempPath(), "DeskCue.ForkBoundary", Guid.NewGuid().ToString("N"));
++        string name = $"DeskCue_Setup_1.5.10.1_{AppUpdateService.CurrentInstallerArchitectureSuffix}.exe";
++        string folder = Path.Combine(root, "1.5.10.1");
++        string priorInstaller = Path.Combine(folder, name);
++        byte[] prior = [1, 2, 3];
++        Directory.CreateDirectory(folder);
++        await File.WriteAllBytesAsync(priorInstaller, prior);
++        using var client = new HttpClient(new PayloadHandler([4, 5, 6]));
++        var service = new AppUpdateService(client, updateRootPath: root);
++        var manifest = Manifest(OwnRelease + name);
++        manifest.Sha256 = Convert.ToHexString(SHA256.HashData([7, 8, 9]));
++        try
++        {
++            var result = await service.DownloadUpdateAsync(manifest);
++            Assert.False(result.Success);
++            Assert.Equal(AppUpdateDownloadFailureKind.HashMismatch, result.FailureKind);
++            Assert.Null(result.FilePath);
++            Assert.Null(service.LastDownloadedInstallerPath);
++            Assert.Equal(prior, await File.ReadAllBytesAsync(priorInstaller));
++            Assert.False(File.Exists(priorInstaller + ".tmp"));
++        }
++        finally
++        {
++            Directory.Delete(root, recursive: true);
++        }
++    }
++
++    private sealed class PayloadHandler(byte[] bytes) : HttpMessageHandler
++    {
++        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
++            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) });
++    }
++
++    private sealed class CountRequestsHandler : HttpMessageHandler
++    {
++        public int RequestCount { get; private set; }
++
++        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
++        {
++            RequestCount++;
++            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
++            {
++                Content = new StringContent("{\"ok\":true,\"id\":1,\"items\":[]}")
++            });
++        }
++    }
++}
+diff --git a/tests/DeskCue.Tests/SettingsAboutContactTests.cs b/tests/DeskCue.Tests/SettingsAboutContactTests.cs
+index 87492524..ffca19ac 100644
+--- a/tests/DeskCue.Tests/SettingsAboutContactTests.cs
++++ b/tests/DeskCue.Tests/SettingsAboutContactTests.cs
+@@ -3,7 +3,7 @@
+ public sealed class SettingsAboutContactTests
+ {
+     [Fact]
+-    public void AboutSection_UsesInAppFeedbackAndExposesNoEmailOrRepositoryButton()
++    public void AboutSection_UsesForkFeedbackAndDoesNotClaimUpstreamStoreOrPayments()
+     {
+         string root = FindRepositoryRoot();
+         string xaml = File.ReadAllText(Path.Combine(
+@@ -121,13 +121,13 @@ public sealed class SettingsAboutContactTests
+         Assert.Contains("ms-appx:///Assets/Support/support-alipay.png", xaml, StringComparison.Ordinal);
+         Assert.Equal(1, CountOccurrences(xaml, "ms-appx:///Assets/Support/support-wechat.png"));
+         Assert.Equal(1, CountOccurrences(xaml, "ms-appx:///Assets/Support/support-alipay.png"));
+-        Assert.Contains("https://apps.microsoft.com/detail/", viewModel, StringComparison.Ordinal);
+-        Assert.Contains("9PBZSNB4D69H", viewModel, StringComparison.Ordinal);
+-        Assert.Contains("deskcue_about_support", viewModel, StringComparison.Ordinal);
+-        Assert.Contains("?cid=", viewModel, StringComparison.Ordinal);
+-        Assert.Contains("ms-windows-store://pdp/?ProductId=", viewModel, StringComparison.Ordinal);
+-        Assert.Contains("&cid=", viewModel, StringComparison.Ordinal);
+-        Assert.Contains("IsDirectInstallerUpdateDelivery ? Visibility.Visible : Visibility.Collapsed", aboutViewModel, StringComparison.Ordinal);
++        Assert.DoesNotContain("9PBZSNB4D69H", viewModel, StringComparison.Ordinal);
++        Assert.DoesNotContain("apps.microsoft.com/detail/", viewModel, StringComparison.Ordinal);
++        Assert.Contains("StoreSupportCardVisibility => Visibility.Collapsed", aboutViewModel, StringComparison.Ordinal);
++        Assert.Contains("DonationQrCodeVisibility => Visibility.Collapsed", aboutViewModel, StringComparison.Ordinal);
++        Assert.Contains("https://github.com/CyberShadowX/DeskCue/issues", feedbackView, StringComparison.Ordinal);
++        Assert.Contains("CyberShadowX", zhCn, StringComparison.Ordinal);
++        Assert.Contains("DeskBox", zhCn, StringComparison.Ordinal);
+         Assert.Contains("AboutMeDialog.ShowAsync", dialogCode, StringComparison.Ordinal);
+         Assert.Contains("SupportDeskCueDialog.ShowAsync", storeActions, StringComparison.Ordinal);
+         Assert.Contains("ViewModel.StoreSupportCardVisibility != Visibility.Visible", storeActions, StringComparison.Ordinal);
+diff --git a/tests/DeskCue.Tests/SettingsCopyAndHierarchyTests.cs b/tests/DeskCue.Tests/SettingsCopyAndHierarchyTests.cs
+index 0773522c..7f1a50b7 100644
+--- a/tests/DeskCue.Tests/SettingsCopyAndHierarchyTests.cs
++++ b/tests/DeskCue.Tests/SettingsCopyAndHierarchyTests.cs
+@@ -270,7 +270,8 @@ public sealed class SettingsCopyAndHierarchyTests
+ 
+         string json = strings.RootElement.GetRawText();
+         Assert.DoesNotContain("...", json, StringComparison.Ordinal);
+-        Assert.DoesNotContain("DeskCue", json, StringComparison.Ordinal);
++        // Reject the upstream's inconsistent spelling, not the fork's valid name.
++        Assert.DoesNotContain("Desk" + "box", json, StringComparison.Ordinal);
+     }
+ 
+     [Fact]

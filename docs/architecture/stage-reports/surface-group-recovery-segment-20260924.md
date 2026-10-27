@@ -28,7 +28,7 @@ before its Registry claim is discarded.
 
 Isolated Debug fault stages `merge-post-save-commit`, `merge-rollback-save`,
 and `merge-recovery-promotion` are one-shot and require
-`DESKBOX_DEV_DATA_ROOT`. A headless test consumed the first two through the
+`DESKCUE_DEV_DATA_ROOT`. A headless test consumed the first two through the
 actual `MergeWidgetsAsync` hidden-group path and verified that the committed
 group reloads from disk. Registry tests model a live surviving target plus a
 source group and verify that all member claims move atomically; an unrelated
@@ -48,7 +48,7 @@ violation count is zero.
 - Focused Surface, group, boundary and deletion tests: **104/104 passed**;
   the later direct-merge subset passed **55/55**.
 - Full x64/win-x64 suite: **4,215/4,215 passed**. Ignored local TRX:
-  `tests/DeskBox.Tests/TestResults/architecture-d-merge-recovery-final2-20260924.trx`.
+  `tests/DeskCue.Tests/TestResults/architecture-d-merge-recovery-final2-20260924.trx`.
 - Canonical Debug build: **0 errors**. Release AOT audit/smoke conditional
   compilation: **0 errors, 888 warnings**. This is not Native AOT publish/link.
 - Isolated Debug data-root launch: PID 5904 from this worktree's canonical
@@ -71,18 +71,18 @@ check the no-host quarantine and later rebuild. Then perform normal physical
 merge, member switch, detach and dissolve gestures before declaring D accepted.
 
 An unlaunched profile for that run is prepared at
-`C:/Users/simon/AppData/Local/DeskBox-Dev/architecture-d-visible-fault-20260924`.
+`C:/Users/simon/AppData/Local/DeskCue-Dev/architecture-d-visible-fault-20260924`.
 It contains two visible File widgets, `故障注入-源` and `故障注入-目标`, with separate
 sample folders under the same profile; its managed storage root is also inside
-that profile. Close the current DeskBox instance before launching the canonical
-Debug executable with `DESKBOX_DEV_DATA_ROOT` set to that directory and
-`DESKBOX_DEV_GROUP_FAIL_STAGE` set to
+that profile. Close the current DeskCue instance before launching the canonical
+Debug executable with `DESKCUE_DEV_DATA_ROOT` set to that directory and
+`DESKCUE_DEV_GROUP_FAIL_STAGE` set to
 `merge-post-save-commit,merge-rollback-save`. Drag source onto target once,
-then inspect the profile's `DeskBox.log`, `widget-layout.json`, and the widget
+then inspect the profile's `DeskCue.log`, `widget-layout.json`, and the widget
 HWNDs. Restart without the failure variable to verify durable reconstruction.
 The local `launch-merge-check.ps1` beside that profile starts either phase:
 run it with `-Fault` for the first launch and without that switch after exit.
-It refuses to start while any DeskBox process is running and never closes one.
+It refuses to start while any DeskCue process is running and never closes one.
 The source widget's title-bar `…` menu → `组合格子…` → `故障注入-目标` is a
 deterministic alternative to the drag gesture for triggering the injected
 merge; test the physical drag separately after a clean restart.
@@ -120,7 +120,7 @@ recorded `Dissolved group` at 16:21:35. The durable layout then contained zero
 groups and two visible File widgets, each still pointing to its intact sample
 file. There were no member-claim conflict or unhandled-error records.
 
-With the user's authorization to end DeskBox processes during testing, that
+With the user's authorization to end DeskCue processes during testing, that
 test instance was force-stopped after the layout commit and relaunched without
 fault injection as PID 37372. Startup reported 35 steps, 0 degraded and
 0 failed, with two restored widget HWNDs. The durable layout still contained
@@ -135,7 +135,7 @@ The combined candidate added Debug-only, isolated-data-root fault points
 `merge-recovery-target-unavailable` and `merge-recovery-rebuild` so the branch
 with no adoptable target and no replacement host could be exercised without
 changing Release behavior. The test profile at
-`C:/Users/simon/AppData/Local/DeskBox-Dev/architecture-d-no-host-20260924`
+`C:/Users/simon/AppData/Local/DeskCue-Dev/architecture-d-no-host-20260924`
 started with two visible File widgets and intact sample files. At 18:45:00,
 the user combined the widgets while five fault stages were active:
 `merge-post-save-commit`, `merge-rollback-save`,
@@ -154,7 +154,7 @@ group appeared and member switching worked. This verifies durable recovery
 from the no-host quarantine case on the current Windows device.
 
 A separate profile at
-`C:/Users/simon/AppData/Local/DeskBox-Dev/architecture-d-reused-detach-20260924`
+`C:/Users/simon/AppData/Local/DeskCue-Dev/architecture-d-reused-detach-20260924`
 tested the actual drag-detach path. A title-bar menu removal first produced
 `reusedSurface=False`, so that gesture did not exercise the rollback branch.
 After re-merging, the user's first drag of the active member tab outside the
@@ -179,7 +179,7 @@ detach branch also requires a visible host. The existing
 again (1/1).
 
 To test the persisted edge rather than assume it, an isolated copy at
-`C:/Users/simon/AppData/Local/DeskBox-Dev/architecture-d-hidden-normalize-20260924`
+`C:/Users/simon/AppData/Local/DeskCue-Dev/architecture-d-hidden-normalize-20260924`
 was seeded with one visible group, two members, and one member deliberately
 marked `IsVisible=false`. On Debug startup, the layout was rewritten with
 both members visible while the group remained intact. Startup reported 35
@@ -203,7 +203,7 @@ Compared with the previously validated combined candidate, the remaining
 source/test differences are exactly the nine batch-22 text-size paths.
 
 This stacked D branch passed **4,224/4,224** full x64 tests (ignored local
-TRX `tests/DeskBox.Tests/TestResults/architecture-d-stacked-20260925.trx`)
+TRX `tests/DeskCue.Tests/TestResults/architecture-d-stacked-20260925.trx`)
 and the complete x64 Native AOT publish/link plus `publish-aot-audit.ps1`
 audit: 44 publish files, `AlwaysThrowCount=0`, stable source snapshot.
 The canonical Debug build passed with 0 errors. An isolated launch, PID 3060,

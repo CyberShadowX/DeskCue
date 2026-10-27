@@ -1,4 +1,4 @@
-# DeskBox 格子组成员驻留（Residency）长期方案 —— 最终评估与决策记录
+# DeskCue 格子组成员驻留（Residency）长期方案 —— 最终评估与决策记录
 
 - 日期：2026-09-18（同日第四轮对码修订，见 §10）
 - 状态：方案定稿，未立项实施（排在云同步/数据分层之后；P0 归因可提前插队，且**P0 结果决定后续投入规模**）
@@ -12,7 +12,7 @@
 
 ## 0. 结论
 
-0. **这条线对"降内存"是二阶杠杆，投入规模由 P0 归因决定。** 同日 AOT 曲线（`deskbox-aot-curve-samples.csv`：单个文件格子、无任何组）私有内存 128MB → 490MB plateau；组成员缓存的规模上限只是 组数 × (1~2) 棵虚拟化非活动树，量级估在个位数到几十 MB。P0 必须扩大为**全应用内存归因**（组成员树 / IconHelper 三缓存真实 native 尺寸 / File 投影 / 每窗口固定成本），若组成员树占稳态私有内存 <10%，只做 P1+P2，跳过 Cold 档。
+0. **这条线对"降内存"是二阶杠杆，投入规模由 P0 归因决定。** 同日 AOT 曲线（`deskcue-aot-curve-samples.csv`：单个文件格子、无任何组）私有内存 128MB → 490MB plateau；组成员缓存的规模上限只是 组数 × (1~2) 棵虚拟化非活动树，量级估在个位数到几十 MB。P0 必须扩大为**全应用内存归因**（组成员树 / IconHelper 三缓存真实 native 尺寸 / File 投影 / 每窗口固定成本），若组成员树占稳态私有内存 <10%，只做 P1+P2，跳过 Cold 档。
 1. **不推翻格子组架构。** 一组一窗（SurfaceId / 单 HWND / 切换事务 / 隐藏组纯 identity 切换）被四路证据一致支持：微软自家产品、WinUI 3 每窗口固定成本数据、开源同类产品、跨框架共识。推翻方向（每成员一窗口、单树共享）都有实证表明更差。
 2. **选定方案 = 一种内容模式 + 三档成员状态：**
    - **北极星**：所有 widget kind 收敛为 adapter 持有 ViewModel/运行时、View 是可丢弃叶子。adapter 本身就是驻留单元；Warm/Cold 是**同一缓存字典里每个条目的状态位**，不是两级缓存。
@@ -55,7 +55,7 @@
 
 - 可见组窗口内：缓存成员的完整树**永远不会被任何清理路径释放**。`ReleaseLongHiddenContentResources` 有 `if (Visible || IsClosing) return`（`ContentSwitching.cs:179`）；后台清理仅在**全部 widget 隐藏**时武装（`App.xaml.cs:4013-4056` `CanArmBackgroundMemoryCleanup`）；可见空闲维护只裁进程级缓存到半容量、不碰成员树（`App.xaml.cs:3127-3267`）。
 - `OnWindowLongHidden()` 全仓库**只有一个实现**（Todo，只退订一个 `CompositionTarget.Rendering` 处理器，`TodoWidgetContentAdapter.cs:117-123`；`TodoWidgetContent.xaml.cs:408-424`）。其余全是空默认（`IWidgetContent.cs:43`）。
-- **File 被契约测试明令禁止实现 `OnWindowLongHidden`**：`tests/DeskBox.Tests/WidgetVisualActivityContractTests.cs:351` `Assert.DoesNotContain("OnWindowLongHidden()", fileSurface)`。1.4.6 立的法（"long-hidden 不得弃视图"）与"成员级冻结"是两个正交生命周期轴，新契约必须用新方法名，不能复用 `OnWindowLongHidden`。
+- **File 被契约测试明令禁止实现 `OnWindowLongHidden`**：`tests/DeskCue.Tests/WidgetVisualActivityContractTests.cs:351` `Assert.DoesNotContain("OnWindowLongHidden()", fileSurface)`。1.4.6 立的法（"long-hidden 不得弃视图"）与"成员级冻结"是两个正交生命周期轴，新契约必须用新方法名，不能复用 `OnWindowLongHidden`。
 - 已存在的运行时挂起 seam：切换出时 `OnWindowVisibilityChanged(false)` → `FileSurfaceContent` 调 `ViewModel.SuspendBackgroundActivity()`，**watcher 保活、事件合并**（`FileSurfaceContent.xaml.cs:563-585`；`ViewModels/WidgetViewModel.cs:459-470` 注释原文）。→ 现有缓存成员实际上已处于"树活+运行时挂起"状态。
 
 ### 1.4 File 的所有权链（为什么缓存长这样）
@@ -70,13 +70,13 @@
 |---|---|---|
 | IconHelper 三缓存（icon 字节 200 条/32MB、解码位图 160 条/48MB、缩略图 128 条/32MB 基线，Small=50%/Large=150% 缩放，LRU+字节双预算） | `Helpers/IconHelper.cs:15-24,1013-1054` | 图片已是进程级预算制——**组成员共享**，不需要按成员重复管理 |
 | per-path / per-scope 清理原语 | `IconHelper.cs:691`（ClearIconCache(path)）、`:1060`（ClearCacheScope） | 若将来要按成员清图，原语已存在 |
-| MemorySample（30s 节拍，DESKBOX_PERF_LOG=1）：privateMB/gcHeapMB/thumbCacheMB/decodedBitmapMB/**cachedGroupContents** 等 | `Services/PerformanceLogger.cs:290-421`；`AppDiagnosticsService.cs:93-111` | P0 测量直接用 |
+| MemorySample（30s 节拍，DESKCUE_PERF_LOG=1）：privateMB/gcHeapMB/thumbCacheMB/decodedBitmapMB/**cachedGroupContents** 等 | `Services/PerformanceLogger.cs:290-421`；`AppDiagnosticsService.cs:93-111` | P0 测量直接用 |
 | 强制 GC 器（两次 max-gen + WaitForPendingFinalizers，120s 冷却） | `Services/MemoryReclaimer.cs:46,90-103` | P0 归因协议用；注意契约测试禁止 GC.Collect 出现在 App.xaml.cs（`WidgetVisualActivityContractTests.cs:35-80`），必须走 MemoryReclaimer |
 | transient state 字典（按 widget id，跨销毁存活，回滚清理） | `WidgetManager.Groups.cs:32,2418-2462` | Cold 档状态管道已有一半 |
 | generation/epoch 守卫（File `_itemHydrationGeneration`、QC `_detailImageLoadVersion`、host `_contentVersion` 等全仓库成体系） | `WidgetViewModel.ItemHydration.cs:305+` 等 | 树重建后的 stale-callback 防护模式现成 |
 | 性能设置 UI（CacheBudget 下拉已存在） | `Views/SettingsWindow.xaml:2390-2401` | 字节预算挂同一设置，不加新 UI |
 | 切换延迟测量 | **不存在**（切换文件零 PerformanceLogger 引用；`[WidgetGroup] Switched` 日志不带 ms） | P0 需新建；插桩点：切换入口 `Groups.cs:925/1076`、prepare 后 `:1107`、首帧后 `:1155`、settle `:1252` |
-| AOT 内存曲线采样器与协议 | `scripts/measure-aot-memory-curve.ps1` / `summarize-aot-memory-curve.ps1` / `aot-memory-curve-protocol.md`；今日数据 `deskbox-aot-curve-samples.csv`（baseline 128MB → batch4 plateau 490MB，**单 File 格子无组**） | P0 全应用归因直接复用采样器；该曲线是"组成员树不是大头"的第一手证据 |
+| AOT 内存曲线采样器与协议 | `scripts/measure-aot-memory-curve.ps1` / `summarize-aot-memory-curve.ps1` / `aot-memory-curve-protocol.md`；今日数据 `deskcue-aot-curve-samples.csv`（baseline 128MB → batch4 plateau 490MB，**单 File 格子无组**） | P0 全应用归因直接复用采样器；该曲线是"组成员树不是大头"的第一手证据 |
 | transient state 现状覆盖面 | Todo：草稿三项（`TodoWidgetContentAdapter.cs:175-181`）；File：选中路径+剪切路径（`FileSurfaceContent.xaml.cs:535-544`）；QC：输入/搜索/视图/焦点/详情 id。**均不含滚动位置**；File 不含子目录导航栈、展开堆叠 | Warm 档不需要（树没丢）；**Cold 档硬前置**，见 §4.7 |
 | tab hover 基础设施 | `WidgetGroupTitleSwitcher.Tabs.cs:222-230`（`PointerEntered` → `BeginTabHoverSwitch`，已有 200ms 拖拽 dwell 计时器） | Cold 成员意图预热的挂点，见 §4.8 |
 | adapter 型 kind 的结构共性 | Todo/Search/Weather/Glance/Music 五个 adapter 各约 150 行，`_view is XContent c ? c.Foo() : noop` 转发占 80%；File/QC 是"控件即内容"另一种模式 | 基类/共享 helper 的共性已充分暴露，不必再等三个试点（修订 R8） |
@@ -110,12 +110,12 @@
 
 ### F. 声明式重建路线（视图 = 状态的纯函数，微软 Widgets/Dev Home 形态）
 - 微软 Widgets Board = provider 进程外 + Adaptive Cards JSON → 宿主渲染，Activate/Deactivate 定义"不可见即不更新"（[官方文档](https://learn.microsoft.com/en-us/windows/apps/develop/widgets/widget-providers)）；Dev Home Dashboard 离开页面即 `PinnedWidgets.Clear()` 整树拆掉、回来从状态全量重建（归档仓库源码级确认）。
-- 评估：这是长期北极星（"视图可随时从状态重建、无增量隐藏状态"），方案2 §10 的"非视觉逻辑禁止读 View"审计正是它的第一步。但 DeskBox 的 File 格子（拖拽/叠放/右键原生菜单）远比 Adaptive Cards 交互重，整体声明化不现实。
+- 评估：这是长期北极星（"视图可随时从状态重建、无增量隐藏状态"），方案2 §10 的"非视觉逻辑禁止读 View"审计正是它的第一步。但 DeskCue 的 File 格子（拖拽/叠放/右键原生菜单）远比 Adaptive Cards 交互重，整体声明化不现实。
 - 结论：**不立项，作为设计原则吸收**。
 
 ### G. 进程隔离（重 UI/第三方进子进程）
 - SnowDesktop 把设置 UI 和 shell 操作放短命子进程；Flow Launcher 托管插件进程内、Python/Node 进程外；Ferdium 每 service 独立 renderer。
-- 结论：**否（现阶段）**。DeskBox 无第三方内容进程化需求；设置窗复用已解决泄漏。记档备查。
+- 结论：**否（现阶段）**。DeskCue 无第三方内容进程化需求；设置窗复用已解决泄漏。记档备查。
 
 ---
 
@@ -131,7 +131,7 @@
 ### 3.2 WinUI 3 平台硬事实（可行性边界）
 
 1. **断开子树 ≠ 内存回落（设计内行为）**：GC 看不见 XAML 对象的 native 尺寸、回收扫描贵，故刻意推迟（MS 工程师原话，[#2190](https://github.com/microsoft/microsoft-ui-xaml/issues/2190)）；实测 Gallery 500MB 在内存压力下掉到 75MB（[#9044](https://github.com/microsoft/microsoft-ui-xaml/issues/9044)）。**对策：P0 归因必须走 MemoryReclaimer 强制 GC 分支；验收口径 = "非单调增长"。**
-2. **同栈开放 bug 登记**（设计须规避）：[#11001](https://github.com/microsoft/microsoft-ui-xaml/issues/11001)（WASDK 1.8 + Build 26200，**与 DeskBox 完全同环境**，页面开关内存增长）；[#10981](https://github.com/microsoft/microsoft-ui-xaml/issues/10981)（**.NET 10 回归**：x:Bind + 高频 Dispatcher 泄 `ManagedObjectWrapperHolder`——DeskBox 正是 net10.0+AOT）；[#11742](https://github.com/microsoft/microsoft-ui-xaml/issues/11742)（**解码中销毁子树泄 async action**——逐出前必须等 `BitmapImage` 解码收尾或断源）；[#10488](https://github.com/microsoft-ui-xaml/issues/10488)（ItemsRepeater 滚动不释放）。
+2. **同栈开放 bug 登记**（设计须规避）：[#11001](https://github.com/microsoft/microsoft-ui-xaml/issues/11001)（WASDK 1.8 + Build 26200，**与 DeskCue 完全同环境**，页面开关内存增长）；[#10981](https://github.com/microsoft/microsoft-ui-xaml/issues/10981)（**.NET 10 回归**：x:Bind + 高频 Dispatcher 泄 `ManagedObjectWrapperHolder`——DeskCue 正是 net10.0+AOT）；[#11742](https://github.com/microsoft/microsoft-ui-xaml/issues/11742)（**解码中销毁子树泄 async action**——逐出前必须等 `BitmapImage` 解码收尾或断源）；[#10488](https://github.com/microsoft-ui-xaml/issues/10488)（ItemsRepeater 滚动不释放）。
 3. **Loaded/Unloaded 事件不可作生命周期开关**（乱序/丢失，[#1900](https://github.com/microsoft/microsoft-ui-xaml/issues/1900)，2020 年至今开放）→ 宿主显式调用（本方案的设计）正确。
 4. WASDK ≥1.3 后窗口内子树逐出"机制上安全"（TabView/模板泄漏已修，[#3597](https://github.com/microsoft-ui-xaml/issues/3597)），但非承诺——需终结器打点 + 强制 GC 的"切换 N 次不增长"自动化验证。XAML 树重建耗时**无公开 ms 基准**，只能 P0 自测。
 

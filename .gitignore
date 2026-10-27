@@ -6,6 +6,10 @@ artifacts/
 Output/
 TestResults/
 .codex-temp/
+.superpowers/
+__pycache__/
+*.pyc
+发布版/
 native/target/
 
 *.log

@@ -6,8 +6,8 @@
 
 ## 1. 本轮完成内容
 
-本轮没有扩展已冻结的 `deskbox_native.dll`，新增独立 workspace crate
-`native/deskbox-search-core` 和 `deskbox_search_core.dll`。实现范围一次覆盖：
+本轮没有扩展已冻结的 `deskcue_native.dll`，新增独立 workspace crate
+`native/deskcue-search-core` 和 `deskcue_search_core.dll`。实现范围一次覆盖：
 
 - ABI v1 create/add-batch/seal/query/copy/stats/destroy 生命周期；
 - caller-owned packed UTF-16 批量导入与结果复制；
@@ -55,7 +55,7 @@ pair 按 scalar 比较。C# 加载前再用 final sigma、Deseret、Kelvin、dot
 | Rust / 托管字符载荷下限 | 44.58% |
 
 托管下限没有计算字典、entry、字符串头和 GC 对齐，所以数据足以支持继续推进 Rust SearchCore；它
-还不能直接宣称 DeskBox 进程工作集下降 55.42%。下一阶段必须用隔离进程和 Release DLL测量
+还不能直接宣称 DeskCue 进程工作集下降 55.42%。下一阶段必须用隔离进程和 Release DLL测量
 Private Bytes、Working Set、构建峰值、空闲后驻留以及查询 P50/P95。
 
 ## 4. 已执行验证
@@ -70,8 +70,8 @@ Private Bytes、Working Set、构建峰值、空闲后驻留以及查询 P50/P95
 - 必需导出：10/10；
 - C# 当前索引与 Rust 真实 DLL 差异矩阵：名称、目录、文件夹标志、UTC 时间、相关度、顺序均一致；
 - Unicode 边界：Greek sigma、Deseret、Kelvin、dotless-i、sharp-s 及中英文混合通过；
-- 产品隔离：`SearchIndexService` 未接入、DeskBox.csproj 未打包 SearchCore、AOT publish 中不存在
-  `deskbox_search_core.dll`；
+- 产品隔离：`SearchIndexService` 未接入、DeskCue.csproj 未打包 SearchCore、AOT publish 中不存在
+  `deskcue_search_core.dll`；
 - x64 Native AOT：profile 56 / schema 53，39 个发布文件、88.9 MiB，3 个符号文件、203.7 MiB，
   `WMC1510=1211`、`always-throw=0`、受审计源码稳定；
 - 生产 Rust：ABI 2、能力 511、原十个必需导出及发布哈希门禁保持不变。
