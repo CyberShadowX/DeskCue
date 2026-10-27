@@ -252,22 +252,37 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertEqual(previous, (release / "receipt.json").read_bytes())
 
     def local_run_result(self):
-        value = self.receipt()
-        release = self.root / "release"
-        contract.promote_receipt(release, value, self.installer)
+        run_id = "r-0123456789abcdef"
+        run = self.root / ".artifacts/deskcue-release/win-x64/runs" / run_id
+        frozen = self.root / ".artifacts/b" / run_id
+        (frozen / "deskcue").mkdir(parents=True)
+        for name in ("deskcue/config.json", "deskcue/provenance.json", "deskcue/brand.py", "LICENSE", "UPSTREAM.md"):
+            shutil.copyfile(self.root / name, frozen / name)
+        payload = frozen / "payload"
+        shutil.copytree(self.payload, payload)
+        summary = {**self.summary, "publishDirectory": str(payload),
+                   "installManifest": str(payload / "DeskCue.InstallManifest.txt")}
+        summary_path = frozen / "summary.json"
+        write_json(summary_path, summary)
+        packages = run / "packages"
+        packages.mkdir(parents=True)
+        installer = packages / self.installer.name
+        shutil.copyfile(self.installer, installer)
+        value = contract.create_receipt(frozen, summary_path, installer, [self.trx], self.management, "x64", self.commit)
+        receipt = run / "receipt.json"
+        write_json(receipt, value)
         result = {
-            "schemaVersion": 1, "frozenSource": str(self.root),
-            "retailSummary": str(self.summary_path), "receipt": str(release / "receipt.json"),
-            "installer": str(release / self.installer.name),
-            "payloadFiles": contract.payload_inventory(self.payload),
+            "schemaVersion": 1, "frozenSource": str(frozen), "payloadDirectory": str(payload),
+            "retailSummary": str(summary_path), "receipt": str(receipt),
+            "installer": str(installer), "payloadFiles": contract.payload_inventory(payload),
         }
-        path = self.root / "run-result.json"
+        path = run / "run-result.json"
         write_json(path, result)
         return path
 
     def test_local_staging_preserves_full_runtime_license_and_exact_installer(self):
         result = self.local_run_result()
-        staging = self.root / "staged"
+        staging = result.parent / "staged"
         contract.stage_local(result, staging)
         self.assertEqual((staging / "LICENSE").read_bytes(), (self.root / "LICENSE").read_bytes())
         self.assertEqual((staging / "UPSTREAM.md").read_bytes(), (self.root / "UPSTREAM.md").read_bytes())
@@ -280,17 +295,21 @@ class ReleaseContractTests(unittest.TestCase):
         stable = self.root / "published"
         stable.mkdir()
         (stable / "DeskCue.exe").write_bytes(b"old known-good application")
-        (self.payload / "DeskCue.pri").write_bytes(b"changed after successful build")
+        payload = Path(json.loads(result.read_text(encoding="utf-8"))["payloadDirectory"])
+        (payload / "DeskCue.pri").write_bytes(b"changed after successful build")
         with self.assertRaisesRegex(contract.ReleaseContractError, "payload changed"):
-            contract.stage_local(result, self.root / "staging")
+            contract.stage_local(result, result.parent / "staging")
         self.assertEqual((stable / "DeskCue.exe").read_bytes(), b"old known-good application")
-        self.assertFalse((self.root / "staging").exists())
+        self.assertFalse((result.parent / "staging").exists())
 
     def test_retail_contract_cli_rejects_changed_payload_before_packaging_receipt(self):
         result = self.local_run_result()
-        baseline = self.root / "retail-evidence.json"
-        write_json(baseline, {"payloadDirectory": str(self.payload), "files": contract.payload_inventory(self.payload)})
-        (self.payload / "DeskCue.pri").write_bytes(b"changed during installer build")
+        run = json.loads(result.read_text(encoding="utf-8"))
+        payload = Path(run["payloadDirectory"])
+        baseline = result.parent / "retail-evidence.json"
+        write_json(baseline, {"sourceRoot": run["frozenSource"], "payloadDirectory": str(payload),
+                              "files": contract.payload_inventory(payload)})
+        (payload / "DeskCue.pri").write_bytes(b"changed during installer build")
         command = subprocess.run([
             sys.executable, str(MODULE), "check-retail-snapshot", "--evidence", str(baseline),
         ], capture_output=True, text=True, encoding="utf-8")
@@ -333,8 +352,33 @@ class ReleaseContractTests(unittest.TestCase):
         previous = self.previous_receipt.read_bytes()
         result = self.run_fixture_build()
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("19", result.stdout + result.stderr)
+        self.assertIn("exit 19", result.stdout + result.stderr)
         self.assertEqual(self.previous_receipt.read_bytes(), previous)
+
+    def test_actual_freeze_uses_a_short_guarded_source_directory(self):
+        self.fixture_build_source()
+        result = self.run_fixture_build()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("exit 19", result.stdout + result.stderr)
+        worktrees = subprocess.run(["git", "-C", str(self.root), "worktree", "list", "--porcelain"],
+                                  capture_output=True, text=True, encoding="utf-8", check=True).stdout
+        paths = [Path(line.removeprefix("worktree ")) for line in worktrees.splitlines() if line.startswith("worktree ")]
+        frozen = next(path for path in paths if path != self.root)
+        relative = frozen.relative_to(self.root)
+        self.assertEqual(relative.parts[:2], (".artifacts", "b"))
+        self.assertEqual(len(relative.parts), 3)
+        self.assertRegex(relative.name, r"^r-[0-9a-f]{16}$")
+        canonical_run = self.release_root / "runs" / relative.name
+        self.assertTrue((canonical_run / "logs/freeze-source.log").is_file())
+        steps = json.loads((canonical_run / "steps.json").read_text(encoding="utf-8"))
+        self.assertEqual((steps[-1]["name"], steps[-1]["exitCode"]), ("restore", 19))
+        self.assertFalse((canonical_run / "s").exists())
+        self.assertLess(len(str(frozen)), len(str(canonical_run / "s")))
+        source_head = subprocess.run(["git", "-C", str(self.root), "rev-parse", "HEAD"],
+                                     capture_output=True, text=True, check=True).stdout.strip()
+        frozen_head = subprocess.run(["git", "-C", str(frozen), "rev-parse", "HEAD"],
+                                     capture_output=True, text=True, check=True).stdout.strip()
+        self.assertEqual(source_head, frozen_head)
 
     def test_dirty_source_is_rejected_before_any_build(self):
         self.fixture_build_source()
@@ -414,7 +458,7 @@ class ReleaseContractTests(unittest.TestCase):
         outside = self.root / "outside-staging"
         outside.mkdir()
         (outside / "sentinel.txt").write_bytes(b"outside original")
-        link = self.directory_link(self.root / "staging-alias", outside)
+        link = self.directory_link(result.parent / "staging-alias", outside)
         with self.assertRaisesRegex(contract.ReleaseContractError, "link|reparse|junction|alias"):
             contract.stage_local(result, link / "new-release")
         self.assertEqual({p.name: p.read_bytes() for p in outside.iterdir()}, {"sentinel.txt": b"outside original"})
@@ -441,6 +485,28 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertEqual({p.name: p.read_bytes() for p in outside.iterdir()}, {"sentinel.txt": b"outside original"})
         self.assertEqual(self.previous_receipt.read_bytes(), before)
 
+    def test_short_checkout_parent_junction_cannot_write_outside_source_root(self):
+        self.fixture_build_source()
+        outside = self.root / ".artifacts/external-source"
+        outside.mkdir()
+        (outside / "sentinel.txt").write_bytes(b"outside original")
+        self.directory_link(self.root / ".artifacts/b", outside)
+        before = self.previous_receipt.read_bytes()
+        result = self.run_fixture_build()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertRegex((result.stdout + result.stderr).lower(), "link|reparse|junction|alias")
+        self.assertEqual({p.name: p.read_bytes() for p in outside.iterdir()}, {"sentinel.txt": b"outside original"})
+        self.assertEqual(self.previous_receipt.read_bytes(), before)
+
+    def test_private_run_cannot_select_another_runs_short_checkout(self):
+        result = self.local_run_result()
+        value = json.loads(result.read_text(encoding="utf-8"))
+        value["frozenSource"] = str(self.root / ".artifacts/b/r-fedcba9876543210")
+        write_json(result, value)
+        with self.assertRaisesRegex(contract.ReleaseContractError, "paired short checkout"):
+            contract.stage_local(result, result.parent / "staged")
+        self.assertFalse((result.parent / "staged").exists())
+
     def test_source_root_alias_is_refused_before_build_side_effects(self):
         self.fixture_build_source()
         alias = self.root / ".artifacts/source-alias"
@@ -455,30 +521,11 @@ class ReleaseContractTests(unittest.TestCase):
 
     def test_actual_publish_wrapper_restores_old_release_after_second_move_fails(self):
         self.fixture_build_source()
-        run = self.release_root / "runs/fixture"
-        frozen = run / "s"
-        (frozen / "deskcue").mkdir(parents=True)
-        for name in ("deskcue/config.json", "deskcue/provenance.json", "deskcue/brand.py", "LICENSE", "UPSTREAM.md"):
-            shutil.copyfile(self.root / name, frozen / name)
-        payload = frozen / "payload"
-        shutil.copytree(self.payload, payload)
-        summary = {**self.summary, "publishDirectory": str(payload),
-                   "installManifest": str(payload / "DeskCue.InstallManifest.txt")}
-        summary_path = frozen / "summary.json"
-        write_json(summary_path, summary)
-        packages = run / "packages"
-        packages.mkdir()
-        installer = packages / self.installer.name
-        shutil.copyfile(self.installer, installer)
-        receipt = contract.create_receipt(frozen, summary_path, installer, [self.trx], self.management, "x64", self.commit)
-        receipt_path = run / "receipt.json"
-        write_json(receipt_path, receipt)
-        result_path = run / "run-result.json"
-        write_json(result_path, {"schemaVersion": 1, "frozenSource": str(frozen),
-                                "retailSummary": str(summary_path), "receipt": str(receipt_path),
-                                "installer": str(installer), "payloadFiles": contract.payload_inventory(payload)})
+        result_path = self.local_run_result()
+        run = result_path.parent
+        evidence = json.loads(result_path.read_text(encoding="utf-8"))
         stub_result = self.root / "stub-build-result.json"
-        write_json(stub_result, {"RunResult": str(result_path), "Installer": str(installer),
+        write_json(stub_result, {"RunResult": str(result_path), "Installer": evidence["installer"],
                                  "RuntimeIdentifier": "win-x64"})
         stable = self.root / "发布版"
         stable.mkdir()

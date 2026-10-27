@@ -3,6 +3,21 @@
 Status: product/local-build code verified and reviewed; actual retail/cloud
 execution, runtime acceptance and workspace cutover remain in progress.
 
+First real retail attempt at f0a028d stopped in the Rust linker before tests or
+packaging: the frozen-source output path was 264 characters (LNK1104).
+The same source compiled successfully with a shorter Cargo output path.
+The builder now uses the guarded short checkout `.artifacts/b/<run-id>` while
+keeping canonical logs and receipts unchanged. All 34 focused builder fixtures
+passed in the Controller session; scoped independent re-review passed
+0 Critical / 0 Important / 0 Minor. A new complete retail attempt follows.
+No installer, stable EXE replacement or running-app acceptance is claimed yet.
+
+The final source review's two Important and two Minor policy findings are
+resolved: fork-owned security/conduct/support/contribution/signing policies,
+disabled legacy distribution jobs and the operator guide are now preserved
+across upstream replay. The policy re-review found no remaining C/I/M; real
+candidate replay and missing-policy rejection fixtures passed.
+
 ## Authorized scope
 
 On2026-10-27 the user approved full replacement of former WPF DeskCue with the

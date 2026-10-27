@@ -16,6 +16,15 @@ from urllib.request import Request
 
 
 MODULE = Path(__file__).resolve().parents[1] / "delivery.py"
+OWNED_POLICY_FIXTURE = {
+    "SECURITY.md": "Private contact through CyberShadowX/DeskCue security; no inherited email.\n",
+    "CODE_OF_CONDUCT.md": "DeskCue conduct reports follow the owned security contact policy.\n",
+    "CONTRIBUTING.md": "Use your own configured Git author identity; preserve upstream attribution.\n",
+    "SUPPORT.md": "Feedback opens public CyberShadowX/DeskCue Issues; no automatic diagnostics upload.\n",
+    ".github/PULL_REQUEST_TEMPLATE.md": "Use your own configured Git author identity.\n",
+    "docs/code-signing.md": "No DeskCue signing service or certificate is configured.\n",
+    ".github/workflows/distribution-audit.yml": "name: Legacy audit\njobs:\n  distribution:\n    if: ${{ false }}\n",
+}
 if MODULE.exists():
     spec = importlib.util.spec_from_file_location("deskcue_delivery", MODULE)
     delivery = importlib.util.module_from_spec(spec)
@@ -152,6 +161,10 @@ c.update(recipeSha256=hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdig
 (r/'deskcue/provenance.json').write_text(json.dumps(c))
 '''
         (self.root / "deskcue/brand.py").write_text(recipe, encoding="utf-8")
+        for path, content in OWNED_POLICY_FIXTURE.items():
+            target = self.root / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
         git(self.root, "add", ".")
         git(self.root, "commit", "-m", "recipe")
         provenance = {**self.config, "recipeSha256": hashlib.sha256(git(self.root, "show", "HEAD:deskcue/brand.py").encode()).hexdigest(),
@@ -170,13 +183,17 @@ c.update(recipeSha256=hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdig
         return {"schemaVersion": 1, "build": True, "mode": "head", "baseCommit": self.head,
                 "version": "1.5.9.1", **self.config, **updates}
 
-    def next_upstream(self):
+    def next_upstream(self, policies=None):
         self.upstream = self.home / "upstream"
         git(self.home, "clone", "--no-local", str(self.root), str(self.upstream))
         git(self.upstream, "checkout", "--detach", self.upstream_sha)
         git(self.upstream, "config", "user.name", "Upstream")
         git(self.upstream, "config", "user.email", "upstream@example.invalid")
         (self.upstream / "source.txt").write_text("upstream new\n", encoding="utf-8")
+        for path, content in (policies or {}).items():
+            target = self.upstream / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
         git(self.upstream, "add", ".")
         git(self.upstream, "commit", "-m", "new upstream")
         git(self.upstream, "tag", "v1.6.0")
@@ -222,6 +239,36 @@ class CandidateTests(SourceCase):
         git(self.root, "commit", "-m", "bad patch")
         plan["baseCommit"] = git(self.root, "rev-parse", "HEAD")
         with self.assertRaises(delivery.DeliveryError):
+            delivery.prepare(self.root, plan, self.destination, self.output, upstream_url=str(self.upstream))
+        self.assertEqual(git(self.root, "rev-parse", "HEAD"), plan["baseCommit"])
+        self.assertFalse((self.output / "candidate.json").exists())
+
+    def test_upstream_contacts_and_signing_cannot_replace_owned_policy(self):
+        upstream_policies = {
+            "SECURITY.md": "Report DeskBox security to 1047078635@qq.com.\n",
+            "CODE_OF_CONDUCT.md": "Conduct contact: 1047078635@qq.com.\n",
+            "CONTRIBUTING.md": "Only original maintainer contributions accepted.\n",
+            "SUPPORT.md": "Submit anonymous diagnostic packages to the original service.\n",
+            ".github/PULL_REQUEST_TEMPLATE.md": "Commit as Simon <1047078635@qq.com>.\n",
+            "docs/code-signing.md": "DeskBox test signing verified 2026-10-08.\n",
+            ".github/workflows/distribution-audit.yml": (
+                "organization-id: e4f8de42-d97c-409d-b768-ee383c34c15b\nproject-slug: DeskBox\n"),
+        }
+        plan = self.next_upstream(upstream_policies)
+        metadata = delivery.prepare(self.root, plan, self.destination, self.output, upstream_url=str(self.upstream))
+        for path, content in OWNED_POLICY_FIXTURE.items():
+            with self.subTest(path=path):
+                self.assertEqual((self.destination / path).read_text(encoding="utf-8"), content)
+                self.assertEqual(git(self.destination, "show", f"HEAD:{path}"), content.rstrip())
+        self.assertEqual(metadata["upstreamCommit"], plan["upstreamCommit"])
+
+    def test_missing_owned_policy_blocks_upstream_candidate(self):
+        plan = self.next_upstream({"SECURITY.md": "Original maintainer contact must not reappear.\n"})
+        (self.root / "SECURITY.md").unlink()
+        git(self.root, "add", "--all")
+        git(self.root, "commit", "-m", "lost fork security policy")
+        plan["baseCommit"] = git(self.root, "rev-parse", "HEAD")
+        with self.assertRaisesRegex(delivery.DeliveryError, "required tracked fork policy"):
             delivery.prepare(self.root, plan, self.destination, self.output, upstream_url=str(self.upstream))
         self.assertEqual(git(self.root, "rev-parse", "HEAD"), plan["baseCommit"])
         self.assertFalse((self.output / "candidate.json").exists())

@@ -2,7 +2,23 @@
 
 Plan: docs/superpowers/plans/2026-10-27-deskcue-upstream-adoption.md
 
-## Latest authoritative checkpoint
+## Current execution checkpoint
+
+- Initial reviewed implementation committed as f0a028d. Task4 delivery round3
+  PASS 0C/0I/0M; main focused 45 tests passed; worker full 96 tests passed.
+- First actual retail attempt at that commit stopped in Rust link.exe LNK1104:
+  frozen checkout made its output path 264 characters long. The same source
+  compiled successfully with a short output path (rust-short-path-proof.log).
+- Builder now freezes source in guarded `.artifacts/b/<run-id>` and retains
+  canonical receipt/log paths. Controller fresh 34 focused tests passed;
+  independent scoped re-review PASS 0C/0I/0M, followed by clean commit/full retry.
+- Fresh whole-branch review found fork contact/signing policy leftovers, now
+  corrected as preserved overlays; fresh policy re-review closed 2I/2M with
+  no remaining C/I/M. The operator guide is now under the preserved deskcue
+  prefix. No release/runtime/cutover is claimed yet.
+- No remote push, actual cloud run or published installer so far.
+
+## Earlier checkpoint (superseded by the execution checkpoint above)
 
 - Actual product source remains in F:/AI/AIProjects/DeskCue-migration-20261027,
  branch codex/deskbox-adoption; original workspace not cut over yet. No push yet.

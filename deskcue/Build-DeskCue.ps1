@@ -105,6 +105,11 @@ Assert-SafeDeskCuePath $repoRoot $releaseRoot
 if ((Read-Git $repoRoot @('check-ignore', '--no-index', '--', '.artifacts/deskcue-release/ignore-probe')) -eq '') {
     throw 'The release artifact directory must be ignored by Git.'
 }
+$shortSourceParent = Join-Path $repoRoot '.artifacts\b'
+Assert-SafeDeskCuePath $repoRoot $shortSourceParent
+if ((Read-Git $repoRoot @('check-ignore', '--no-index', '--', '.artifacts/b/ignore-probe')) -eq '') {
+    throw 'The short source checkout directory must be ignored by Git.'
+}
 New-Item -ItemType Directory -Path $releaseRoot -Force | Out-Null
 Assert-SafeDeskCuePath $repoRoot $releaseRoot
 # This lock is held throughout preparation and receipt promotion, separately per architecture.
@@ -160,10 +165,12 @@ try {
         [Environment]::SetEnvironmentVariable($entry.Key, $entry.Value, 'Process')
     }
 
-    # A detached worktree prevents a concurrent checkout/edit in the caller's tree
-    # from becoming a mixed-source build. It is retained with this run's evidence.
-    $frozenRoot = Join-Path $runRoot 's'
-    Assert-SafeDeskCuePath $runRoot $frozenRoot
+    # MSVC/Rust output paths can exceed MAX_PATH when a checkout sits below the
+    # full evidence hierarchy. Keep source shallow; retain logs/receipts in runRoot.
+    $frozenRoot = Join-Path $shortSourceParent $runId
+    Assert-SafeDeskCuePath $repoRoot $frozenRoot
+    New-Item -ItemType Directory -Path $shortSourceParent -Force | Out-Null
+    Assert-SafeDeskCuePath $repoRoot $frozenRoot
     Invoke-CheckedCommand 'freeze-source' 'git' @('-C', $repoRoot, 'worktree', 'add', '--detach', $frozenRoot, $head) $repoRoot
     $null = Assert-CleanSource $frozenRoot $head
     $validator = Join-Path $frozenRoot 'deskcue\release_contract.py'

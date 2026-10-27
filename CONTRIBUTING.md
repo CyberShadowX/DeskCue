@@ -2,34 +2,26 @@
 
 ## English
 
-Thank you for your interest in contributing to DeskCue!
+DeskCue is a fork of [DeskBox](https://github.com/Tianyu199509/DeskBox) maintained in [CyberShadowX/DeskCue](https://github.com/CyberShadowX/DeskCue). Preserve the original copyright, GPL-3.0-only license, third-party notices, and [upstream attribution](UPSTREAM.md).
 
-DeskCue is currently developed and maintained primarily by a solo developer. At this stage, the project is still undergoing frequent architectural adjustments, including ongoing work to better separate the core application from future plugin/extensibility capabilities. Some core APIs, feature boundaries, and long-term implementation decisions have not yet been finalized.
+Report bugs and discuss proposals through this fork's [Issues](https://github.com/CyberShadowX/DeskCue/issues). Pull requests to this fork are reviewed and merged at the maintainer's discretion; discuss substantial changes first. This does not promise review capacity, acceptance, or a future upstream roadmap. Do not send changes to the upstream repository as part of DeskCue's delivery process.
 
-For this reason, **external Pull Requests are temporarily not being accepted for merging**.
+Use your own configured Git author identity (a GitHub noreply address is an option). Never impersonate the upstream author or copy their Git identity. Keep commits focused, describe the resulting behavior, and include relevant test evidence. Build and test through the fork's documented [entry points](deskcue/使用与更新.md); do not bypass release checks.
 
-Accepting PRs responsibly requires more than reviewing whether the code works — it also involves architectural review, compatibility testing, regression testing, long-term maintenance, and continued communication with contributors. At the moment, I do not have enough capacity to provide that level of review consistently.
+The files under `deskcue/` and the fork policy files are replayed during stable upstream adoption. Application changes outside that overlay must have a reviewed replay patch declared in `deskcue/config.json`, so the next adoption retains them. Follow [AGENTS.md](AGENTS.md) for repository development rules.
 
-This is **not a permanent policy**. Once the core architecture and plugin system become more stable, I plan to revisit external contributions and establish clearer contribution guidelines, API boundaries, and review processes.
-
-In the meantime, community feedback is extremely valuable. Bug reports, feature ideas, UI/UX suggestions, technical discussions, prototypes, and implementation proposals are all very welcome through **Issues** or **Discussions**.
-
-Even if a PR cannot currently be merged, I sincerely appreciate the time and effort people put into exploring and improving DeskCue. Thank you for your understanding and support!
+Security reports follow [SECURITY.md](SECURITY.md); keep vulnerability details and private data out of public Issues and pull requests.
 
 ---
 
 ## 中文
 
-感谢你愿意参与 DeskCue 的开发与改进！
+DeskCue 是 [DeskBox](https://github.com/Tianyu199509/DeskBox) 的派生分支，由 [CyberShadowX/DeskCue](https://github.com/CyberShadowX/DeskCue) 维护。请保留原作者版权、GPL-3.0-only 许可证、第三方声明和[上游归属](UPSTREAM.md)。
 
-DeskCue 目前主要由个人独立开发和维护。现阶段项目仍处于较频繁的架构调整期，包括正在规划**核心本体与未来插件 / 扩展能力的解耦**，部分基础接口、功能边界以及长期实现方式也尚未完全确定。
+请通过本分支的 [Issues](https://github.com/CyberShadowX/DeskCue/issues) 反馈问题和讨论方案。发往本分支的 Pull Request 由维护者自行评估是否审查、合并；较大变更请先讨论。本文不承诺审查能力、接受结果或上游未来路线图。DeskCue 的交付流程不向上游仓库提交变更。
 
-因此，**目前暂不接受外部 Pull Request 的代码合并**。
+请使用自己配置的 Git 作者身份，也可选择 GitHub noreply 地址。不要冒用上游作者或复制其 Git 身份。提交应聚焦单个目标，说明实际行为及相关测试证据。构建和测试使用本分支的[文档入口](deskcue/使用与更新.md)，不绕过发布检查。
 
-一个 PR 的合并不仅需要确认功能是否可用，还需要进行架构审查、兼容性验证、回归测试，并承担后续长期维护和沟通成本。目前作为个人开发者，我暂时没有足够的时间和精力持续完成足够深入的 Code Review，也不希望在没有能力长期维护的情况下贸然开放 PR。
+稳定上游同步会重放 `deskcue/` 下的文件及本分支政策文件。该覆盖范围之外的应用修改，必须通过 `deskcue/config.json` 声明的已审查补丁保留，防止下次同步丢失。仓库开发规则见 [AGENTS.md](AGENTS.md)。
 
-**这并不是永久性的限制。** 等核心架构、插件体系以及相关接口逐渐稳定后，我会重新评估并开放外部贡献，同时完善贡献规范、接口边界和 Review 流程。
-
-在此之前，非常欢迎通过 **Issue / Discussion** 提交 Bug、功能建议、UI/UX 意见、技术方案、原型或实现思路。
-
-即使现阶段无法直接合并 PR，我也非常感谢每一位愿意花时间研究和改进 DeskCue 的朋友。感谢理解与支持！
+安全问题遵循 [SECURITY.md](SECURITY.md)，不要在公开 Issue 或 Pull Request 中发布漏洞细节或私人数据。

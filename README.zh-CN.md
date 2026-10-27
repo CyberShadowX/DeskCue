@@ -16,4 +16,4 @@ DeskCue 是基于 [DeskBox](https://github.com/Tianyu199509/DeskBox) 的 Windows
 
 需要 .NET SDK10.0.402、Rust1.96.0、对应 MSVC/Windows SDK 和 Inno Setup6。云端与本地使用同一套 `deskcue/` 脚本。Full Native AOT 安装包包含私有运行时；它是完整运行目录与安装器，不是旧 WPF 单文件程序。
 
-上游源码来源、DeskCue 修订号和固定应用身份记录在 `deskcue/config.json`；生成来源收据位于 `deskcue/provenance.json`。日常操作与实际验证状态见 [docs/HANDOFF.md](docs/HANDOFF.md)。旧 DeskCue 数据未自动导入，个人数据不上传到源码仓库。
+上游源码来源、DeskCue 修订号和固定应用身份记录在 `deskcue/config.json`；生成来源收据位于 `deskcue/provenance.json`。日常操作见 [使用与更新](deskcue/使用与更新.md)，实际验证状态见 [HANDOFF.md](docs/HANDOFF.md)。旧 DeskCue 数据未自动导入，个人数据不上传到源码仓库。

@@ -391,8 +391,11 @@ def new_path(path, root):
 
 def tracked_overlay(root, ref):
     prefixes = ("deskcue/", "tools/", "docs/superpowers/")
+    fork_policies = {"SECURITY.md", "CODE_OF_CONDUCT.md", "CONTRIBUTING.md", "SUPPORT.md",
+                     ".github/PULL_REQUEST_TEMPLATE.md", "docs/code-signing.md",
+                     ".github/workflows/distribution-audit.yml"}
     single = {".gitignore", "AGENTS.md", "README.md", "README.zh-CN.md", "UPSTREAM.md", "docs/HANDOFF.md",
-              ".github/workflows/deskcue-upstream.yml"}
+              ".github/workflows/deskcue-upstream.yml"} | fork_policies
     entries = []
     for entry in git(root, "ls-tree", "-rz", ref).split(b"\0"):
         if not entry:
@@ -406,6 +409,8 @@ def tracked_overlay(root, ref):
         if mode not in {"100644", "100755"} or kind != "blob":
             raise DeliveryError("Management overlay contains a symlink or non-file entry.")
         entries.append((path, blob))
+    if not fork_policies.issubset(path for path, _ in entries):
+        raise DeliveryError("A required tracked fork policy is missing; upstream policy defaults cannot be released.")
     return entries
 
 

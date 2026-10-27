@@ -91,6 +91,24 @@ def safe_path(path, root=None):
     return candidate
 
 
+def release_run_layout(run_root, frozen_source, platform=None):
+    """Pair canonical evidence with a short, independently guarded checkout."""
+    run = safe_path(run_root)
+    require(len(run.parents) >= 5 and run.parent.name == "runs"
+            and re.fullmatch(r"r-[0-9a-f]{16}", run.name), "invalid canonical release run layout")
+    rid = run.parent.parent.name
+    require(rid in ("win-x64", "win-arm64"), "invalid release run architecture")
+    if platform is not None:
+        require(rid == ("win-arm64" if platform == "ARM64" else "win-x64"), "release run platform mismatch")
+    workspace = safe_path(run.parents[4], run.parents[4])
+    release = safe_path(workspace / ".artifacts/deskcue-release" / rid, workspace)
+    require(run == release / "runs" / run.name, "release run escaped its canonical evidence root")
+    frozen = safe_path(frozen_source, workspace)
+    expected = safe_path(workspace / ".artifacts/b" / run.name, workspace)
+    require(frozen == expected, "frozen source must use the paired short checkout layout")
+    return {"workspaceRoot": workspace, "runRoot": run, "releaseRoot": release, "frozenSource": frozen}
+
+
 def sha256(path):
     path = safe_path(path)
     digest = hashlib.sha256()
@@ -263,7 +281,8 @@ def payload_inventory(payload):
 def check_retail_snapshot(evidence_path):
     evidence_path = safe_path(evidence_path)
     evidence = load_json(evidence_path)
-    payload = safe_path(evidence["payloadDirectory"], evidence_path.parent)
+    layout = release_run_layout(evidence_path.parent, evidence["sourceRoot"])
+    payload = safe_path(evidence["payloadDirectory"], layout["frozenSource"])
     require(payload_inventory(payload) == evidence["files"],
             "payload changed during installer packaging")
 
@@ -327,7 +346,7 @@ def validate_retail(source_root, summary_path, platform, source_commit):
     native = summary.get("rustNative", {})
     require(native.get("publishMatchesStaging") is True and isinstance(native.get("sha256"), str)
             and native["sha256"].lower() == inventory["deskcue_native.dll"]["sha256"], "Rust native staging/hash mismatch")
-    return {"payloadDirectory": str(payload), "files": inventory}
+    return {"sourceRoot": str(source_root), "payloadDirectory": str(payload), "files": inventory}
 
 
 def create_receipt(source_root, summary_path, installer_path, trx_paths, management_path, platform, source_commit):
@@ -458,9 +477,10 @@ def stage_local(result_path, destination):
     result_path = safe_path(result_path)
     run_root = result_path.parent
     result = load_json(result_path)
+    layout = release_run_layout(run_root, result["frozenSource"])
     receipt_path = safe_path(result["receipt"], run_root)
     installer = safe_path(result["installer"], run_root)
-    frozen = safe_path(result["frozenSource"], run_root)
+    frozen = layout["frozenSource"]
     retail = safe_path(result["retailSummary"], frozen)
     target = safe_path(destination, run_root)
     receipt = load_json(receipt_path)
@@ -532,8 +552,9 @@ def main(argv=None):
             management = validate_management_results(args.management_results)
             print(json.dumps({key: tests[key] + management[key] for key in tests}))
         elif args.command == "retail":
-            args.source_root = safe_path(args.source_root, args.source_root)
-            args.output = safe_path(args.output, args.source_root.parent)
+            args.output = safe_path(args.output)
+            layout = release_run_layout(args.output.parent, args.source_root, args.platform)
+            args.source_root = layout["frozenSource"]
             assert_clean_source(args.source_root, args.commit)
             validate_metadata(args.source_root, args.commit)
             evidence = validate_retail(args.source_root, args.retail_summary, args.platform, args.commit)
@@ -541,13 +562,14 @@ def main(argv=None):
         elif args.command == "complete":
             args.output = safe_path(args.output)
             run_root = args.output.parent
-            args.source_root = safe_path(args.source_root, run_root)
+            layout = release_run_layout(run_root, args.source_root, args.platform)
+            args.source_root = layout["frozenSource"]
             args.installer = safe_path(args.installer, run_root)
             args.trx_dir = safe_path(args.trx_dir, run_root)
             args.management_results = safe_path(args.management_results, run_root)
             args.retail_evidence = safe_path(args.retail_evidence, run_root)
             args.release_root = safe_path(args.release_root, args.release_root)
-            require(args.release_root == run_root.parent.parent and run_root.parent.name == "runs",
+            require(args.release_root == layout["releaseRoot"],
                     "canonical release root does not own the selected run")
             assert_clean_source(args.source_root, args.commit)
             check_retail_snapshot(args.retail_evidence)
