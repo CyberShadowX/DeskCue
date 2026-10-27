@@ -1,103 +1,83 @@
-name: ARM64 Runtime Gate
+name: DeskCue ARM64 hang dump diagnostics
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - codex/stage7b-arm64-actions
 
 permissions:
   contents: read
-
-concurrency:
-  group: arm64-runtime-${{ github.ref }}
-  cancel-in-progress: true
+  actions: read
 
 jobs:
-  native-runtime:
-    name: Native ARM64 ABI runtime
+  analyze:
+    if: github.repository == 'CyberShadowX/DeskCue'
     runs-on: windows-11-vs2026-arm
-    timeout-minutes: 60
-
+    timeout-minutes: 25
     env:
-      DOTNET_CLI_TELEMETRY_OPTOUT: 1
-      DOTNET_NOLOGO: 1
-      RestoreLockedMode: true
-
+      DOTNET_NOLOGO: '1'
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
     steps:
-      - name: Checkout isolated source snapshot
-        uses: actions/checkout@v4
-
-      - name: Setup pinned .NET SDK
-        uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.402
 
-      - name: Verify native ARM64 host and pinned Rust
+      - uses: actions/download-artifact@v4
+        with:
+          name: deskcue-failure-win-arm64
+          run-id: 40536288591
+          github-token: ${{ github.token }}
+          path: evidence
+
+      - name: Verify native host and exact original dump
+        id: dump
         shell: pwsh
         run: |
-          $processArchitecture = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture
-          $osArchitecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
-          if ($processArchitecture -ne [System.Runtime.InteropServices.Architecture]::Arm64 -or
-              $osArchitecture -ne [System.Runtime.InteropServices.Architecture]::Arm64) {
-            throw "Expected an ARM64 OS and process; OS=$osArchitecture process=$processArchitecture."
+          if ([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -ne 'Arm64') { throw 'Native ARM64 analysis is required.' }
+          [IO.File]::WriteAllText((Join-Path $env:GITHUB_WORKSPACE 'global.json'), '{"sdk":{"version":"10.0.402","rollForward":"disable"}}', [Text.UTF8Encoding]::new($false))
+          $sdk = & dotnet --version
+          if ($LASTEXITCODE -ne 0 -or $sdk.Trim() -ne '10.0.402') { throw 'Selected SDK does not match.' }
+          $dumps = @(Get-ChildItem -LiteralPath evidence -Recurse -File -Filter '*.dmp')
+          if ($dumps.Count -lt 1) { throw 'Expected an original hang dump.' }
+          foreach ($dump in $dumps) {
+            $actual = (Get-FileHash -LiteralPath $dump.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actual -cne '88f26041b357d8630307810db518f1cdcd322e55cb7a81153fab846cd0f6c32a') { throw 'An original dump copy has a different SHA256.' }
           }
-          dotnet --info
-          rustc -vV
-          cargo --version
-          $rustcDetails = rustc -vV | Out-String
-          if ($rustcDetails -notmatch 'rustc 1\.96\.0' -or
-              $rustcDetails -notmatch 'host: aarch64-pc-windows-msvc') {
-            throw "The repository-pinned native ARM64 Rust 1.96.0 toolchain is not active."
-          }
+          $selected = $dumps | Sort-Object FullName | Select-Object -First 1
+          New-Item -ItemType Directory -Path analysis -Force | Out-Null
+          @{ sourceCommit = '6b6195c2be230e6951860ae02c293598d7ecb508'; sourceRun = 40536288591; dumpSha256 = $actual; verifiedDumpCopies = $dumps.Count; sdk = $sdk.Trim(); architecture = 'Arm64' } | ConvertTo-Json | Set-Content -LiteralPath analysis/input.json -Encoding utf8
+          "path=$($selected.FullName)" >> $env:GITHUB_OUTPUT
 
-      - name: Restore ARM64 assets
+      - name: Install pinned Microsoft dump analyzer
+        id: tool
         shell: pwsh
-        run: >-
-          dotnet restore .\DeskCue.sln
-          --locked-mode
-          -p:Platform=ARM64
-          -p:RuntimeIdentifier=win-arm64
-          --verbosity minimal
+        run: |
+          $toolRoot = Join-Path $env:RUNNER_TEMP 'deskcue-dump-tools'
+          $config = Join-Path $env:RUNNER_TEMP 'deskcue-dump-nuget.config'
+          '<configuration><packageSources><clear/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources></configuration>' | Set-Content -LiteralPath $config -Encoding utf8
+          & dotnet tool install dotnet-dump --tool-path $toolRoot --version 10.0.750501 --configfile $config
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned dump tool installation failed.' }
+          $tool = Join-Path $toolRoot 'dotnet-dump.exe'
+          $version = & $tool --version
+          if ($LASTEXITCODE -ne 0 -or $version -notmatch '10\.0\.750501') { throw 'Pinned dump tool version differs.' }
+          $version | Set-Content -LiteralPath analysis/tool-version.txt -Encoding utf8
+          "path=$tool" >> $env:GITHUB_OUTPUT
 
-      - name: Run Stage 7B native ARM64 gate
+      - name: Analyze original managed thread stacks
         shell: pwsh
-        run: >-
-          .\scripts\run-arm64-stage-7b-runtime.ps1
-          -Configuration Release
-          -OutputDirectory .\.artifacts\arm64-stage7b-runtime
-          -NoRestore
+        env:
+          DESKCUE_DUMP: ${{ steps.dump.outputs.path }}
+          DESKCUE_DUMP_TOOL: ${{ steps.tool.outputs.path }}
+        run: |
+          $symbols = Join-Path $env:RUNNER_TEMP 'deskcue-dump-symbols'
+          New-Item -ItemType Directory -Path $symbols -Force | Out-Null
+          $arguments = @('analyze', $env:DESKCUE_DUMP, '-c', "setsymbolserver -ms -cache $symbols", '-c', 'clrthreads', '-c', 'clrstack -all', '-c', 'threadpool', '-c', 'syncblk', '-c', 'exit')
+          & $env:DESKCUE_DUMP_TOOL @arguments 2>&1 | Tee-Object -FilePath analysis/managed-stacks.txt | Out-Host
+          if ($LASTEXITCODE -ne 0) { throw 'Dump analysis returned a failure; inspect saved diagnostics.' }
 
-      - name: Run Stage 7C0 ARM64 CRT A/B gate
-        shell: pwsh
-        run: >-
-          .\scripts\audit-rust-crt-distribution.ps1
-          -Platforms ARM64
-          -OutputDirectory .\.artifacts\rust-crt-stage7c0-arm64
-          -MemoryProbeRounds 5
-          -NoRestore
-
-      - name: Upload ARM64 runtime evidence
-        if: always()
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
         with:
-          name: arm64-stage7b-runtime-evidence
-          if-no-files-found: error
-          retention-days: 14
-          path: |
-            .artifacts/arm64-stage7b-runtime/*.json
-            .artifacts/arm64-stage7b-runtime/**/*.trx
-            .artifacts/arm64-stage7b-runtime/native/*.dll
-            .artifacts/arm64-stage7b-runtime/search/*.dll
-
-      - name: Upload ARM64 CRT distribution evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: arm64-stage7c0-crt-evidence
-          if-no-files-found: error
-          retention-days: 14
-          path: |
-            .artifacts/rust-crt-stage7c0-arm64/*.json
-            .artifacts/rust-crt-stage7c0-arm64/**/*.trx
-            .artifacts/rust-crt-stage7c0-arm64/**/*.dll
+          name: deskcue-arm64-hang-analysis
+          if-no-files-found: warn
+          retention-days: 1
+          compression-level: 6
+          path: analysis/**
