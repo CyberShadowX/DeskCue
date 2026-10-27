@@ -1,7 +1,34 @@
 # DeskCue migration handoff
 
-Status: product/local-build code verified and reviewed; actual retail/cloud
-execution, runtime acceptance and workspace cutover remain in progress.
+Status: workspace cutover complete; source9b local retail and GUI preflight
+verified; cross-environment fixes and first public1.5.9.2 delivery remain in progress.
+
+Rev2 candidate is now frozen and independently CODE-reviewedPASS0C/0I/0M.
+Fresh Controller management108/108 passed; version/fixture/reminder/architecture
+scoped reviews passed. Fresh LF generation exactly reproduced mechanicalBASE2
+fc0c25bd2c02a761fb2a3fcd3a4c49dbe7d39ede; complete patch121962bytes,
+SHA256E130AEB5882D53498367B12CD4820579822AFE025C5CC4F6B1D82E6AB7E68BC7,
+reproduces all1697 indexed productentries exactly after checkedapplication.
+The next clean commit must pass full local and dualarchitecture cloud gates;
+the earlier ARM search hang remains unproven until an actual diagnostic rerun.
+
+Current workspace is F:/AI/AIProjects/DeskCue onmain, trackingCyberShadowX/DeskCue.
+Legacy contents/history remain in F:/AI/AIProjects/DeskCue-legacy-20261027; the
+earlier separate bundle/EXE/SQLite backup is also preserved. Source9b full local
+publication passed5927/5927(5820C#+107helpers),0skips; actual WinUI settings
+rendered DeskCue1.5.9.1, single-instance forwarding and normal UIA trayExit passed.
+This is a preflight of9b, not acceptance of the later cache-fix candidate.
+
+Latest actual cloudCI40526959569 passed5820/0/0; delivery40526968013 did not
+publish. It revealed culture/drive fixture assumptions, x64-only ARMfixtures,
+and an actual stale reminder snapshot bug. Scoped corrections are verified;
+ARM's incomplete run also timed out with Search recommendation lastactive,
+which does not identify its rootcause. Failure diagnostics are being retained
+for the next actual run. Current authoritative task ledger:deskcue/progress.md.
+
+First public revision is1.5.9.2; the earlier validated1.5.9.1 artifacts remain
+immutable. Versionmetadata/replay/fullpublication/cloud/GUI must complete before
+the final acceptance sign-off below can be advanced.
 
 First real retail attempt at f0a028d stopped in the Rust linker before tests or
 packaging: the frozen-source output path was 264 characters (LNK1104).

@@ -2,7 +2,69 @@
 
 Plan: docs/superpowers/plans/2026-10-27-deskcue-upstream-adoption.md
 
-## Current execution checkpoint
+## Current authoritative candidate1.5.9.2
+
+- Rev2 candidate is frozen and whole CODE delta reviewPASS0C0I0M. All scoped
+  reminder/fixture/ARM/diagnostics/version reviews alsoPASS0C0I0M. Main fresh
+  management108/108PASS0skip(.artifacts/controller-v2-management.log).
+- FinalBASE2 fc0c25bd2c02a761fb2a3fcd3a4c49dbe7d39ede,configSHA
+  AEE8BBAE02FC6C2EAB1E3A49F42EADA154947719A5525AB2ACF36C4DEEB7F326;
+  recipe unchangedBE428219...,GUIDsunchanged. FreshLFgeneration exactlyBASE2,
+  patch121962bytes SHA E130AEB5882D53498367B12CD4820579822AFE025C5CC4F6B1D82E6AB7E68BC7,
+  checkedapplication reproduces all1697indexed productentries across5subtrees.
+  .artifacts/v2-final-product-replay.json. Brand21PASS/directversionconsistencyPASS.
+- Commit this reviewed clean candidate, then run sharedfullPublish and actual
+  clouddualarch again. Existing1591successfulinstaller/checksum/receipt/payload
+  must remain immutable;1592 has a distinct installerfilename. No DeskCue
+  process is running after normalGUIexit. ActualARMsearchhang stillunresolved;
+  no release until bothfullbuilds pass, use newlyretaineddiagnostics if it repeats.
+
+## Previous state after9b7b4d78 (evidence preserved)
+
+- Workspace cutover COMPLETE: F:/AI/AIProjects/DeskCue, main tracking ownorigin;
+  original20top-level entries preserved in DeskCue-legacy-20261027. Codex held
+  the root directory open, so a rollback-capable child-entry rename preserved
+  the directory itself;2old/10new owned linked worktrees repaired. Receipt:
+  .artifacts/cutover-result.json. All unrelated data/history retained.
+- Source9b local fullPublish COMPLETE:5820C#+107helpers=5927PASS0skip,
+ 394payloadfiles/131.3MiB,installer33702525bytes SHA
+ b3ace83fb1d3e8bfea15811a4bf2ac8f42904413b9b7247725a95da4855b7c02.
+  NativeGUI preflight rendered DeskCue1.5.9.1 Onboarding+Settings/About; second
+  launch exited0 leaving originalPID40396; normal trayExit invoked by UIA,
+  process exited without force. OriginalDeskBox45252 unchanged. Finalcandidate
+  GUI/update acceptance stillpending. Evidence .artifacts/runtime-acceptance.
+- The initial smoke fixture used PascalCase instead of camelCase JSON; defaults
+  were used. IsDevelopmentRoot prevented startup registration. Its newly created
+  empty C:/Users/Administrator/DeskCue directory was verified by exact creation
+  time/emptiness and removed nonrecursively after normalexit. Finalsmoke must use
+  camelCase and an explicitFmanagedroot. No OS security/input settings changed.
+- Ownrepo Issues+Discussions enabled and independently read back true. Feedback
+  routes nowwork; no issue/comment/discussion content was posted.
+- LiveCI40526959569 source9bSUCCESS5820/0/0,20warnings0errors. Delivery40526968013
+  failed: x645816PASS4FAIL(calendarNLS,TEMPdrive assumptions,real remindercache
+  stale metadata); ARMpartial4332PASS6FAIL then5min inactivity abort. SixARM
+  failures were x64-only update/DLL fixtures; lastactiveSearchEngineRecommendation
+  test does not prove hangcause. No AOT/installer/release from that cloudrun.
+- Calendar/cross-volume TESTONLY fixes controlledRED3→GREEN6/fullclasses83PASS,
+  independent0C0I0M(.artifacts/cloud-fixture-debug). Reminder realmtime-only cache
+  bug fixed by authoritative Load each30s:RED2→GREEN17/repeat170/related43PASS,
+  independent0C0I0M(.artifacts/reminder-cache-debug). Duecase proves same mtime+
+  same length; completioncase proves same mtime. No new transaction guarantee.
+- ARMfixture TESTONLY fixes frozen:93PASS inclbotharchmetadataRED→GREEN;
+  productionarch/hashguards unchanged. OriginalSearchcase unmodified, local
+  isolated1PASS91ms; actualARMhang remainsunresolved. Evidence arm-fixture-debug.
+- Rootadded failure-only one-daycloud logs/TRX/sequence/minidump artifacts and
+  explicit mini dump type, preserving5minhangtimeout/fullsuccessgates. Reviewpending.
+- Firstpublicdelivery revision is being raised to1.5.9.2/revision2, preserving
+  existing1.5.9.1 installerbytes/receipts. Brandingworker owns versionmetadata+
+  config/provenance/test_brand only; all identityGUIDs staystable. Root must use
+  NEW reviewedmechanicalbase to regenerate completepatch and prove exactreplay.
+- Next: version+ARM/diagnosticsreviews, rootnewpatchreplay/freshfulltests+publish,
+  pushmain/runactualdualarchcloud and resolveARMhang from captured evidence if
+  repeated, verifyrelease/feed/downloadhashes, freshGUI/updatecheck+normalexit,
+  accurateHANDOFF and finalfreshindependentreviewer. Do not claimdeliverycomplete.
+
+## Previous execution checkpoint (historical)
 
 - Initial reviewed implementation committed as f0a028d. Task4 delivery round3
   PASS 0C/0I/0M; main focused 45 tests passed; worker full 96 tests passed.

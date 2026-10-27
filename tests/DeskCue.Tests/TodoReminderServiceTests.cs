@@ -117,6 +117,78 @@ public sealed class TodoReminderServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CheckNowAsync_NotifiesAgainWhenDueDateChangesWithTheSameFileMetadata()
+    {
+        DateTimeOffset now = new(2026, 7, 7, 10, 0, 0, TimeSpan.Zero);
+        var settingsService = CreateSettingsService("todo-widget");
+        var store = CreateStore("todo-widget");
+        await store.SaveAsync(new TodoWidgetData
+        {
+            Items =
+            [
+                new TodoItem
+                {
+                    Id = "task",
+                    Text = "Send build",
+                    DueDate = now.AddMinutes(4)
+                }
+            ]
+        });
+        DateTime writtenAtUtc = File.GetLastWriteTimeUtc(store.StorePath);
+        long originalLength = new FileInfo(store.StorePath).Length;
+        var notifications = new List<TodoReminderNotification>();
+        using var service = CreateService(settingsService, now, notifications);
+        Assert.Equal(1, await service.CheckNowAsync(now));
+
+        var data = await store.LoadAsync();
+        var item = Assert.Single(data.Items);
+        item.DueDate = now.AddMinutes(10);
+        await store.SaveAsync(data);
+        File.SetLastWriteTimeUtc(store.StorePath, writtenAtUtc);
+        Assert.Equal(writtenAtUtc, File.GetLastWriteTimeUtc(store.StorePath));
+        Assert.Equal(originalLength, new FileInfo(store.StorePath).Length);
+
+        Assert.Equal(1, await service.CheckNowAsync(now.AddMinutes(6)));
+        Assert.Equal(2, notifications.Count);
+    }
+
+    [Fact]
+    public async Task CheckNowAsync_DoesNotNotifyOrOverwriteCompletionWhenFileTimestampIsUnchanged()
+    {
+        DateTimeOffset now = new(2026, 7, 7, 10, 0, 0, TimeSpan.Zero);
+        var settingsService = CreateSettingsService("todo-widget");
+        var store = CreateStore("todo-widget");
+        await store.SaveAsync(new TodoWidgetData
+        {
+            Items =
+            [
+                new TodoItem
+                {
+                    Id = "task",
+                    Text = "Send build",
+                    DueDate = now.AddMinutes(10)
+                }
+            ]
+        });
+        DateTime writtenAtUtc = File.GetLastWriteTimeUtc(store.StorePath);
+        var notifications = new List<TodoReminderNotification>();
+        using var service = CreateService(settingsService, now, notifications);
+        Assert.Equal(0, await service.CheckNowAsync(now));
+
+        var data = await store.LoadAsync();
+        var item = Assert.Single(data.Items);
+        item.IsCompleted = true;
+        item.CompletedAt = now.AddMinutes(1);
+        await store.SaveAsync(data);
+        File.SetLastWriteTimeUtc(store.StorePath, writtenAtUtc);
+        Assert.Equal(writtenAtUtc, File.GetLastWriteTimeUtc(store.StorePath));
+
+        Assert.Equal(0, await service.CheckNowAsync(now.AddMinutes(6)));
+        Assert.Empty(notifications);
+        Assert.True(Assert.Single((await store.LoadAsync()).Items).IsCompleted);
+    }
+
+    [Fact]
     public async Task CheckNowAsync_SkipsWhenReminderSettingDisabled()
     {
         DateTimeOffset now = new(2026, 7, 7, 10, 0, 0, TimeSpan.Zero);

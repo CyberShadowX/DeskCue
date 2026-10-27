@@ -1,5 +1,5 @@
 diff --git a/src/DeskCue/DeskCue.csproj b/src/DeskCue/DeskCue.csproj
-index eee86dcc..fbc2fb3f 100644
+index 524e7583..246e3962 100644
 --- a/src/DeskCue/DeskCue.csproj
 +++ b/src/DeskCue/DeskCue.csproj
 @@ -39,6 +39,11 @@
@@ -146,6 +146,83 @@ index d5bef92c..2b783078 100644
          string json = JsonSerializer.Serialize(
              new DeskCueFeedbackMinePayload(ClientId),
              FeedbackJsonContext.Default.FeedbackMinePayload);
+diff --git a/src/DeskCue/Services/TodoReminderService.cs b/src/DeskCue/Services/TodoReminderService.cs
+index 3f3ffb4e..5d3598be 100644
+--- a/src/DeskCue/Services/TodoReminderService.cs
++++ b/src/DeskCue/Services/TodoReminderService.cs
+@@ -26,12 +26,6 @@ public sealed class TodoReminderService : IDisposable, ITodoReminderSession
+     private readonly Func<DateTimeOffset> _clock;
+     private readonly HashSet<string> _sessionNotifiedKeys = new(StringComparer.Ordinal);
+ 
+-    // The 30s scan used to read and deserialize every todo store on every
+-    // tick. The files only change when the user edits a widget, so a
+-    // last-write probe answers "unchanged" cheaply while the cached snapshot
+-    // still lets time-based due transitions fire on schedule.
+-    private readonly Dictionary<string, (DateTime WrittenAtUtc, TodoWidgetData Data)> _storeSnapshots = new(StringComparer.Ordinal);
+-
+     private DispatcherQueueTimer? _timer;
+     private bool _isChecking;
+     private bool _disposed;
+@@ -174,22 +168,6 @@ public sealed class TodoReminderService : IDisposable, ITodoReminderSession
+                     !settings.DeletedWidgetIds.Contains(widget.Id))
+                 .ToList();
+ 
+-            // A deleted todo widget's snapshot would otherwise live as long
+-            // as the reminder service does; the scan sees the authoritative
+-            // widget set, so prune everything it did not just enumerate.
+-            if (_storeSnapshots.Count > 0)
+-            {
+-                var liveWidgetIds = widgets
+-                    .Select(widget => widget.Id)
+-                    .ToHashSet(StringComparer.Ordinal);
+-                foreach (string staleId in _storeSnapshots.Keys
+-                             .Where(id => !liveWidgetIds.Contains(id))
+-                             .ToArray())
+-                {
+-                    _storeSnapshots.Remove(staleId);
+-                }
+-            }
+-
+             if (widgets.Count == 0)
+             {
+                 return 0;
+@@ -418,25 +396,6 @@ public sealed class TodoReminderService : IDisposable, ITodoReminderSession
+         await CheckNowAsync(_clock());
+     }
+ 
+-    private async Task<TodoWidgetData> LoadStoreSnapshotAsync(
+-        string widgetId,
+-        TodoWidgetStore store)
+-    {
+-        DateTime writtenAtUtc = File.GetLastWriteTimeUtc(store.StorePath);
+-        if (_storeSnapshots.TryGetValue(widgetId, out (DateTime WrittenAtUtc, TodoWidgetData Data) cached) &&
+-            cached.WrittenAtUtc == writtenAtUtc)
+-        {
+-            return cached.Data;
+-        }
+-
+-        TodoWidgetData data = await store.LoadAsync();
+-        // Stamp after the load: a write racing the read shows up as a newer
+-        // timestamp and forces one more reload on the next tick.
+-        _storeSnapshots[widgetId] =
+-            (File.GetLastWriteTimeUtc(store.StorePath), data);
+-        return data;
+-    }
+-
+     private async Task CollectWidgetCandidatesAsync(
+         WidgetConfig widget,
+         DateTimeOffset now,
+@@ -444,7 +403,9 @@ public sealed class TodoReminderService : IDisposable, ITodoReminderSession
+         List<TodoReminderCandidate> candidates)
+     {
+         var store = _storeFactory(widget.Id);
+-        var data = await LoadStoreSnapshotAsync(widget.Id, store);
++        // Atomic saves can share a last-write timestamp. Reload each scan;
++        // timestamps do not reliably identify the current persisted content.
++        var data = await store.LoadAsync();
+         if (_disposed || !ShouldBeRunning())
+         {
+             return;
 diff --git a/src/DeskCue/Strings/ar-SA.json b/src/DeskCue/Strings/ar-SA.json
 index 438d8ec8..e7fdb538 100644
 --- a/src/DeskCue/Strings/ar-SA.json
@@ -1012,10 +1089,59 @@ index 44698235..350afc74 100644
          string rustToolchain = File.ReadAllText(TestPaths.FromRepository("rust-toolchain.toml"));
          Assert.Contains("channel = \"1.96.0\"", rustToolchain, StringComparison.Ordinal);
 diff --git a/tests/DeskCue.Tests/AppUpdateServiceTests.cs b/tests/DeskCue.Tests/AppUpdateServiceTests.cs
-index 4f7f9358..5240a01d 100644
+index 4f7f9358..91e26c80 100644
 --- a/tests/DeskCue.Tests/AppUpdateServiceTests.cs
 +++ b/tests/DeskCue.Tests/AppUpdateServiceTests.cs
-@@ -25,12 +25,12 @@ public sealed class AppUpdateServiceTests : IDisposable
+@@ -2,6 +2,8 @@ using System.Net;
+ using System.Security.Cryptography;
+ using System.Runtime.InteropServices;
+ using System.Text;
++using System.Text.Json;
++using System.Text.Json.Serialization;
+ using DeskCue.Models;
+ using DeskCue.Services;
+ using DeskCue.ViewModels;
+@@ -12,6 +14,39 @@ public sealed class AppUpdateServiceTests : IDisposable
+ {
+     private readonly string _tempRoot = Path.Combine(Path.GetTempPath(), "DeskCue.Tests", Guid.NewGuid().ToString("N"));
+ 
++    private const string ManifestFixtureJson = """
++        {
++          "ScHeMaVeRsIoN": "1",
++          "version": "1.2.2",
++          "downloadUrl": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_x64.exe",
++          "manualDownloadUrl": "https://pan.quark.cn/s/version-specific",
++          "sha256": "abc",
++          "SiZe": "1234",
++          "arm64DownloadUrl": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_arm64.exe",
++          "arm64Sha256": "abc",
++          "arm64Size": "1234",
++          "summary": { "zh-CN": "修复多屏定位" },
++          "futureManifestField": { "ignored": true }
++        }
++        """;
++
++    [Theory]
++    [InlineData("x64", "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_x64.exe")]
++    [InlineData("arm64", "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_arm64.exe")]
++    public void UpdateResponseFixtures_ContainMetadataForEachSupportedArchitecture(string architecture, string expectedUrl)
++    {
++        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
++        {
++            NumberHandling = JsonNumberHandling.AllowReadingFromString
++        };
++        var manifest = JsonSerializer.Deserialize<AppUpdateManifest>(ManifestFixtureJson, options)!;
++        Assert.True(AppUpdateService.TrySelectInstallerForArchitecture(manifest, architecture));
++        Assert.Equal(expectedUrl, manifest.DownloadUrl);
++        var download = CreateDownloadFixture("abc", 1234);
++        Assert.True(AppUpdateService.TrySelectInstallerForArchitecture(download, architecture));
++        Assert.Equal(expectedUrl, download.DownloadUrl);
++    }
++
+     [Fact]
+     public void InstallerAssetSelection_UsesTheCurrentProcessArchitecture()
+     {
+@@ -25,12 +60,12 @@ public sealed class AppUpdateServiceTests : IDisposable
          Assert.False(AppUpdateService.IsInstallerAssetName("DeskCue_Setup_1.4.3_x64_Full.exe", "x64"));
          Assert.False(AppUpdateService.IsInstallerAssetName("DeskCue_Setup_1.4.3_arm64_Full.exe", "arm64"));
          Assert.True(AppUpdateService.IsInstallerDownloadCompatibleWithArchitecture(
@@ -1031,7 +1157,7 @@ index 4f7f9358..5240a01d 100644
              "https://example.com/download/latest",
              "arm64"));
          Assert.Equal(
-@@ -44,10 +44,10 @@ public sealed class AppUpdateServiceTests : IDisposable
+@@ -44,10 +79,10 @@ public sealed class AppUpdateServiceTests : IDisposable
          var manifest = new AppUpdateManifest
          {
              Version = "1.3.8",
@@ -1044,7 +1170,7 @@ index 4f7f9358..5240a01d 100644
              Arm64Sha256 = new string('B', 64),
              Arm64Size = 202
          };
-@@ -64,10 +64,10 @@ public sealed class AppUpdateServiceTests : IDisposable
+@@ -64,10 +99,10 @@ public sealed class AppUpdateServiceTests : IDisposable
          var manifest = new AppUpdateManifest
          {
              Version = "1.3.8",
@@ -1057,7 +1183,7 @@ index 4f7f9358..5240a01d 100644
              Arm64Sha256 = new string('B', 64),
              Arm64Size = 202
          };
-@@ -122,6 +122,9 @@ public sealed class AppUpdateServiceTests : IDisposable
+@@ -122,6 +157,9 @@ public sealed class AppUpdateServiceTests : IDisposable
      [InlineData("1.2.1", "1.2.1", false)]
      [InlineData("1.2.1", "1.2.0", false)]
      [InlineData("1.2.1", "not-a-version", false)]
@@ -1067,34 +1193,62 @@ index 4f7f9358..5240a01d 100644
      public void IsRemoteVersionNewer_ComparesSemanticVersionPrefix(string currentVersion, string remoteVersion, bool expected)
      {
          Assert.Equal(expected, AppUpdateService.IsRemoteVersionNewer(currentVersion, remoteVersion));
-@@ -137,7 +140,7 @@ public sealed class AppUpdateServiceTests : IDisposable
-                 {
-                   "ScHeMaVeRsIoN": "1",
-                   "version": "1.2.2",
+@@ -133,20 +171,7 @@ public sealed class AppUpdateServiceTests : IDisposable
+         using var httpClient = CreateHttpClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
+         {
+             Content = new StringContent(
+-                """
+-                {
+-                  "ScHeMaVeRsIoN": "1",
+-                  "version": "1.2.2",
 -                  "downloadUrl": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskBox_Setup_1.2.2_x64.exe",
-+                  "downloadUrl": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_x64.exe",
-                   "manualDownloadUrl": "https://pan.quark.cn/s/version-specific",
-                   "sha256": "abc",
-                   "SiZe": "1234",
-@@ -186,7 +189,7 @@ public sealed class AppUpdateServiceTests : IDisposable
+-                  "manualDownloadUrl": "https://pan.quark.cn/s/version-specific",
+-                  "sha256": "abc",
+-                  "SiZe": "1234",
+-                  "summary": {
+-                    "zh-CN": "修复多屏定位"
+-                  },
+-                  "futureManifestField": { "ignored": true }
+-                }
+-                """,
++                ManifestFixtureJson,
+                 Encoding.UTF8,
+                 "application/json")
+         });
+@@ -186,7 +211,13 @@ public sealed class AppUpdateServiceTests : IDisposable
                        "assets": [
                          {
                            "name": "DeskCue_Setup_1.2.4_x64.exe",
 -                          "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskBox_Setup_1.2.4_x64.exe",
 +                          "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_x64.exe",
++                          "size": 23423211,
++                          "digest": "sha256:8ecb3092ae5bd6883f8a75bbea03d9800251e0c23fdbe1bf4d91fd3a62565561"
++                        },
++                        {
++                          "name": "DeskCue_Setup_1.2.4_arm64.exe",
++                          "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_arm64.exe",
                            "size": 23423211,
                            "digest": "sha256:8ecb3092ae5bd6883f8a75bbea03d9800251e0c23fdbe1bf4d91fd3a62565561"
                          }
-@@ -209,7 +212,7 @@ public sealed class AppUpdateServiceTests : IDisposable
+@@ -209,7 +240,7 @@ public sealed class AppUpdateServiceTests : IDisposable
          Assert.Equal(AppUpdateCheckStatus.UpdateAvailable, result.Status);
          Assert.NotNull(result.Manifest);
          Assert.Equal("1.2.4", result.Manifest.Version);
 -        Assert.Equal("https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskBox_Setup_1.2.4_x64.exe", result.Manifest.DownloadUrl);
-+        Assert.Equal("https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_x64.exe", result.Manifest.DownloadUrl);
++        Assert.Equal($"https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_{AppUpdateService.CurrentInstallerArchitectureSuffix}.exe", result.Manifest.DownloadUrl);
          Assert.Equal("8ECB3092AE5BD6883F8A75BBEA03D9800251E0C23FDBE1BF4D91FD3A62565561", result.Manifest.Sha256);
          Assert.Equal(23423211, result.Manifest.Size);
          Assert.Equal("https://github.com/CyberShadowX/DeskCue/releases/tag/v1.2.4", result.Manifest.ReleaseNotesUrl);
-@@ -248,12 +251,12 @@ public sealed class AppUpdateServiceTests : IDisposable
+@@ -232,7 +263,7 @@ public sealed class AppUpdateServiceTests : IDisposable
+                 return new HttpResponseMessage(HttpStatusCode.OK)
+                 {
+                     Content = new StringContent(
+-                        "8ECB3092AE5BD6883F8A75BBEA03D9800251E0C23FDBE1BF4D91FD3A62565561  DeskCue_Setup_1.2.4_x64.exe",
++                        $"8ECB3092AE5BD6883F8A75BBEA03D9800251E0C23FDBE1BF4D91FD3A62565561  DeskCue_Setup_1.2.4_{AppUpdateService.CurrentInstallerArchitectureSuffix}.exe",
+                         Encoding.UTF8,
+                         "text/plain")
+                 };
+@@ -248,12 +279,22 @@ public sealed class AppUpdateServiceTests : IDisposable
                        "assets": [
                          {
                            "name": "DeskCue_Setup_1.2.4_x64.exe",
@@ -1106,28 +1260,48 @@ index 4f7f9358..5240a01d 100644
                            "name": "DeskCue_Setup_1.2.4_x64.exe.sha256",
 -                          "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskBox_Setup_1.2.4_x64.exe.sha256",
 +                          "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_x64.exe.sha256",
++                          "size": 95
++                        },
++                        {
++                          "name": "DeskCue_Setup_1.2.4_arm64.exe",
++                          "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_arm64.exe",
++                          "size": 23423211
++                        },
++                        {
++                          "name": "DeskCue_Setup_1.2.4_arm64.exe.sha256",
++                          "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_arm64.exe.sha256",
                            "size": 95
                          }
                        ]
-@@ -289,7 +292,7 @@ public sealed class AppUpdateServiceTests : IDisposable
-         var result = await service.DownloadUpdateAsync(new AppUpdateManifest
-         {
-             Version = "1.2.2",
--            DownloadUrl = "https://deskbox.fun/DeskBox_Setup_1.2.2_x64.exe"
-+            DownloadUrl = "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_x64.exe"
+@@ -286,11 +327,7 @@ public sealed class AppUpdateServiceTests : IDisposable
          });
+         var service = new AppUpdateService(httpClient, updateRootPath: _tempRoot);
+ 
+-        var result = await service.DownloadUpdateAsync(new AppUpdateManifest
+-        {
+-            Version = "1.2.2",
+-            DownloadUrl = "https://deskbox.fun/DeskBox_Setup_1.2.2_x64.exe"
+-        });
++        var result = await service.DownloadUpdateAsync(CreateDownloadFixture());
  
          Assert.False(result.Success);
-@@ -310,7 +313,7 @@ public sealed class AppUpdateServiceTests : IDisposable
-         var result = await service.DownloadUpdateAsync(new AppUpdateManifest
-         {
-             Version = "1.2.2",
--            DownloadUrl = "https://deskbox.fun/DeskBox_Setup_1.2.2_x64.exe",
-+            DownloadUrl = "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_x64.exe",
-             Sha256 = sha256,
-             Size = payload.Length
+         Assert.Equal(AppUpdateDownloadFailureKind.HashMissing, result.FailureKind);
+@@ -307,13 +344,7 @@ public sealed class AppUpdateServiceTests : IDisposable
          });
-@@ -337,7 +340,7 @@ public sealed class AppUpdateServiceTests : IDisposable
+         var service = new AppUpdateService(httpClient, updateRootPath: _tempRoot);
+ 
+-        var result = await service.DownloadUpdateAsync(new AppUpdateManifest
+-        {
+-            Version = "1.2.2",
+-            DownloadUrl = "https://deskbox.fun/DeskBox_Setup_1.2.2_x64.exe",
+-            Sha256 = sha256,
+-            Size = payload.Length
+-        });
++        var result = await service.DownloadUpdateAsync(CreateDownloadFixture(sha256, payload.Length));
+ 
+         Assert.True(result.Success, $"{result.FailureKind}: {result.ErrorMessage}");
+         Assert.True(File.Exists(result.FilePath));
+@@ -337,7 +368,7 @@ public sealed class AppUpdateServiceTests : IDisposable
          var result = await service.DownloadUpdateAsync(new AppUpdateManifest
          {
              Version = "1.2.2",
@@ -1136,7 +1310,7 @@ index 4f7f9358..5240a01d 100644
              Sha256 = sha256,
              Size = payload.Length
          });
-@@ -360,7 +363,7 @@ public sealed class AppUpdateServiceTests : IDisposable
+@@ -360,7 +391,7 @@ public sealed class AppUpdateServiceTests : IDisposable
          var result = await service.DownloadUpdateAsync(new AppUpdateManifest
          {
              Version = "1.2.2",
@@ -1145,7 +1319,25 @@ index 4f7f9358..5240a01d 100644
              Sha256 = "00"
          }, cancellationToken: cancellation.Token);
  
-@@ -481,9 +484,9 @@ public sealed class AppUpdateServiceTests : IDisposable
+@@ -460,6 +491,17 @@ public sealed class AppUpdateServiceTests : IDisposable
+         }
+     }
+ 
++    private static AppUpdateManifest CreateDownloadFixture(string sha256 = "", long size = 0) => new()
++    {
++        Version = "1.2.2",
++        DownloadUrl = "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_x64.exe",
++        Sha256 = sha256,
++        Size = size,
++        Arm64DownloadUrl = "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_arm64.exe",
++        Arm64Sha256 = sha256,
++        Arm64Size = size
++    };
++
+     private static HttpClient CreateHttpClient(Func<HttpRequestMessage, HttpResponseMessage> handler)
+     {
+         return new HttpClient(new StubHttpMessageHandler(handler));
+@@ -481,9 +523,9 @@ public sealed class AppUpdateServiceTests : IDisposable
      }
  
      [Theory]
@@ -1158,7 +1350,7 @@ index 4f7f9358..5240a01d 100644
      [InlineData("http://deskbox.fun/update/DeskBox_Setup.exe", false)]
      [InlineData("https://evil.example.com/DeskBox_Setup.exe", false)]
      [InlineData("https://deskbox.fun.evil.example.com/DeskBox_Setup.exe", false)]
-@@ -510,8 +513,8 @@ public sealed class AppUpdateServiceTests : IDisposable
+@@ -510,8 +552,8 @@ public sealed class AppUpdateServiceTests : IDisposable
          var manifest = new AppUpdateManifest
          {
              Version = "1.5.2.0",
@@ -1391,6 +1583,120 @@ index 12df1a5f..7cf498fd 100644
          public void Dispose() => _watcher.Dispose();
      }
  
+diff --git a/tests/DeskCue.Tests/DesktopOrganizationRecoveryAbandonTests.cs b/tests/DeskCue.Tests/DesktopOrganizationRecoveryAbandonTests.cs
+index 9dd4f2bd..ab74f88c 100644
+--- a/tests/DeskCue.Tests/DesktopOrganizationRecoveryAbandonTests.cs
++++ b/tests/DeskCue.Tests/DesktopOrganizationRecoveryAbandonTests.cs
+@@ -345,10 +345,13 @@ public sealed class DesktopOrganizationRecoveryAbandonTests : IDisposable
+             () => transaction.ExecuteAsync(plan));
+     }
+ 
+-    [Fact]
+-    public void ComputeRequiredSpaceByDrive_ExemptsSameVolumeMoves()
++    [Theory]
++    [InlineData(@"C:\", @"D:\")]
++    [InlineData(@"D:\", @"C:\")]
++    public void ComputeRequiredSpaceByDrive_ExemptsSameVolumeMoves(
++        string root,
++        string otherRoot)
+     {
+-        string root = Path.GetPathRoot(Path.GetFullPath(_root))!;
+         var sameVolumePlan = new DesktopOrganizationPlan
+         {
+             Targets =
+@@ -366,7 +369,7 @@ public sealed class DesktopOrganizationRecoveryAbandonTests : IDisposable
+             [
+                 new DesktopOrganizationTargetPlan
+                 {
+-                    TargetDirectoryPath = @"D:\DeskCueStorage\Documents",
++                    TargetDirectoryPath = Path.Combine(otherRoot, "DeskCueStorage", "Documents"),
+                     Items =
+                     [
+                         Snapshot(Path.Combine(root, "Users", "user", "Desktop", "big.iso"), 100),
+@@ -382,14 +385,17 @@ public sealed class DesktopOrganizationRecoveryAbandonTests : IDisposable
+         IReadOnlyDictionary<string, long> crossVolume =
+             DesktopOrganizationTransaction.ComputeRequiredSpaceByDrive(crossVolumePlan);
+         KeyValuePair<string, long> requirement = Assert.Single(crossVolume);
+-        Assert.Equal("D:\\", requirement.Key, StringComparer.OrdinalIgnoreCase);
++        Assert.Equal(otherRoot, requirement.Key, StringComparer.OrdinalIgnoreCase);
+         Assert.Equal(150, requirement.Value);
+     }
+ 
+-    [Fact]
+-    public void ValidateAvailableSpace_ThrowsOnlyForCrossVolumeShortfall()
++    [Theory]
++    [InlineData(@"C:\", @"D:\")]
++    [InlineData(@"D:\", @"C:\")]
++    public void ValidateAvailableSpace_ThrowsOnlyForCrossVolumeShortfall(
++        string root,
++        string otherRoot)
+     {
+-        string root = Path.GetPathRoot(Path.GetFullPath(_root))!;
+         var sameVolumePlan = new DesktopOrganizationPlan
+         {
+             Targets =
+@@ -407,7 +413,7 @@ public sealed class DesktopOrganizationRecoveryAbandonTests : IDisposable
+             [
+                 new DesktopOrganizationTargetPlan
+                 {
+-                    TargetDirectoryPath = @"D:\DeskCueStorage\Documents",
++                    TargetDirectoryPath = Path.Combine(otherRoot, "DeskCueStorage", "Documents"),
+                     Items = [Snapshot(Path.Combine(root, "Users", "user", "Desktop", "big.iso"), 100)]
+                 }
+             ]
+@@ -418,7 +424,7 @@ public sealed class DesktopOrganizationRecoveryAbandonTests : IDisposable
+         DesktopOrganizationInsufficientSpaceException exception = Assert.Throws<
+             DesktopOrganizationInsufficientSpaceException>(
+             () => DesktopOrganizationTransaction.ValidateAvailableSpace(crossVolumePlan, _ => 0));
+-        Assert.Equal("D:\\", exception.DriveName, StringComparer.OrdinalIgnoreCase);
++        Assert.Equal(otherRoot, exception.DriveName, StringComparer.OrdinalIgnoreCase);
+     }
+ 
+     private async Task<DesktopOrganizationPlan> BuildPlanAsync(string desktop, string storage)
+diff --git a/tests/DeskCue.Tests/GlanceCalendarAndImageServiceTests.cs b/tests/DeskCue.Tests/GlanceCalendarAndImageServiceTests.cs
+index 08b87094..690f0e0c 100644
+--- a/tests/DeskCue.Tests/GlanceCalendarAndImageServiceTests.cs
++++ b/tests/DeskCue.Tests/GlanceCalendarAndImageServiceTests.cs
+@@ -44,25 +44,34 @@ public sealed class GlanceCalendarAndImageServiceTests : IDisposable
+         Assert.Equal(expected, GlanceImageDecodeSizeCalculator.NeedsRefresh(current, required));
+     }
+ 
+-    [Fact]
+-    public async Task CalendarMonth_AlwaysBuildsSixCompleteWeeks()
++    [Theory]
++    [InlineData(DayOfWeek.Monday, new[] { "一", "二", "三", "四", "五", "六", "日" })]
++    [InlineData(DayOfWeek.Sunday, new[] { "日", "一", "二", "三", "四", "五", "六" })]
++    public async Task CalendarMonth_AlwaysBuildsSixCompleteWeeks(
++        DayOfWeek firstDayOfWeek,
++        string[] expectedHeaders)
+     {
+         var source = new LocalCalendarPresentationSource();
++        // Week-start defaults vary between Windows globalization data versions.
++        // Set the input explicitly without mutating the cached shared culture.
++        var culture = (CultureInfo)CultureInfo.GetCultureInfo("zh-CN").Clone();
++        culture.DateTimeFormat.FirstDayOfWeek = firstDayOfWeek;
+ 
+         GlanceCalendarMonth month = await source.GetMonthAsync(
+             new DateOnly(2026, 8, 1),
+-            CultureInfo.GetCultureInfo("zh-CN"));
++            culture);
+ 
+         Assert.Equal(new DateOnly(2026, 8, 1), month.Month);
+         Assert.Equal(7, month.WeekdayHeaders.Count);
+-        Assert.Equal(["一", "二", "三", "四", "五", "六", "日"], month.WeekdayHeaders);
++        Assert.Equal(expectedHeaders, month.WeekdayHeaders);
+         Assert.Equal(42, month.Days.Count);
++        Assert.Equal(firstDayOfWeek, month.Days[0].Date.DayOfWeek);
+         Assert.Contains(month.Days, day => day.Date == new DateOnly(2026, 8, 1) && day.IsCurrentMonth);
+         Assert.All(month.Days, day => Assert.False(string.IsNullOrWhiteSpace(day.DayText)));
+         Assert.Empty(await source.GetAgendaAsync(
+             new DateOnly(2026, 8, 1),
+             7,
+-            CultureInfo.GetCultureInfo("zh-CN")));
++            culture));
+     }
+ 
+     [Fact]
 diff --git a/tests/DeskCue.Tests/SettingsAboutContactTests.cs b/tests/DeskCue.Tests/SettingsAboutContactTests.cs
 index 87492524..ffca19ac 100644
 --- a/tests/DeskCue.Tests/SettingsAboutContactTests.cs
@@ -1439,3 +1745,100 @@ index 0773522c..7f1a50b7 100644
      }
  
      [Fact]
+diff --git a/tests/DeskCue.Tests/ShortcutNativeDifferentialTests.cs b/tests/DeskCue.Tests/ShortcutNativeDifferentialTests.cs
+index d8083932..6ca97991 100644
+--- a/tests/DeskCue.Tests/ShortcutNativeDifferentialTests.cs
++++ b/tests/DeskCue.Tests/ShortcutNativeDifferentialTests.cs
+@@ -65,7 +65,8 @@ public sealed class ShortcutNativeDifferentialTests : IDisposable
+         Assert.DoesNotContain(Path.DirectorySeparatorChar, diagnostic.ModuleName);
+         Assert.DoesNotContain(Path.AltDirectorySeparatorChar, diagnostic.ModuleName);
+         Assert.True(diagnostic.ModuleExists);
+-        Assert.Equal("X64", diagnostic.ModuleArchitecture);
++        Assert.Contains(RuntimeInformation.ProcessArchitecture, [Architecture.X64, Architecture.Arm64]);
++        Assert.Equal(RuntimeInformation.ProcessArchitecture.ToString(), diagnostic.ModuleArchitecture);
+         Assert.Matches("^[0-9A-F]{64}$", diagnostic.ModuleSha256 ?? string.Empty);
+         Assert.Equal(loadWasAlreadyCreated, diagnostic.LoadAttempted);
+         if (!loadWasAlreadyCreated)
+diff --git a/tests/DeskCue.Tests/TodoReminderServiceTests.cs b/tests/DeskCue.Tests/TodoReminderServiceTests.cs
+index 0c3686aa..75e895f9 100644
+--- a/tests/DeskCue.Tests/TodoReminderServiceTests.cs
++++ b/tests/DeskCue.Tests/TodoReminderServiceTests.cs
+@@ -116,6 +116,78 @@ public sealed class TodoReminderServiceTests : IDisposable
+         Assert.Equal(2, notifications.Count);
+     }
+ 
++    [Fact]
++    public async Task CheckNowAsync_NotifiesAgainWhenDueDateChangesWithTheSameFileMetadata()
++    {
++        DateTimeOffset now = new(2026, 7, 7, 10, 0, 0, TimeSpan.Zero);
++        var settingsService = CreateSettingsService("todo-widget");
++        var store = CreateStore("todo-widget");
++        await store.SaveAsync(new TodoWidgetData
++        {
++            Items =
++            [
++                new TodoItem
++                {
++                    Id = "task",
++                    Text = "Send build",
++                    DueDate = now.AddMinutes(4)
++                }
++            ]
++        });
++        DateTime writtenAtUtc = File.GetLastWriteTimeUtc(store.StorePath);
++        long originalLength = new FileInfo(store.StorePath).Length;
++        var notifications = new List<TodoReminderNotification>();
++        using var service = CreateService(settingsService, now, notifications);
++        Assert.Equal(1, await service.CheckNowAsync(now));
++
++        var data = await store.LoadAsync();
++        var item = Assert.Single(data.Items);
++        item.DueDate = now.AddMinutes(10);
++        await store.SaveAsync(data);
++        File.SetLastWriteTimeUtc(store.StorePath, writtenAtUtc);
++        Assert.Equal(writtenAtUtc, File.GetLastWriteTimeUtc(store.StorePath));
++        Assert.Equal(originalLength, new FileInfo(store.StorePath).Length);
++
++        Assert.Equal(1, await service.CheckNowAsync(now.AddMinutes(6)));
++        Assert.Equal(2, notifications.Count);
++    }
++
++    [Fact]
++    public async Task CheckNowAsync_DoesNotNotifyOrOverwriteCompletionWhenFileTimestampIsUnchanged()
++    {
++        DateTimeOffset now = new(2026, 7, 7, 10, 0, 0, TimeSpan.Zero);
++        var settingsService = CreateSettingsService("todo-widget");
++        var store = CreateStore("todo-widget");
++        await store.SaveAsync(new TodoWidgetData
++        {
++            Items =
++            [
++                new TodoItem
++                {
++                    Id = "task",
++                    Text = "Send build",
++                    DueDate = now.AddMinutes(10)
++                }
++            ]
++        });
++        DateTime writtenAtUtc = File.GetLastWriteTimeUtc(store.StorePath);
++        var notifications = new List<TodoReminderNotification>();
++        using var service = CreateService(settingsService, now, notifications);
++        Assert.Equal(0, await service.CheckNowAsync(now));
++
++        var data = await store.LoadAsync();
++        var item = Assert.Single(data.Items);
++        item.IsCompleted = true;
++        item.CompletedAt = now.AddMinutes(1);
++        await store.SaveAsync(data);
++        File.SetLastWriteTimeUtc(store.StorePath, writtenAtUtc);
++        Assert.Equal(writtenAtUtc, File.GetLastWriteTimeUtc(store.StorePath));
++
++        Assert.Equal(0, await service.CheckNowAsync(now.AddMinutes(6)));
++        Assert.Empty(notifications);
++        Assert.True(Assert.Single((await store.LoadAsync()).Items).IsCompleted);
++    }
++
+     [Fact]
+     public async Task CheckNowAsync_SkipsWhenReminderSettingDisabled()
+     {

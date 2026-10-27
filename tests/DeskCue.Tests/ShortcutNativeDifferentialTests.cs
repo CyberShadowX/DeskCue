@@ -65,7 +65,8 @@ public sealed class ShortcutNativeDifferentialTests : IDisposable
         Assert.DoesNotContain(Path.DirectorySeparatorChar, diagnostic.ModuleName);
         Assert.DoesNotContain(Path.AltDirectorySeparatorChar, diagnostic.ModuleName);
         Assert.True(diagnostic.ModuleExists);
-        Assert.Equal("X64", diagnostic.ModuleArchitecture);
+        Assert.Contains(RuntimeInformation.ProcessArchitecture, [Architecture.X64, Architecture.Arm64]);
+        Assert.Equal(RuntimeInformation.ProcessArchitecture.ToString(), diagnostic.ModuleArchitecture);
         Assert.Matches("^[0-9A-F]{64}$", diagnostic.ModuleSha256 ?? string.Empty);
         Assert.Equal(loadWasAlreadyCreated, diagnostic.LoadAttempted);
         if (!loadWasAlreadyCreated)

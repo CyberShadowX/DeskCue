@@ -2,6 +2,8 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using DeskCue.Models;
 using DeskCue.Services;
 using DeskCue.ViewModels;
@@ -11,6 +13,39 @@ namespace DeskCue.Tests;
 public sealed class AppUpdateServiceTests : IDisposable
 {
     private readonly string _tempRoot = Path.Combine(Path.GetTempPath(), "DeskCue.Tests", Guid.NewGuid().ToString("N"));
+
+    private const string ManifestFixtureJson = """
+        {
+          "ScHeMaVeRsIoN": "1",
+          "version": "1.2.2",
+          "downloadUrl": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_x64.exe",
+          "manualDownloadUrl": "https://pan.quark.cn/s/version-specific",
+          "sha256": "abc",
+          "SiZe": "1234",
+          "arm64DownloadUrl": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_arm64.exe",
+          "arm64Sha256": "abc",
+          "arm64Size": "1234",
+          "summary": { "zh-CN": "修复多屏定位" },
+          "futureManifestField": { "ignored": true }
+        }
+        """;
+
+    [Theory]
+    [InlineData("x64", "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_x64.exe")]
+    [InlineData("arm64", "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_arm64.exe")]
+    public void UpdateResponseFixtures_ContainMetadataForEachSupportedArchitecture(string architecture, string expectedUrl)
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            NumberHandling = JsonNumberHandling.AllowReadingFromString
+        };
+        var manifest = JsonSerializer.Deserialize<AppUpdateManifest>(ManifestFixtureJson, options)!;
+        Assert.True(AppUpdateService.TrySelectInstallerForArchitecture(manifest, architecture));
+        Assert.Equal(expectedUrl, manifest.DownloadUrl);
+        var download = CreateDownloadFixture("abc", 1234);
+        Assert.True(AppUpdateService.TrySelectInstallerForArchitecture(download, architecture));
+        Assert.Equal(expectedUrl, download.DownloadUrl);
+    }
 
     [Fact]
     public void InstallerAssetSelection_UsesTheCurrentProcessArchitecture()
@@ -136,20 +171,7 @@ public sealed class AppUpdateServiceTests : IDisposable
         using var httpClient = CreateHttpClient(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent(
-                """
-                {
-                  "ScHeMaVeRsIoN": "1",
-                  "version": "1.2.2",
-                  "downloadUrl": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_x64.exe",
-                  "manualDownloadUrl": "https://pan.quark.cn/s/version-specific",
-                  "sha256": "abc",
-                  "SiZe": "1234",
-                  "summary": {
-                    "zh-CN": "修复多屏定位"
-                  },
-                  "futureManifestField": { "ignored": true }
-                }
-                """,
+                ManifestFixtureJson,
                 Encoding.UTF8,
                 "application/json")
         });
@@ -192,6 +214,12 @@ public sealed class AppUpdateServiceTests : IDisposable
                           "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_x64.exe",
                           "size": 23423211,
                           "digest": "sha256:8ecb3092ae5bd6883f8a75bbea03d9800251e0c23fdbe1bf4d91fd3a62565561"
+                        },
+                        {
+                          "name": "DeskCue_Setup_1.2.4_arm64.exe",
+                          "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_arm64.exe",
+                          "size": 23423211,
+                          "digest": "sha256:8ecb3092ae5bd6883f8a75bbea03d9800251e0c23fdbe1bf4d91fd3a62565561"
                         }
                       ]
                     }
@@ -212,7 +240,7 @@ public sealed class AppUpdateServiceTests : IDisposable
         Assert.Equal(AppUpdateCheckStatus.UpdateAvailable, result.Status);
         Assert.NotNull(result.Manifest);
         Assert.Equal("1.2.4", result.Manifest.Version);
-        Assert.Equal("https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_x64.exe", result.Manifest.DownloadUrl);
+        Assert.Equal($"https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_{AppUpdateService.CurrentInstallerArchitectureSuffix}.exe", result.Manifest.DownloadUrl);
         Assert.Equal("8ECB3092AE5BD6883F8A75BBEA03D9800251E0C23FDBE1BF4D91FD3A62565561", result.Manifest.Sha256);
         Assert.Equal(23423211, result.Manifest.Size);
         Assert.Equal("https://github.com/CyberShadowX/DeskCue/releases/tag/v1.2.4", result.Manifest.ReleaseNotesUrl);
@@ -235,7 +263,7 @@ public sealed class AppUpdateServiceTests : IDisposable
                 return new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new StringContent(
-                        "8ECB3092AE5BD6883F8A75BBEA03D9800251E0C23FDBE1BF4D91FD3A62565561  DeskCue_Setup_1.2.4_x64.exe",
+                        $"8ECB3092AE5BD6883F8A75BBEA03D9800251E0C23FDBE1BF4D91FD3A62565561  DeskCue_Setup_1.2.4_{AppUpdateService.CurrentInstallerArchitectureSuffix}.exe",
                         Encoding.UTF8,
                         "text/plain")
                 };
@@ -257,6 +285,16 @@ public sealed class AppUpdateServiceTests : IDisposable
                         {
                           "name": "DeskCue_Setup_1.2.4_x64.exe.sha256",
                           "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_x64.exe.sha256",
+                          "size": 95
+                        },
+                        {
+                          "name": "DeskCue_Setup_1.2.4_arm64.exe",
+                          "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_arm64.exe",
+                          "size": 23423211
+                        },
+                        {
+                          "name": "DeskCue_Setup_1.2.4_arm64.exe.sha256",
+                          "browser_download_url": "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.4/DeskCue_Setup_1.2.4_arm64.exe.sha256",
                           "size": 95
                         }
                       ]
@@ -289,11 +327,7 @@ public sealed class AppUpdateServiceTests : IDisposable
         });
         var service = new AppUpdateService(httpClient, updateRootPath: _tempRoot);
 
-        var result = await service.DownloadUpdateAsync(new AppUpdateManifest
-        {
-            Version = "1.2.2",
-            DownloadUrl = "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_x64.exe"
-        });
+        var result = await service.DownloadUpdateAsync(CreateDownloadFixture());
 
         Assert.False(result.Success);
         Assert.Equal(AppUpdateDownloadFailureKind.HashMissing, result.FailureKind);
@@ -310,13 +344,7 @@ public sealed class AppUpdateServiceTests : IDisposable
         });
         var service = new AppUpdateService(httpClient, updateRootPath: _tempRoot);
 
-        var result = await service.DownloadUpdateAsync(new AppUpdateManifest
-        {
-            Version = "1.2.2",
-            DownloadUrl = "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_x64.exe",
-            Sha256 = sha256,
-            Size = payload.Length
-        });
+        var result = await service.DownloadUpdateAsync(CreateDownloadFixture(sha256, payload.Length));
 
         Assert.True(result.Success, $"{result.FailureKind}: {result.ErrorMessage}");
         Assert.True(File.Exists(result.FilePath));
@@ -462,6 +490,17 @@ public sealed class AppUpdateServiceTests : IDisposable
             Directory.Delete(_tempRoot, recursive: true);
         }
     }
+
+    private static AppUpdateManifest CreateDownloadFixture(string sha256 = "", long size = 0) => new()
+    {
+        Version = "1.2.2",
+        DownloadUrl = "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_x64.exe",
+        Sha256 = sha256,
+        Size = size,
+        Arm64DownloadUrl = "https://github.com/CyberShadowX/DeskCue/releases/download/v1.2.2/DeskCue_Setup_1.2.2_arm64.exe",
+        Arm64Sha256 = sha256,
+        Arm64Size = size
+    };
 
     private static HttpClient CreateHttpClient(Func<HttpRequestMessage, HttpResponseMessage> handler)
     {

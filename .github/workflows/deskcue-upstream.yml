@@ -169,6 +169,20 @@ jobs:
           & ./candidate/deskcue/Build-DeskCue.ps1 -Platform $env:DESKCUE_PLATFORM -SourceRoot ./candidate -IsccPath $env:DESKCUE_ISCC
           if ($LASTEXITCODE -ne 0) { throw 'Shared DeskCue retail build failed.' }
 
+      - name: Preserve failed build logs and test diagnostics
+        if: ${{ failure() && !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: deskcue-failure-${{ matrix.rid }}
+          if-no-files-found: warn
+          retention-days: 1
+          compression-level: 6
+          path: |
+            candidate/.artifacts/deskcue-release/${{ matrix.rid }}/runs/*/steps.json
+            candidate/.artifacts/deskcue-release/${{ matrix.rid }}/runs/*/logs/**
+            candidate/.artifacts/deskcue-release/${{ matrix.rid }}/runs/*/tests/**
+            candidate/.artifacts/deskcue-release/${{ matrix.rid }}/runs/*/management-tests.json
+
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.rid }}

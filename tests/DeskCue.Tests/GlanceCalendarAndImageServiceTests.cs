@@ -44,25 +44,34 @@ public sealed class GlanceCalendarAndImageServiceTests : IDisposable
         Assert.Equal(expected, GlanceImageDecodeSizeCalculator.NeedsRefresh(current, required));
     }
 
-    [Fact]
-    public async Task CalendarMonth_AlwaysBuildsSixCompleteWeeks()
+    [Theory]
+    [InlineData(DayOfWeek.Monday, new[] { "一", "二", "三", "四", "五", "六", "日" })]
+    [InlineData(DayOfWeek.Sunday, new[] { "日", "一", "二", "三", "四", "五", "六" })]
+    public async Task CalendarMonth_AlwaysBuildsSixCompleteWeeks(
+        DayOfWeek firstDayOfWeek,
+        string[] expectedHeaders)
     {
         var source = new LocalCalendarPresentationSource();
+        // Week-start defaults vary between Windows globalization data versions.
+        // Set the input explicitly without mutating the cached shared culture.
+        var culture = (CultureInfo)CultureInfo.GetCultureInfo("zh-CN").Clone();
+        culture.DateTimeFormat.FirstDayOfWeek = firstDayOfWeek;
 
         GlanceCalendarMonth month = await source.GetMonthAsync(
             new DateOnly(2026, 8, 1),
-            CultureInfo.GetCultureInfo("zh-CN"));
+            culture);
 
         Assert.Equal(new DateOnly(2026, 8, 1), month.Month);
         Assert.Equal(7, month.WeekdayHeaders.Count);
-        Assert.Equal(["一", "二", "三", "四", "五", "六", "日"], month.WeekdayHeaders);
+        Assert.Equal(expectedHeaders, month.WeekdayHeaders);
         Assert.Equal(42, month.Days.Count);
+        Assert.Equal(firstDayOfWeek, month.Days[0].Date.DayOfWeek);
         Assert.Contains(month.Days, day => day.Date == new DateOnly(2026, 8, 1) && day.IsCurrentMonth);
         Assert.All(month.Days, day => Assert.False(string.IsNullOrWhiteSpace(day.DayText)));
         Assert.Empty(await source.GetAgendaAsync(
             new DateOnly(2026, 8, 1),
             7,
-            CultureInfo.GetCultureInfo("zh-CN")));
+            culture));
     }
 
     [Fact]

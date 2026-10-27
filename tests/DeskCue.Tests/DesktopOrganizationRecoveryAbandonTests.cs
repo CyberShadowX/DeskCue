@@ -345,10 +345,13 @@ public sealed class DesktopOrganizationRecoveryAbandonTests : IDisposable
             () => transaction.ExecuteAsync(plan));
     }
 
-    [Fact]
-    public void ComputeRequiredSpaceByDrive_ExemptsSameVolumeMoves()
+    [Theory]
+    [InlineData(@"C:\", @"D:\")]
+    [InlineData(@"D:\", @"C:\")]
+    public void ComputeRequiredSpaceByDrive_ExemptsSameVolumeMoves(
+        string root,
+        string otherRoot)
     {
-        string root = Path.GetPathRoot(Path.GetFullPath(_root))!;
         var sameVolumePlan = new DesktopOrganizationPlan
         {
             Targets =
@@ -366,7 +369,7 @@ public sealed class DesktopOrganizationRecoveryAbandonTests : IDisposable
             [
                 new DesktopOrganizationTargetPlan
                 {
-                    TargetDirectoryPath = @"D:\DeskCueStorage\Documents",
+                    TargetDirectoryPath = Path.Combine(otherRoot, "DeskCueStorage", "Documents"),
                     Items =
                     [
                         Snapshot(Path.Combine(root, "Users", "user", "Desktop", "big.iso"), 100),
@@ -382,14 +385,17 @@ public sealed class DesktopOrganizationRecoveryAbandonTests : IDisposable
         IReadOnlyDictionary<string, long> crossVolume =
             DesktopOrganizationTransaction.ComputeRequiredSpaceByDrive(crossVolumePlan);
         KeyValuePair<string, long> requirement = Assert.Single(crossVolume);
-        Assert.Equal("D:\\", requirement.Key, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(otherRoot, requirement.Key, StringComparer.OrdinalIgnoreCase);
         Assert.Equal(150, requirement.Value);
     }
 
-    [Fact]
-    public void ValidateAvailableSpace_ThrowsOnlyForCrossVolumeShortfall()
+    [Theory]
+    [InlineData(@"C:\", @"D:\")]
+    [InlineData(@"D:\", @"C:\")]
+    public void ValidateAvailableSpace_ThrowsOnlyForCrossVolumeShortfall(
+        string root,
+        string otherRoot)
     {
-        string root = Path.GetPathRoot(Path.GetFullPath(_root))!;
         var sameVolumePlan = new DesktopOrganizationPlan
         {
             Targets =
@@ -407,7 +413,7 @@ public sealed class DesktopOrganizationRecoveryAbandonTests : IDisposable
             [
                 new DesktopOrganizationTargetPlan
                 {
-                    TargetDirectoryPath = @"D:\DeskCueStorage\Documents",
+                    TargetDirectoryPath = Path.Combine(otherRoot, "DeskCueStorage", "Documents"),
                     Items = [Snapshot(Path.Combine(root, "Users", "user", "Desktop", "big.iso"), 100)]
                 }
             ]
@@ -418,7 +424,7 @@ public sealed class DesktopOrganizationRecoveryAbandonTests : IDisposable
         DesktopOrganizationInsufficientSpaceException exception = Assert.Throws<
             DesktopOrganizationInsufficientSpaceException>(
             () => DesktopOrganizationTransaction.ValidateAvailableSpace(crossVolumePlan, _ => 0));
-        Assert.Equal("D:\\", exception.DriveName, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(otherRoot, exception.DriveName, StringComparer.OrdinalIgnoreCase);
     }
 
     private async Task<DesktopOrganizationPlan> BuildPlanAsync(string desktop, string storage)

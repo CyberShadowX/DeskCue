@@ -25,6 +25,10 @@ class BrandingTests(unittest.TestCase):
         self.root = Path(self.temp.name) / "source"
         self.root.mkdir()
         self.config = json.loads(CONFIG.read_text(encoding="utf-8"))
+        # These source fixtures explicitly model upstream 1.5.9/revision 1.
+        # Keep them stable when the real release configuration advances.
+        self.config.update(upstreamRef="v1.5.9", upstreamVersion="1.5.9",
+                           brandingRevision=1, productVersion="1.5.9.1")
         self.fixture = {
             "DeskBox.sln": 'Project = "DeskBox", "src\\DeskBox\\DeskBox.csproj"\n',
             "src/DeskBox/DeskBox.csproj": '<Project><PropertyGroup><RootNamespace>DeskBox</RootNamespace><Version>1.5.9</Version><AssemblyVersion>1.5.9.0</AssemblyVersion><FileVersion>1.5.9.0</FileVersion><InformationalVersion>1.5.9</InformationalVersion></PropertyGroup><Content Include="deskbox_native.dll" /></Project>\n',
@@ -302,6 +306,30 @@ class BrandingTests(unittest.TestCase):
         before = self.snapshot()
         self.run_recipe(expected=2)
         self.assertEqual(self.snapshot(), before)
+
+    def test_revision_two_drives_metadata_and_provenance_without_changing_identity(self):
+        self.config.update(brandingRevision=2, productVersion="1.5.9.2")
+        self.run_recipe()
+        for path in ("src/DeskCue/DeskCue.csproj", "src/DeskCue.Updater/DeskCue.Updater.csproj"):
+            for tag in ("Version", "AssemblyVersion", "FileVersion", "InformationalVersion"):
+                self.assertIn(f"<{tag}>1.5.9.2</{tag}>", self.read(path))
+        for path in ("installer/DeskCue.iss", "installer/DeskCue.arm64.iss"):
+            self.assertIn('#define MyAppVersion "1.5.9.2"', self.read(path))
+            self.assertIn('#define MyAppVersionInfo "1.5.9.2"', self.read(path))
+            self.assertIn("F90973DE-39B2-508A-8DEC-088C53758F37", self.read(path))
+        manifest = self.read("src/DeskCue/Package.appxmanifest")
+        self.assertIn('Version="1.5.9.2"', manifest)
+        for identity in ("CyberShadowX.DeskCue", "32AFF2BA-34E3-56BE-83E3-671BEBBFA32F",
+                         "D61F048B-B5EE-5CC8-87BC-D28E118A8CBB", "E5662752-7950-51E8-9830-6A12DE878954"):
+            self.assertIn(identity, manifest)
+        self.assertIn('version="1.5.9.2" name="DeskCue"', self.read("src/DeskCue/app.manifest"))
+        self.assertIn('"1.5.9.2", "1.5.9", "1.5.8"', self.read("src/DeskCue/Services/ReleaseNotesService.cs").replace("\n", ""))
+        self.assertIn('"0F10D29D"', self.read("src/DeskCue/Services/DeskCueDataPathService.cs"))
+        self.assertTrue((self.root / "docs/releases/v1.5.9.2.md").is_file())
+        self.assertFalse((self.root / "docs/releases/v1.5.9.1.md").exists())
+        provenance = json.loads(self.read("deskcue/provenance.json"))
+        self.assertEqual(provenance["brandingRevision"], 2)
+        self.assertEqual(provenance["productVersion"], "1.5.9.2")
 
 
 if __name__ == "__main__":

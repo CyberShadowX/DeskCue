@@ -202,7 +202,7 @@ try {
         $testOutput = Join-Path $trxRoot ([string]$index)
         Assert-SafeDeskCuePath $runRoot $testOutput
         Invoke-CheckedCommand "test-$index" $dotnet (@('test', $testProjects[$index], '--configuration', 'Release',
-            '--no-restore', '-p:WindowsAppSdkBootstrapInitialize=false', '--blame-hang', '--blame-hang-timeout', '5m',
+            '--no-restore', '-p:WindowsAppSdkBootstrapInitialize=false', '--blame-hang', '--blame-hang-dump-type', 'mini', '--blame-hang-timeout', '5m',
             '--logger', 'trx;LogFileName=results.trx', '--results-directory', $testOutput, '-v:minimal') + $common) $frozenRoot
         if (-not (Test-Path -LiteralPath (Join-Path $testOutput 'results.trx') -PathType Leaf)) { throw "Test project $index produced no TRX." }
     }

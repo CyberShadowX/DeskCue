@@ -5,8 +5,8 @@
 ; ISCC /DDeskCueNativeAot=1 /DDeskCueBundledRuntime=1 /DMyAppReleaseDir=<publish 目录> DeskCue.arm64.iss
 
 #define MyAppName "DeskCue"
-#define MyAppVersion "1.5.9.1"
-#define MyAppVersionInfo "1.5.9.1"
+#define MyAppVersion "1.5.9.2"
+#define MyAppVersionInfo "1.5.9.2"
 #define MyAppPublisher "CyberShadowX"
 #define MyAppExeName "DeskCue.exe"
 #define MyAppOutputBaseName "DeskCue_Setup"
