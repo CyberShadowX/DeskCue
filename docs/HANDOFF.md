@@ -10,7 +10,35 @@ The builder now uses the guarded short checkout `.artifacts/b/<run-id>` while
 keeping canonical logs and receipts unchanged. All 34 focused builder fixtures
 passed in the Controller session; scoped independent re-review passed
 0 Critical / 0 Important / 0 Minor. A new complete retail attempt follows.
-No installer, stable EXE replacement or running-app acceptance is claimed yet.
+No complete retail publication, stable EXE replacement or running-app
+acceptance is claimed yet.
+
+At reviewed03bb09b, the second full local attempt passed its Release build but
+stopped on the historical 43200-second watcher-delay fixture (5819 passed,
+1 failed,0 skipped). Its cause is under controlled investigation. A separate
+private run passed FullNativeAOT publish, byte validation and Inno compilation
+(394 payload files,131.3MiB); it is diagnostic-only until all release gates pass.
+The own-main push succeeded. First actual cloud delivery run40521404850 passed
+candidate/helpers101 but both builders rejected ISCC's0.0.0.0 FileVersion;
+delivery was skipped. Inherited CI selected SDK10.0.403 and failed locked restore.
+Compiler-engine version detection and exact SDK selection are being corrected.
+
+Current retry source: the watcher timeout was reproduced with a real FSW
+Created/Changed delivery latch. A late Changed after the fixture's multi-hour
+clock jump correctly re-armed another full interval. The fix controls only the
+long-preset fixture's initial event pair; production is unchanged and live FSW
+tests remain. Focused4/4 and10repeat rounds40/40 passed, no skips; independent
+reviewPASS0C/0I/0M. The rejected Start-baseline proposal and all earlier failures
+remain in private evidence.
+
+The complete checked patch now includes that fixture fix:101655bytes,
+SHA2564C688E1B7252E5F1F68BB58ED688F06B5868573086D917F8ED3B08026E63CBD6.
+Fresh LF-source generation and application reproduced all1697 indexed product
+entries across src/tests/native/scripts/installer exactly. Cloud fixes preserve
+the strict6.7.1 engine pin, SDK10.0.402/rollForwarddisable, locked restore and
+owned CI/global.json overlays. Worker helper suite107/107 passed; Controller
+new probe fixtures5/5, actual engine probe and SDK-overlay candidate test passed.
+Full retail/cloud reruns follow the new reviewed commit.
 
 The final source review's two Important and two Minor policy findings are
 resolved: fork-owned security/conduct/support/contribution/signing policies,
@@ -44,7 +72,7 @@ task/settings import or desktop-file organization has been performed.
  5 failed/7 passed, demonstrating the original trust/feedback boundaries.
 - Controller full fork validation:5820/5820passed,0failed,0skipped; Release build
  18warnings/0errors. Evidence retained locally under .artifacts/fork-r5-full.
-- Fresh checked patch replay reproduces all1697 product index entries across
+- Earlier checked patch replay reproduced all1697 product index entries across
  src/tests/native/scripts/installer exactly. PatchSHA256:
  8307279b6002b930b138be33f24a4354fd608a0e18f0cd91f628e0974ac632ef.
 - Task1 recipe/identity round2PASS0C/0I/0M, including true junction tests and
@@ -58,8 +86,8 @@ task/settings import or desktop-file organization has been performed.
 - Failed full runs remain recorded: initial14migration fixture failures; later
  three stale update-origin fixtures plus one existing12h watcher-delay timeout;
  then the mechanical copy-test self-rejection. Those migration assertions were
- repaired; the watcher timing failure was not root-caused or code-fixed, and
- later green runs do not erase that historical risk.
+  repaired. The watcher timing failure was initially unresolved; its later
+ controlled reproduction and fixture-only correction are recorded above.
 
 ## Final acceptance sign-off
 

@@ -32,7 +32,16 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 10.0.402
+
+      - name: Verify selected pinned SDK
+        shell: pwsh
+        run: |
+          $selectedSdk = & dotnet --version
+          if ($LASTEXITCODE -ne 0 -or $selectedSdk.Trim() -ne '10.0.402') {
+            throw "Expected selected .NET SDK 10.0.402; found $selectedSdk."
+          }
+          Write-Host "Selected .NET SDK: $selectedSdk"
 
       - name: Restore
         shell: pwsh

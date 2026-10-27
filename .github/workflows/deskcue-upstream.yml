@@ -147,10 +147,17 @@ jobs:
         run: |
           $actualArchitecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
           if (($env:DESKCUE_PLATFORM -eq 'ARM64' -and $actualArchitecture -ne 'Arm64') -or ($env:DESKCUE_PLATFORM -eq 'x64' -and $actualArchitecture -ne 'X64')) { throw 'Expected a native architecture builder.' }
+          Write-Host "Builder OS architecture: $actualArchitecture; process architecture: $([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)"
+          Push-Location ./candidate
+          try {
+            $selectedSdk = & dotnet --version
+            if ($LASTEXITCODE -ne 0 -or $selectedSdk.Trim() -ne '10.0.402') { throw "Expected selected .NET SDK 10.0.402; found $selectedSdk." }
+            Write-Host "Selected .NET SDK: $selectedSdk"
+          } finally { Pop-Location }
           $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
           if (-not (Test-Path -LiteralPath $iscc -PathType Leaf)) { throw 'The standard hosted image must supply Inno Setup 6.' }
-          $innoVersion = (Get-Item -LiteralPath $iscc).VersionInfo.FileVersion
-          if ($innoVersion -notmatch '^6\.7\.1(?:\.|\s|$)') { throw "Expected pinned Inno Setup 6.7.1; found $innoVersion." }
+          python management/deskcue/delivery.py probe-inno --iscc $iscc --expected-version 6.7.1 --scratch-root "$env:RUNNER_TEMP/deskcue-inno-probes"
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned Inno compiler engine verification failed.' }
           "iscc=$iscc" >> $env:GITHUB_OUTPUT
 
       - name: Run shared tests and Full Native AOT offline installer build

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Reflection;
 using DeskCue.Models;
 using DeskCue.Services;
 
@@ -42,9 +43,15 @@ public sealed class DesktopAutoOrganizationWatcherDelayTests : IDisposable
     public async Task LongerPresets_HoldTheFileUntilTheConfiguredIntervalElapses(
         int delaySeconds)
     {
-        using var harness = WatcherHarness.Create(_root, delaySeconds);
+        using var harness = WatcherHarness.Create(_root, delaySeconds, controlledNotifications: true);
         string desktopFile = Path.Combine(harness.DesktopPath, "note.txt");
         File.WriteAllText(desktopFile, "content");
+
+        // Deliver the complete initial Created/Changed pair before advancing
+        // hours on the manual clock. One requested delay is not an OS-event
+        // barrier: a late initial Changed correctly re-arms another full wait.
+        // The other delay tests continue to exercise the live OS watcher.
+        harness.ObserveCreatedFile(desktopFile);
 
         var interval = TimeSpan.FromSeconds(delaySeconds);
         await WaitUntilAsync(() => harness.RequestedDelays.Any(d => d >= interval));
@@ -173,7 +180,7 @@ public sealed class DesktopAutoOrganizationWatcherDelayTests : IDisposable
             Completed = completed;
         }
 
-        public static WatcherHarness Create(string root, int delaySeconds)
+        public static WatcherHarness Create(string root, int delaySeconds, bool controlledNotifications = false)
         {
             string desktopPath = Directory.CreateDirectory(
                 Path.Combine(root, "desktop")).FullName;
@@ -227,6 +234,15 @@ public sealed class DesktopAutoOrganizationWatcherDelayTests : IDisposable
                 });
             watcher.ItemOrganized += completed.Enqueue;
             watcher.Start();
+            if (controlledNotifications)
+            {
+                // Keep production processing intact and control only the OS
+                // notification boundary for the multi-hour clock contract.
+                var eventSource = (FileSystemWatcher)typeof(DesktopAutoOrganizationWatcher)
+                    .GetField("_watcher", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .GetValue(watcher)!;
+                eventSource.EnableRaisingEvents = false;
+            }
 
             return new WatcherHarness(
                 desktopPath,
@@ -235,6 +251,17 @@ public sealed class DesktopAutoOrganizationWatcherDelayTests : IDisposable
                 clock,
                 requestedDelays,
                 completed);
+        }
+
+        public void ObserveCreatedFile(string path)
+        {
+            FileSystemEventHandler observe = typeof(DesktopAutoOrganizationWatcher)
+                .GetMethod("OnCreatedOrChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .CreateDelegate<FileSystemEventHandler>(_watcher);
+            foreach (WatcherChangeTypes change in new[] { WatcherChangeTypes.Created, WatcherChangeTypes.Changed })
+            {
+                observe(_watcher, new FileSystemEventArgs(change, DesktopPath, Path.GetFileName(path)));
+            }
         }
 
         public void Dispose() => _watcher.Dispose();

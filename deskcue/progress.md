@@ -16,7 +16,32 @@ Plan: docs/superpowers/plans/2026-10-27-deskcue-upstream-adoption.md
   corrected as preserved overlays; fresh policy re-review closed 2I/2M with
   no remaining C/I/M. The operator guide is now under the preserved deskcue
   prefix. No release/runtime/cutover is claimed yet.
-- No remote push, actual cloud run or published installer so far.
+- Reviewed03bb09b was pushed to own main. Actual cloud delivery run40521404850:
+  candidate succeeded, helpers101/101; both native builders stopped because
+  ISCC FileVersion=0.0.0.0, so no retail test/build or delivery occurred. The
+  compiler-engine banner is being used for the exact version check instead.
+- Inherited CI run40521375317 installed SDK10.0.403 via10.0.x, causing locked
+  updater restore NU1004 (ILLink10.0.13 versus10.0.14). Pinning exact10.0.402
+  and global.json rollForward=disable; preserving those owned overlays.
+- Local retail retry r-f9142abdd24b48b2 passed Release build(20warnings/0errors)
+  then stopped at5819/5820 with the same43200-second watcher-delay timeout.
+  watcher_debug is investigating a controllable fixture/FSW fakeclock race;
+  no blind retry or production watcher fix is claimed.
+- The same frozen03bb source separately passed private FullNativeAOT retail
+  compile, byte contracts and Inno installer compile. Payload394files/131.3MiB;
+  installer33695699bytes. This is diagnostic evidence only, not a release:
+  .artifacts/packaging-diagnostic-result.json. No app installed/launched yet.
+- Fresh main management suite101/101PASS(.artifacts/controller-management-final.log).
+  Actual local publication, cloud release, runtime and cutover remain pending.
+- Watcher fixture root cause now confirmed by a real FSW latch RED. Only the
+  long-preset initial notification pair is controlled; production unchanged.
+  Focused4/4 and10repeat rounds40/40PASS, no skips; independentPASS0C/0I/0M.
+  The rejected Start-baseline attempt remains recorded in private evidence.
+- Regenerated patch101655bytes SHA4C688E1B7252E5F1F68BB58ED688F06B5868573086D917F8ED3B08026E63CBD6.
+  Fresh LF mechanical generation+patch apply reproduces all1697 product entries
+  exactly across five subtrees(.artifacts/final-product-replay.json).
+- Inno/SDK fixes frozen; worker107/107helpersPASS; main new probe5PASS, actual
+ 6.7.3 probePASS and SDK/CI overlay candidate1PASS. Scopedreview then actual reruns.
 
 ## Earlier checkpoint (superseded by the execution checkpoint above)
 

@@ -203,6 +203,22 @@ c.update(recipeSha256=hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdig
 
 
 class CandidateTests(SourceCase):
+    def test_sdk_pin_and_own_ci_survive_new_upstream_overlay(self):
+        owned = {"global.json": '{"sdk":{"version":"10.0.402","rollForward":"disable","allowPrerelease":false}}\n',
+                 ".github/workflows/ci.yml": 'name: Own pinned CI\nsdk: 10.0.402\n'}
+        for name, content in owned.items():
+            target = self.root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
+        git(self.root, "add", ".")
+        git(self.root, "commit", "-m", "own SDK and CI policy")
+        self.head = git(self.root, "rev-parse", "HEAD")
+        plan = self.next_upstream(policies={"global.json": '{"sdk":{"version":"10.0.403","rollForward":"latestPatch"}}\n',
+                                             ".github/workflows/ci.yml": 'name: Upstream latest SDK\nsdk: 10.0.x\n'})
+        delivery.prepare(self.root, plan, self.destination, self.output, upstream_url=str(self.upstream))
+        for name, expected in owned.items():
+            self.assertEqual((self.destination / name).read_text(encoding="utf-8"), expected)
+
     def test_first_candidate_preserves_exact_reviewed_head_and_bundle(self):
         metadata = delivery.prepare(self.root, self.plan(), self.destination, self.output)
         self.assertEqual(metadata["sourceCommit"], self.head)
@@ -754,6 +770,56 @@ class ReleaseTests(SourceCase):
         with patch.object(delivery.shutil, "copyfile", side_effect=broken_copy):
             with self.assertRaises(delivery.DeliveryError):
                 delivery.render_release(self.metadata, self.bundle, self.artifacts, self.home / "release")
+
+
+class ToolProbeTests(unittest.TestCase):
+    def setUp(self):
+        self.assertTrue(callable(getattr(delivery, "probe_inno", None)), "Inno compiler engine probe is missing")
+        base = Path(__file__).resolve().parents[2] / ".artifacts/delivery-tests"
+        base.mkdir(parents=True, exist_ok=True)
+        self.temp = tempfile.TemporaryDirectory(prefix="compiler-probe-", dir=base)
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.compiler = self.root / "ISCC.exe"
+        self.compiler.write_bytes(b"controlled external compiler fixture")
+
+    def response(self, version="6.7.1", code=0):
+        return subprocess.CompletedProcess([], code,
+            f"Inno Setup 6 Command-Line Compiler\nCompiler engine version: Inno Setup {version}\nSuccessful compile. Output was disabled.\n", "")
+
+    def probe(self, **options):
+        return delivery.probe_inno(self.compiler, "6.7.1", self.root / "scratch", **options)
+
+    def test_probe_accepts_exact_engine_version_without_file_metadata(self):
+        with patch.object(delivery.subprocess, "run", return_value=self.response()):
+            result = self.probe()
+        self.assertEqual((result["status"], result["compilerVersion"], result["outputDisabled"]),
+                         ("verified", "6.7.1", True))
+
+    def test_probe_rejects_wrong_engine_even_with_success_exit(self):
+        with patch.object(delivery.subprocess, "run", return_value=self.response("6.7.3")):
+            with self.assertRaises(delivery.DeliveryError):
+                self.probe()
+
+    def test_probe_requires_a_successful_complete_compile(self):
+        with patch.object(delivery.subprocess, "run", return_value=self.response(code=2)):
+            with self.assertRaises(delivery.DeliveryError):
+                self.probe()
+
+    def test_probe_rejects_missing_or_ambiguous_engine_banner(self):
+        for output in ("Inno Setup 6 Command-Line Compiler\nUsage: iscc script.iss\n",
+                       self.response().stdout + "Compiler engine version: Inno Setup 6.7.3\n"):
+            with self.subTest(output=output), patch.object(delivery.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, output, "")):
+                with self.assertRaises(delivery.DeliveryError):
+                    self.probe()
+
+    def test_probe_rejects_generated_installer_files(self):
+        def producing_file(*args, **kwargs):
+            (Path(kwargs["cwd"]) / "unexpected.exe").write_bytes(b"MZmust not be generated")
+            return self.response()
+        with patch.object(delivery.subprocess, "run", side_effect=producing_file):
+            with self.assertRaises(delivery.DeliveryError):
+                self.probe()
 
 
 class ApiTests(unittest.TestCase):
