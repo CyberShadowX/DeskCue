@@ -212,7 +212,7 @@ public sealed class AotPublishContractTests
             File.ReadAllText(TestPaths.FromRepository("global.json")));
         JsonElement sdk = globalJson.RootElement.GetProperty("sdk");
         Assert.Equal("10.0.402", sdk.GetProperty("version").GetString());
-        Assert.Equal("latestPatch", sdk.GetProperty("rollForward").GetString());
+        Assert.Equal("disable", sdk.GetProperty("rollForward").GetString());
 
         string rustToolchain = File.ReadAllText(TestPaths.FromRepository("rust-toolchain.toml"));
         Assert.Contains("channel = \"1.96.0\"", rustToolchain, StringComparison.Ordinal);

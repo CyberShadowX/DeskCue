@@ -998,6 +998,19 @@ index d23a04bc..08123ad3 100644
                          Padding="14"
                          Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                          BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+diff --git a/tests/DeskCue.Tests/AotPublishContractTests.cs b/tests/DeskCue.Tests/AotPublishContractTests.cs
+index 44698235..350afc74 100644
+--- a/tests/DeskCue.Tests/AotPublishContractTests.cs
++++ b/tests/DeskCue.Tests/AotPublishContractTests.cs
+@@ -212,7 +212,7 @@ public sealed class AotPublishContractTests
+             File.ReadAllText(TestPaths.FromRepository("global.json")));
+         JsonElement sdk = globalJson.RootElement.GetProperty("sdk");
+         Assert.Equal("10.0.402", sdk.GetProperty("version").GetString());
+-        Assert.Equal("latestPatch", sdk.GetProperty("rollForward").GetString());
++        Assert.Equal("disable", sdk.GetProperty("rollForward").GetString());
+ 
+         string rustToolchain = File.ReadAllText(TestPaths.FromRepository("rust-toolchain.toml"));
+         Assert.Contains("channel = \"1.96.0\"", rustToolchain, StringComparison.Ordinal);
 diff --git a/tests/DeskCue.Tests/AppUpdateServiceTests.cs b/tests/DeskCue.Tests/AppUpdateServiceTests.cs
 index 4f7f9358..5240a01d 100644
 --- a/tests/DeskCue.Tests/AppUpdateServiceTests.cs

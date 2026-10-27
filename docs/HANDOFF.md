@@ -31,14 +31,26 @@ tests remain. Focused4/4 and10repeat rounds40/40 passed, no skips; independent
 reviewPASS0C/0I/0M. The rejected Start-baseline proposal and all earlier failures
 remain in private evidence.
 
-The complete checked patch now includes that fixture fix:101655bytes,
-SHA2564C688E1B7252E5F1F68BB58ED688F06B5868573086D917F8ED3B08026E63CBD6.
+The complete checked patch now includes that fixture fix and the exact-SDK
+contract expectation:102536bytes,
+SHA2567D4321C47D4D80D1A55166EC12FDF06B958C18313B1E36CCB615D8069C576455.
 Fresh LF-source generation and application reproduced all1697 indexed product
 entries across src/tests/native/scripts/installer exactly. Cloud fixes preserve
 the strict6.7.1 engine pin, SDK10.0.402/rollForwarddisable, locked restore and
 owned CI/global.json overlays. Worker helper suite107/107 passed; Controller
 new probe fixtures5/5, actual engine probe and SDK-overlay candidate test passed.
 Full retail/cloud reruns follow the new reviewed commit.
+
+The full local720239d retry passed5819/5820; the sole failure was the inherited
+AotPublishContractTests expectation `latestPatch` after the intentional SDK
+policy changed to `disable`. The expectation is now corrected and included in
+the complete patch. A private-index checked application of the updated patch
+to the final mechanical base reproduces all1697 entries exactly. No failure
+was skipped or reclassified as a successful publication.
+The corrected contract passed a fresh Controller targeted run1/1,0 skipped;
+independent scoped re-reviewPASS0C/0I/0M. Both actual cloud native-builder/SDK/
+Inno engine gates passed at720239d. That old run is being cancelled before
+known stale contract work; a new clean source rerun will exercise all gates.
 
 The final source review's two Important and two Minor policy findings are
 resolved: fork-owned security/conduct/support/contribution/signing policies,

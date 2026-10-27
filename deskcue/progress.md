@@ -42,6 +42,15 @@ Plan: docs/superpowers/plans/2026-10-27-deskcue-upstream-adoption.md
   exactly across five subtrees(.artifacts/final-product-replay.json).
 - Inno/SDK fixes frozen; worker107/107helpersPASS; main new probe5PASS, actual
  6.7.3 probePASS and SDK/CI overlay candidate1PASS. Scopedreview then actual reruns.
+- Actual720239d retry:5819/5820, solely the inherited AotPublishContractTests
+  assertion still requiring latestPatch instead of the deliberately fixeddisable.
+  Assertion corrected; fresh targeted test and scopedreview follow. New complete
+  patch102536bytes SHA7D4321C47D4D80D1A55166EC12FDF06B958C18313B1E36CCB615D8069C576455,
+  cached check/apply from77a0d4b reproduces all1697 five-subtree entries exactly
+  (.artifacts/sdk-pin-product-replay.json). Watcher cases passed this full run.
+- Main targetedSDKcontract1/1PASS, scopedre-review0C/0I/0M; both real cloud
+  x64/ARM64 exactSDK+Innoengine gates passed on720239. Cancel old known-stale
+  contract run and retry the new clean source, preserving its evidence.
 
 ## Earlier checkpoint (superseded by the execution checkpoint above)
 
