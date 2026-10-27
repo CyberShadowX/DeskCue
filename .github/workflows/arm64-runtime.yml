@@ -73,6 +73,22 @@ jobs:
           & $env:DESKCUE_DUMP_TOOL @arguments 2>&1 | Tee-Object -FilePath analysis/managed-stacks.txt | Out-Host
           if ($LASTEXITCODE -ne 0) { throw 'Dump analysis returned a failure; inspect saved diagnostics.' }
 
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: diagnostic-input
+          persist-credentials: false
+
+      - name: Probe original SDK lifecycle in isolated native children
+        shell: pwsh
+        run: |
+          $probe = Join-Path $env:GITHUB_WORKSPACE 'diagnostic-input/.github/diagnostics/Probe-EverythingLifecycle.ps1'
+          $sdk = Join-Path $env:GITHUB_WORKSPACE 'diagnostic-input/src/DeskCue/ThirdParty/Everything/EverythingARM64.dll'
+          if ((Get-FileHash -LiteralPath $probe -Algorithm SHA256).Hash -cne 'DC7B8A1FB04F34ECA60EAE940297ED6A7F273C8ACFF369F18579D6D32D4EFA77') { throw 'Reviewed probe script changed.' }
+          if ((Get-FileHash -LiteralPath $sdk -Algorithm SHA256).Hash -cne '8531EA393677DD8FD37BED7420AC93344CD458B9A1324BA65C4A75D024D61886') { throw 'Original upstream ARM64 SDK changed.' }
+          & $probe -SourceRoot (Join-Path $env:GITHUB_WORKSPACE 'diagnostic-input') -OutputDirectory (Join-Path $env:GITHUB_WORKSPACE 'analysis/native-sdk-lifecycle') -PerProbeSeconds 8
+          if ($LASTEXITCODE -ne 0) { throw 'Isolated native SDK probe infrastructure failed.' }
+
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
