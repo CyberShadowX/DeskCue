@@ -1,5 +1,219 @@
+diff --git a/src/DeskCue/App.Tray.cs b/src/DeskCue/App.Tray.cs
+index 0308a411..a8907e43 100644
+--- a/src/DeskCue/App.Tray.cs
++++ b/src/DeskCue/App.Tray.cs
+@@ -626,6 +626,8 @@ public partial class App
+     }
+ 
+     private readonly TrayContextMenuModePolicy _trayContextMenuModePolicy = new();
++    private readonly TrayContextMenuPresentationPolicy _trayContextMenuPresentationPolicy =
++        new(static () => !IsShuttingDown);
+ 
+     /// <summary>Suppresses a second deferred menu open while the first is
+     /// still landing or blocking inside TrackPopupMenuEx's modal loop (the
+@@ -708,8 +710,9 @@ public partial class App
+ 
+         try
+         {
++            long attempt = _trayContextMenuPresentationPolicy.BeginAttempt();
+             trayIcon.ShowContextMenu(point);
+-            _trayContextMenuModePolicy.RecordSuccess();
++            SafeFireAndForget(() => VerifyTrayContextMenuPresentationAsync(trayIcon, point, attempt));
+         }
+         catch (Exception ex) when (IsSecondWindowHostFailure(ex))
+         {
+@@ -722,6 +725,117 @@ public partial class App
+         }
+     }
+ 
++    private async Task VerifyTrayContextMenuPresentationAsync(
++        TaskbarIcon expectedIcon,
++        DrawingPoint point,
++        long attempt)
++    {
++        // ShowAt/Loaded can complete on a later dispatcher turn. Never inspect
++        // the hidden prewarm host, or count a returned ShowContextMenu as proof
++        // that DWM actually presents it. These checks are bounded to this open.
++        await Task.Yield();
++        try
++        {
++            for (int probe = 0; probe < 3; probe++)
++            {
++                if (probe > 0)
++                {
++                    await Task.Delay(75);
++                }
++
++                if (!ReferenceEquals(_trayIcon, expectedIcon) ||
++                    _trayContextMenuModePolicy.IsDegradedToPopupMenu ||
++                    !_trayContextMenuPresentationPolicy.IsCurrent(attempt))
++                {
++                    return;
++                }
++
++                TrayContextMenuPresentation presentation = GetTrayContextMenuPresentation();
++                if (presentation == TrayContextMenuPresentation.Unknown)
++                {
++                    continue;
++                }
++
++                bool nativeFallback = presentation == TrayContextMenuPresentation.Cloaked;
++                if (nativeFallback)
++                {
++                    // TrackPopupMenuEx pumps this dispatcher. Keep the same
++                    // bounded modal reentry guard as the ordinary open path.
++                    if (Environment.TickCount64 < _trayContextMenuReentrySuppressedUntilTick)
++                    {
++                        return;
++                    }
++
++                    _trayContextMenuReentrySuppressedUntilTick = Environment.TickCount64 + 30_000;
++                }
++
++                try
++                {
++                    _trayContextMenuPresentationPolicy.TryComplete(
++                        attempt,
++                        presentation,
++                        () => { _trayContextMenuModePolicy.RecordSuccess(); },
++                        () => expectedIcon.CloseContextMenu(),
++                        () =>
++                        {
++                            _trayContextMenuModePolicy.RecordUnusablePresentation();
++                            Log("[Tray] Visible SecondWindow menu host is DWM-cloaked; using native PopupMenu");
++                            SetTrayContextMenuNativeMode(expectedIcon);
++                        },
++                        () => ShowTrayContextMenuInNativeMode(point));
++                }
++                finally
++                {
++                    if (nativeFallback)
++                    {
++                        _trayContextMenuReentrySuppressedUntilTick = 0;
++                    }
++                }
++
++                return;
++            }
++        }
++        catch (Exception ex)
++        {
++            Log($"[Tray] Failed to verify tray context menu presentation: {ex.Message}");
++        }
++        finally
++        {
++            _trayContextMenuPresentationPolicy.Cancel(attempt);
++        }
++    }
++
++    private TrayContextMenuPresentation GetTrayContextMenuPresentation()
++    {
++        if (_trayOrganizeDesktopItem is not { IsLoaded: true } anchorItem ||
++            FindVisualAncestor<MenuFlyoutPresenter>(anchorItem) is not { } presenter ||
++            presenter.XamlRoot is not { } xamlRoot)
++        {
++            return TrayContextMenuPresentation.Unknown;
++        }
++
++        // Items are shared with H.NotifyIcon's generated flyout. An owning
++        // open popup establishes that this is the current shown menu, not its
++        // prewarm host or an already dismissed menu from an earlier probe.
++        bool menuOpen = false;
++        foreach (Popup popup in VisualTreeHelper.GetOpenPopupsForXamlRoot(xamlRoot))
++        {
++            if (popup.IsOpen && popup.Child is not null && ContainsVisual(popup.Child, presenter))
++            {
++                menuOpen = true;
++                break;
++            }
++        }
++
++        if (!menuOpen || xamlRoot.ContentIslandEnvironment is not { } environment)
++        {
++            return TrayContextMenuPresentation.Unknown;
++        }
++
++        var host = Microsoft.UI.Win32Interop.GetWindowFromWindowId(environment.AppWindowId);
++        return Win32Helper.GetOwnedTrayMenuPresentation(host);
++    }
++
+     private static bool IsSecondWindowHostFailure(Exception exception)
+     {
+         // H.NotifyIcon 2.5.0-beta.1's second window can fail its prewarm race
+@@ -734,7 +848,7 @@ public partial class App
+ 
+     private void ShowTrayContextMenuInNativeMode(DrawingPoint point)
+     {
+-        if (_trayIcon is not { } trayIcon)
++        if (IsShuttingDown || _trayIcon is not { } trayIcon)
+         {
+             return;
+         }
+@@ -785,8 +899,9 @@ public partial class App
+ 
+         try
+         {
++            long attempt = _trayContextMenuPresentationPolicy.BeginAttempt();
+             trayIcon.ShowContextMenu(point);
+-            _trayContextMenuModePolicy.RecordSuccess();
++            SafeFireAndForget(() => VerifyTrayContextMenuPresentationAsync(trayIcon, point, attempt));
+         }
+         catch (Exception ex) when (IsSecondWindowHostFailure(ex))
+         {
+@@ -816,6 +931,12 @@ public partial class App
+     }
+ 
+     private void SwitchTrayContextMenuToNativeMode(TaskbarIcon trayIcon)
++    {
++        trayIcon.CloseContextMenu();
++        SetTrayContextMenuNativeMode(trayIcon);
++    }
++
++    private void SetTrayContextMenuNativeMode(TaskbarIcon trayIcon)
+     {
+         trayIcon.ContextMenuMode = ContextMenuMode.PopupMenu;
+         Log("[Tray] Tray context menu degraded to native PopupMenu mode (SecondWindow host failed to initialize)");
+@@ -836,7 +957,12 @@ public partial class App
+     {
+         if (TryGetTrayIconIdentity(out var trayIconWindowHandle, out var trayIconId) &&
+             Win32Helper.TryGetNotifyIconRect(trayIconWindowHandle, trayIconId, out var iconRect) &&
+-            IsUsableTrayIconRect(iconRect))
++            Win32Helper.TryGetMonitorWorkArea(fallbackPoint.X, fallbackPoint.Y, out var originatingMonitor, out _) &&
++            TrayContextMenuPlacementPolicy.CanUseShellIconRect(
++                iconRect,
++                fallbackPoint,
++                originatingMonitor,
++                Win32Helper.GetDpiScaleForPoint(fallbackPoint.X, fallbackPoint.Y)))
+         {
+             return GetTrayContextMenuAnchorPointFromIconRect(iconRect, fallbackPoint);
+         }
+@@ -953,11 +1079,6 @@ public partial class App
+         return ClampPointToRect(new DrawingPoint(x, y), monitor);
+     }
+ 
+-    private static bool IsUsableTrayIconRect(Win32Helper.RECT rect)
+-    {
+-        return rect.Right > rect.Left && rect.Bottom > rect.Top;
+-    }
+-
+     private static TaskbarEdge GetNearestTaskbarEdge(
+         Win32Helper.RECT iconRect,
+         Win32Helper.RECT monitor,
+@@ -1545,6 +1666,12 @@ internal sealed class TrayContextMenuModePolicy
+ 
+     internal bool IsDegradedToPopupMenu => _degradedToPopupMenu;
+ 
++    internal void RecordUnusablePresentation()
++    {
++        _consecutiveSecondWindowFailures++;
++        _degradedToPopupMenu = true;
++    }
++
+     /// <summary>Resets the failure count after a successful open. Degradation
+     /// itself is terminal for the session.</summary>
+     internal void RecordSuccess()
 diff --git a/src/DeskCue/DeskCue.csproj b/src/DeskCue/DeskCue.csproj
-index 6a870c59..7e496867 100644
+index 93cc7631..9d30b985 100644
 --- a/src/DeskCue/DeskCue.csproj
 +++ b/src/DeskCue/DeskCue.csproj
 @@ -39,6 +39,11 @@
@@ -14,6 +228,49 @@ index 6a870c59..7e496867 100644
    <!--
      Opt-in Native AOT audit profile. Keep ordinary Debug/Release behavior
      unchanged until the application-level AOT compatibility work is complete.
+diff --git a/src/DeskCue/Platform/Win32Helper.TrayMenu.cs b/src/DeskCue/Platform/Win32Helper.TrayMenu.cs
+new file mode 100644
+index 00000000..0450c033
+--- /dev/null
++++ b/src/DeskCue/Platform/Win32Helper.TrayMenu.cs
+@@ -0,0 +1,37 @@
++namespace DeskCue.Platform;
++
++public static partial class Win32Helper
++{
++    /// <summary>
++    /// A successful show call is insufficient when a shell extension cloaks
++    /// the menu's real WinUI host. Only query a current, visible, owned host;
++    /// an unavailable DWM attribute is unknown rather than a failure.
++    /// </summary>
++    internal static TrayContextMenuPresentation GetOwnedTrayMenuPresentation(IntPtr hwnd)
++    {
++        if (hwnd == IntPtr.Zero ||
++            GetWindowThreadProcessId(hwnd, out uint processId) == 0 ||
++            processId != (uint)Environment.ProcessId ||
++            !IsWindowVisible(hwnd))
++        {
++            return TrayContextMenuPresentation.Unknown;
++        }
++
++        try
++        {
++            if (DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out int cloaked, sizeof(int)) != 0)
++            {
++                return TrayContextMenuPresentation.Unknown;
++            }
++
++            return cloaked == 0
++                ? TrayContextMenuPresentation.Visible
++                : TrayContextMenuPresentation.Cloaked;
++        }
++        catch (Exception ex) when (
++            ex is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
++        {
++            return TrayContextMenuPresentation.Unknown;
++        }
++    }
++}
 diff --git a/src/DeskCue/Services/AppUpdateService.cs b/src/DeskCue/Services/AppUpdateService.cs
 index b73383e9..37d2f43f 100644
 --- a/src/DeskCue/Services/AppUpdateService.cs
@@ -214,6 +471,19 @@ index d5bef92c..2b783078 100644
          string json = JsonSerializer.Serialize(
              new DeskCueFeedbackMinePayload(ClientId),
              FeedbackJsonContext.Default.FeedbackMinePayload);
+diff --git a/src/DeskCue/Services/ReleaseNotesService.cs b/src/DeskCue/Services/ReleaseNotesService.cs
+index b56c89bb..b9e2f780 100644
+--- a/src/DeskCue/Services/ReleaseNotesService.cs
++++ b/src/DeskCue/Services/ReleaseNotesService.cs
+@@ -172,7 +172,7 @@ public sealed class ReleaseNotesService
+     /// </summary>
+     public static readonly IReadOnlyList<string> KnownReleaseVersions =
+     [
+-        "1.5.9.4", "1.5.9", "1.5.8", "1.5.7", "1.5.6", "1.5.5", "1.5.4", "1.5.3", "1.5.2",
++        "1.5.9.4", "1.5.9.3", "1.5.9", "1.5.8", "1.5.7", "1.5.6", "1.5.5", "1.5.4", "1.5.3", "1.5.2",
+         "1.5.1", "1.5.0", "1.4.9", "1.4.8", "1.4.7", "1.4.6", "1.4.3", "1.4.2",
+         "1.4.1", "1.4.0",
+     ];
 diff --git a/src/DeskCue/Services/TodoReminderService.cs b/src/DeskCue/Services/TodoReminderService.cs
 index 3f3ffb4e..5d3598be 100644
 --- a/src/DeskCue/Services/TodoReminderService.cs
@@ -1029,6 +1299,140 @@ index 5c30a440..5d89bc72 100644
    "QuickCapture.CopiedCount": "已複製 {0} 項",
    "QuickCapture.DropTab.Records": "放開以儲存到隨記",
    "Settings.QuickCapture.ClipboardReason.Enabled": "等待複製內容",
+diff --git a/src/DeskCue/TrayContextMenuPlacementPolicy.cs b/src/DeskCue/TrayContextMenuPlacementPolicy.cs
+new file mode 100644
+index 00000000..7d69c19c
+--- /dev/null
++++ b/src/DeskCue/TrayContextMenuPlacementPolicy.cs
+@@ -0,0 +1,128 @@
++using DeskCue.Platform;
++using DrawingPoint = System.Drawing.Point;
++
++namespace DeskCue;
++
++/// <summary>Physical-pixel decisions for a pointer-originated tray menu.</summary>
++internal static class TrayContextMenuPlacementPolicy
++{
++    internal static bool CanUseShellIconRect(
++        Win32Helper.RECT iconRect,
++        DrawingPoint capturedPoint,
++        Win32Helper.RECT originatingMonitor,
++        double dpiScale)
++    {
++        // Shell_NotifyIconGetRect can still describe Explorer's icon while a
++        // replacement tray forwards this click from a different screen edge.
++        // All inputs are physical pixels; only the small allowance uses DPI.
++        double scale = double.IsFinite(dpiScale) && dpiScale > 0
++            ? Math.Clamp(dpiScale, 0.5, 4)
++            : 1;
++        long tolerance = (long)Math.Ceiling(12 * scale);
++        long maximumIconExtent = (long)Math.Ceiling(128 * scale);
++        long width = (long)iconRect.Right - iconRect.Left;
++        long height = (long)iconRect.Bottom - iconRect.Top;
++        if (width <= 0 || height <= 0 ||
++            width > maximumIconExtent || height > maximumIconExtent ||
++            originatingMonitor.Right <= originatingMonitor.Left ||
++            originatingMonitor.Bottom <= originatingMonitor.Top ||
++            iconRect.Left < originatingMonitor.Left || iconRect.Right > originatingMonitor.Right ||
++            iconRect.Top < originatingMonitor.Top || iconRect.Bottom > originatingMonitor.Bottom ||
++            capturedPoint.X < originatingMonitor.Left || capturedPoint.X >= originatingMonitor.Right ||
++            capturedPoint.Y < originatingMonitor.Top || capturedPoint.Y >= originatingMonitor.Bottom)
++        {
++            return false;
++        }
++
++        return capturedPoint.X >= (long)iconRect.Left - tolerance &&
++            capturedPoint.X <= (long)iconRect.Right + tolerance &&
++            capturedPoint.Y >= (long)iconRect.Top - tolerance &&
++            capturedPoint.Y <= (long)iconRect.Bottom + tolerance;
++    }
++}
++
++internal enum TrayContextMenuPresentation
++{
++    Unknown,
++    Visible,
++    Cloaked
++}
++
++/// <summary>One presentation decision for each actual menu-open attempt.</summary>
++internal sealed class TrayContextMenuPresentationPolicy
++{
++    private readonly Func<bool> _canPresent;
++    private long _attempt;
++    private bool _completed;
++
++    internal TrayContextMenuPresentationPolicy(Func<bool> canPresent)
++    {
++        _canPresent = canPresent;
++    }
++
++    internal long BeginAttempt()
++    {
++        _completed = false;
++        return ++_attempt;
++    }
++
++    internal bool IsCurrent(long attempt) => attempt == _attempt && !_completed && _canPresent();
++
++    internal void Cancel(long attempt)
++    {
++        if (attempt == _attempt)
++        {
++            _completed = true;
++        }
++    }
++
++    internal bool TryComplete(
++        long attempt,
++        TrayContextMenuPresentation presentation,
++        Action recordSuccess,
++        Action closeSecondWindow,
++        Action switchToNative,
++        Action showNative)
++    {
++        if (!IsCurrent(attempt))
++        {
++            return false;
++        }
++
++        // Missing public host/DWM evidence does not establish failure or
++        // success. Allow another bounded probe without changing menu mode.
++        if (presentation == TrayContextMenuPresentation.Unknown)
++        {
++            return false;
++        }
++
++        _completed = true;
++        if (presentation == TrayContextMenuPresentation.Cloaked)
++        {
++            // H.NotifyIcon chooses which host to close using the current mode.
++            // Closing after the switch would leave its SecondWindow alive.
++            closeSecondWindow();
++            // Close/DependencyProperty callbacks can synchronously begin app
++            // shutdown or supersede this attempt. Recheck after each step;
++            // the original probe's liveness no longer establishes permission.
++            if (attempt != _attempt || !_canPresent())
++            {
++                return true;
++            }
++
++            switchToNative();
++            if (attempt != _attempt || !_canPresent())
++            {
++                return true;
++            }
++
++            showNative();
++        }
++        else
++        {
++            recordSuccess();
++        }
++
++        return true;
++    }
++}
 diff --git a/src/DeskCue/ViewModels/SettingsViewModel.AboutAndUpdates.cs b/src/DeskCue/ViewModels/SettingsViewModel.AboutAndUpdates.cs
 index de8c6ffe..890170ac 100644
 --- a/src/DeskCue/ViewModels/SettingsViewModel.AboutAndUpdates.cs
@@ -1999,6 +2403,25 @@ index 08b87094..690f0e0c 100644
      }
  
      [Fact]
+diff --git a/tests/DeskCue.Tests/ReleaseNotesKnownVersionsTests.cs b/tests/DeskCue.Tests/ReleaseNotesKnownVersionsTests.cs
+index 38cb9ecb..448489c7 100644
+--- a/tests/DeskCue.Tests/ReleaseNotesKnownVersionsTests.cs
++++ b/tests/DeskCue.Tests/ReleaseNotesKnownVersionsTests.cs
+@@ -33,6 +33,14 @@ public sealed class ReleaseNotesKnownVersionsTests
+         Assert.Contains("1.4.0", ReleaseNotesService.KnownReleaseVersions);
+     }
+ 
++    [Fact]
++    public void KnownReleaseVersions_KeepPreviousDeskCueReleaseAfterVersionBump()
++    {
++        Assert.Equal(
++            ["1.5.9.4", "1.5.9.3"],
++            ReleaseNotesService.KnownReleaseVersions.Take(2));
++    }
++
+     [Fact]
+     public void KnownReleaseVersions_NewestMatchesCurrentRelease()
+     {
 diff --git a/tests/DeskCue.Tests/ReleaseNotesTests.cs b/tests/DeskCue.Tests/ReleaseNotesTests.cs
 index 0dac191a..f85a7c60 100644
 --- a/tests/DeskCue.Tests/ReleaseNotesTests.cs
@@ -2221,4 +2644,240 @@ index 0c3686aa..75e895f9 100644
 +
      [Fact]
      public async Task CheckNowAsync_SkipsWhenReminderSettingDisabled()
+     {
+diff --git a/tests/DeskCue.Tests/TrayContextMenuPlacementPolicyTests.cs b/tests/DeskCue.Tests/TrayContextMenuPlacementPolicyTests.cs
+new file mode 100644
+index 00000000..1bc756c2
+--- /dev/null
++++ b/tests/DeskCue.Tests/TrayContextMenuPlacementPolicyTests.cs
+@@ -0,0 +1,89 @@
++using DeskCue;
++using DrawingPoint = System.Drawing.Point;
++
++namespace DeskCue.Tests;
++
++public sealed class TrayContextMenuPlacementPolicyTests
++{
++    private static readonly Win32Helper.RECT Primary = Rect(0, 0, 2560, 1440);
++
++    [Fact]
++    public void FinderTopClick_DoesNotUseTheRetainedBottomWindowsTrayRect()
++    {
++        Assert.False(TrayContextMenuPlacementPolicy.CanUseShellIconRect(
++            Rect(2200, 1400, 2232, 1432), new DrawingPoint(1158, 12), Primary, 1));
++    }
++
++    [Fact]
++    public void WindowsTrayClickInsideIcon_KeepsTheShellAnchor()
++    {
++        Assert.True(TrayContextMenuPlacementPolicy.CanUseShellIconRect(
++            Rect(2200, 1400, 2232, 1432), new DrawingPoint(2216, 1416), Primary, 1));
++    }
++
++    [Fact]
++    public void NegativeOriginMonitor_RejectsAnIconOnThePrimaryMonitor()
++    {
++        Assert.False(TrayContextMenuPlacementPolicy.CanUseShellIconRect(
++            Rect(2200, 1400, 2232, 1432), new DrawingPoint(-1200, 12),
++            Rect(-1920, -120, 0, 1080), 1.5));
++        Assert.True(TrayContextMenuPlacementPolicy.CanUseShellIconRect(
++            Rect(-1224, 0, -1176, 36), new DrawingPoint(-1200, 12),
++            Rect(-1920, -120, 0, 1080), 1.5));
++    }
++
++    [Fact]
++    public void SmallPointerTolerance_IsScaledOnceUsingTheOriginatingMonitorDpi()
++    {
++        var rect = Rect(2000, 1400, 2032, 1432);
++        Assert.False(TrayContextMenuPlacementPolicy.CanUseShellIconRect(
++            rect, new DrawingPoint(2048, 1416), Primary, 1));
++        Assert.True(TrayContextMenuPlacementPolicy.CanUseShellIconRect(
++            rect, new DrawingPoint(2048, 1416), Primary, 1.5));
++        Assert.False(TrayContextMenuPlacementPolicy.CanUseShellIconRect(
++            rect, new DrawingPoint(2085, 1416), Primary, 4));
++    }
++
++    [Fact]
++    public void OverflowTrayAwayFromTaskbar_CanStillUseItsNearbyShellIconRect()
++    {
++        Assert.True(TrayContextMenuPlacementPolicy.CanUseShellIconRect(
++            Rect(2210, 1100, 2242, 1132), new DrawingPoint(2226, 1116), Primary, 1));
++    }
++
++    [Theory]
++    [InlineData(10, 10, 10, 42)]
++    [InlineData(10, 10, 42, 10)]
++    [InlineData(-2147483648, 0, 2147483647, 32)]
++    [InlineData(0, -2147483648, 32, 2147483647)]
++    [InlineData(0, 0, 2560, 1440)]
++    public void MalformedOrUnboundedShellRect_CannotOverrideCapturedPointer(
++        int left, int top, int right, int bottom)
++    {
++        Assert.False(TrayContextMenuPlacementPolicy.CanUseShellIconRect(
++            Rect(left, top, right, bottom), new DrawingPoint(16, 16), Primary, 1));
++    }
++
++    [Theory]
++    [InlineData(double.NaN)]
++    [InlineData(double.PositiveInfinity)]
++    [InlineData(-1)]
++    [InlineData(100000)]
++    public void InvalidOrExtremeDpi_DoesNotCreateAnUnboundedAgreementArea(double dpi)
++    {
++        Assert.False(TrayContextMenuPlacementPolicy.CanUseShellIconRect(
++            Rect(1200, 0, 1232, 32), new DrawingPoint(1000, 12), Primary, dpi));
++    }
++
++    [Fact]
++    public void IntegerLimitMonitor_UsesWideArithmeticForSmallValidIcon()
++    {
++        Assert.True(TrayContextMenuPlacementPolicy.CanUseShellIconRect(
++            Rect(int.MinValue, int.MinValue, int.MinValue + 32, int.MinValue + 32),
++            new DrawingPoint(int.MinValue + 16, int.MinValue + 16),
++            Rect(int.MinValue, int.MinValue, int.MinValue + 2560, int.MinValue + 1440), 1));
++    }
++
++    private static Win32Helper.RECT Rect(int left, int top, int right, int bottom) =>
++        new() { Left = left, Top = top, Right = right, Bottom = bottom };
++}
+diff --git a/tests/DeskCue.Tests/TrayContextMenuResilienceTests.cs b/tests/DeskCue.Tests/TrayContextMenuResilienceTests.cs
+index 268a3c33..65a0a62c 100644
+--- a/tests/DeskCue.Tests/TrayContextMenuResilienceTests.cs
++++ b/tests/DeskCue.Tests/TrayContextMenuResilienceTests.cs
+@@ -11,6 +11,136 @@ namespace DeskCue.Tests;
+ /// </summary>
+ public sealed class TrayContextMenuResilienceTests
+ {
++    [Fact]
++    public void Presentation_ObservedShellCloak_ClosesBeforeSwitchingAndShowsNativeOnce()
++    {
++        var policy = new TrayContextMenuPresentationPolicy(static () => true);
++        var calls = new List<string>();
++        long attempt = policy.BeginAttempt();
++        bool nativeMode = false;
++        int commands = 0;
++        var interaction = new TrayMenuInteractionGate(_ => { });
++
++        void CloseSecondWindow()
++        {
++            Assert.False(nativeMode);
++            calls.Add("close");
++        }
++        void SwitchToNative()
++        {
++            nativeMode = true;
++            calls.Add("switch");
++        }
++        void ShowNative()
++        {
++            Assert.True(nativeMode);
++            calls.Add("native");
++            if (interaction.TryEnter()) commands++;
++            if (interaction.TryEnter()) commands++;
++        }
++
++        Assert.True(policy.TryComplete(attempt, TrayContextMenuPresentation.Cloaked,
++            () => calls.Add("success"), CloseSecondWindow, SwitchToNative, ShowNative));
++        Assert.False(policy.TryComplete(attempt, TrayContextMenuPresentation.Cloaked,
++            () => calls.Add("success"), CloseSecondWindow, SwitchToNative, ShowNative));
++
++        Assert.Equal(new[] { "close", "switch", "native" }, calls);
++        Assert.Equal(1, commands);
++    }
++
++    [Fact]
++    public void Presentation_HealthyHost_PreservesSecondWindowAndRecordsSuccess()
++    {
++        var policy = new TrayContextMenuPresentationPolicy(static () => true);
++        long attempt = policy.BeginAttempt();
++        int successes = 0;
++        Assert.True(policy.TryComplete(attempt, TrayContextMenuPresentation.Visible,
++            () => successes++, Unexpected, Unexpected, Unexpected));
++        Assert.Equal(1, successes);
++    }
++
++    [Fact]
++    public void Presentation_UnavailableEvidence_DoesNotFallBackOrRecordSuccess()
++    {
++        var policy = new TrayContextMenuPresentationPolicy(static () => true);
++        long attempt = policy.BeginAttempt();
++        Assert.False(policy.TryComplete(attempt, TrayContextMenuPresentation.Unknown,
++            Unexpected, Unexpected, Unexpected, Unexpected));
++        Assert.True(policy.IsCurrent(attempt));
++        Assert.True(policy.TryComplete(attempt, TrayContextMenuPresentation.Visible,
++            () => { }, Unexpected, Unexpected, Unexpected));
++    }
++
++    [Fact]
++    public void Presentation_DismissedOrSupersededAttempt_CannotOpenALateNativeMenu()
++    {
++        var policy = new TrayContextMenuPresentationPolicy(static () => true);
++        long first = policy.BeginAttempt();
++        long second = policy.BeginAttempt();
++        Assert.False(policy.TryComplete(first, TrayContextMenuPresentation.Cloaked,
++            Unexpected, Unexpected, Unexpected, Unexpected));
++        policy.Cancel(second);
++        Assert.False(policy.TryComplete(second, TrayContextMenuPresentation.Cloaked,
++            Unexpected, Unexpected, Unexpected, Unexpected));
++    }
++
++    private static void Unexpected() => Assert.Fail("Unexpected presentation action.");
++
++    [Theory]
++    [InlineData(false)]
++    [InlineData(true)]
++    public void Presentation_ShutdownBeforeDeferredProbe_PreventsAllPresentationActions(bool cloaked)
++    {
++        bool shuttingDown = false;
++        var policy = new TrayContextMenuPresentationPolicy(() => !shuttingDown);
++        long attempt = policy.BeginAttempt();
++        Assert.True(policy.IsCurrent(attempt));
++
++        shuttingDown = true;
++
++        Assert.False(policy.IsCurrent(attempt));
++        Assert.False(policy.TryComplete(attempt,
++            cloaked ? TrayContextMenuPresentation.Cloaked : TrayContextMenuPresentation.Visible,
++            Unexpected, Unexpected, Unexpected, Unexpected));
++    }
++
++    [Fact]
++    public void Presentation_ShutdownBetweenUnknownProbes_PreventsTheNextProbe()
++    {
++        bool shuttingDown = false;
++        var policy = new TrayContextMenuPresentationPolicy(() => !shuttingDown);
++        long attempt = policy.BeginAttempt();
++        Assert.False(policy.TryComplete(attempt, TrayContextMenuPresentation.Unknown,
++            Unexpected, Unexpected, Unexpected, Unexpected));
++
++        shuttingDown = true;
++
++        Assert.False(policy.IsCurrent(attempt));
++        Assert.False(policy.TryComplete(attempt, TrayContextMenuPresentation.Cloaked,
++            Unexpected, Unexpected, Unexpected, Unexpected));
++    }
++
++    [Theory]
++    [InlineData(true)]
++    [InlineData(false)]
++    public void Presentation_ShutdownDuringFallback_PreventsRemainingSteps(bool shutdownOnClose)
++    {
++        bool shuttingDown = false;
++        var policy = new TrayContextMenuPresentationPolicy(() => !shuttingDown);
++        var calls = new List<string>();
++        long attempt = policy.BeginAttempt();
++
++        Assert.True(policy.TryComplete(attempt, TrayContextMenuPresentation.Cloaked,
++            Unexpected,
++            () => { calls.Add("close"); if (shutdownOnClose) shuttingDown = true; },
++            () => { calls.Add("switch"); shuttingDown = true; },
++            () => calls.Add("native")));
++
++        Assert.Equal(shutdownOnClose ? new[] { "close" } : new[] { "close", "switch" }, calls);
++        Assert.False(policy.TryComplete(attempt, TrayContextMenuPresentation.Cloaked,
++            Unexpected, Unexpected, Unexpected, Unexpected));
++    }
++
+     [Fact]
+     public void ModePolicy_FirstFailure_RequestsHostRebuildInsteadOfDegradation()
      {

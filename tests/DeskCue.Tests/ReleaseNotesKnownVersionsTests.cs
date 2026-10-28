@@ -34,6 +34,14 @@ public sealed class ReleaseNotesKnownVersionsTests
     }
 
     [Fact]
+    public void KnownReleaseVersions_KeepPreviousDeskCueReleaseAfterVersionBump()
+    {
+        Assert.Equal(
+            ["1.5.9.4", "1.5.9.3"],
+            ReleaseNotesService.KnownReleaseVersions.Take(2));
+    }
+
+    [Fact]
     public void KnownReleaseVersions_NewestMatchesCurrentRelease()
     {
         // Appending the new version at release time is a manual step; this

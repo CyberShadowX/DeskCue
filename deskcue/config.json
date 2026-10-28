@@ -7,8 +7,8 @@
   "upstreamCommit": "1fdf0bd9f84affe889318173a7f3141843c79604",
   "upstreamReleaseCommit": "4cae1d4ebb0e416af7d66a764f52f6ccaafdda3a",
   "upstreamVersion": "1.5.9",
-  "brandingRevision": 3,
-  "productVersion": "1.5.9.3",
+  "brandingRevision": 4,
+  "productVersion": "1.5.9.4",
   "packageIdentity": "CyberShadowX.DeskCue",
   "productionInstanceScope": "0F10D29D",
   "forkPatches": [
