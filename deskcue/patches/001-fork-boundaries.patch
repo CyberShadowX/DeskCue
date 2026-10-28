@@ -472,18 +472,30 @@ index d5bef92c..2b783078 100644
              new DeskCueFeedbackMinePayload(ClientId),
              FeedbackJsonContext.Default.FeedbackMinePayload);
 diff --git a/src/DeskCue/Services/ReleaseNotesService.cs b/src/DeskCue/Services/ReleaseNotesService.cs
-index b56c89bb..b9e2f780 100644
+index b56c89bb..452f4a7f 100644
 --- a/src/DeskCue/Services/ReleaseNotesService.cs
 +++ b/src/DeskCue/Services/ReleaseNotesService.cs
-@@ -172,7 +172,7 @@ public sealed class ReleaseNotesService
-     /// </summary>
-     public static readonly IReadOnlyList<string> KnownReleaseVersions =
-     [
--        "1.5.9.4", "1.5.9", "1.5.8", "1.5.7", "1.5.6", "1.5.5", "1.5.4", "1.5.3", "1.5.2",
-+        "1.5.9.4", "1.5.9.3", "1.5.9", "1.5.8", "1.5.7", "1.5.6", "1.5.5", "1.5.4", "1.5.3", "1.5.2",
-         "1.5.1", "1.5.0", "1.4.9", "1.4.8", "1.4.7", "1.4.6", "1.4.3", "1.4.2",
-         "1.4.1", "1.4.0",
-     ];
+@@ -24,6 +24,20 @@ public sealed class ReleaseNotesService
+     private readonly HttpClient _httpClient;
+     private readonly string _cacheRootPath;
+ 
++    static ReleaseNotesService()
++    {
++        KnownReleaseVersions = MergeKnownReleaseVersions(KnownReleaseVersions);
++    }
++
++    /// <summary>Retains published fork history when branding regenerates the current/upstream list.</summary>
++    internal static IReadOnlyList<string> MergeKnownReleaseVersions(
++        IEnumerable<string> currentAndUpstreamVersions) =>
++        currentAndUpstreamVersions
++            .Concat(["1.5.9.4", "1.5.9.3"])
++            .Distinct(StringComparer.Ordinal)
++            .OrderByDescending(version => version, CachedVersionComparer.Instance)
++            .ToArray();
++
+     public ReleaseNotesService(string? cacheRootPath = null, HttpClient? httpClient = null)
+     {
+         _cacheRootPath = string.IsNullOrWhiteSpace(cacheRootPath)
 diff --git a/src/DeskCue/Services/TodoReminderService.cs b/src/DeskCue/Services/TodoReminderService.cs
 index 3f3ffb4e..5d3598be 100644
 --- a/src/DeskCue/Services/TodoReminderService.cs
@@ -2404,19 +2416,34 @@ index 08b87094..690f0e0c 100644
  
      [Fact]
 diff --git a/tests/DeskCue.Tests/ReleaseNotesKnownVersionsTests.cs b/tests/DeskCue.Tests/ReleaseNotesKnownVersionsTests.cs
-index 38cb9ecb..448489c7 100644
+index 38cb9ecb..32406493 100644
 --- a/tests/DeskCue.Tests/ReleaseNotesKnownVersionsTests.cs
 +++ b/tests/DeskCue.Tests/ReleaseNotesKnownVersionsTests.cs
-@@ -33,6 +33,14 @@ public sealed class ReleaseNotesKnownVersionsTests
+@@ -33,6 +33,29 @@ public sealed class ReleaseNotesKnownVersionsTests
          Assert.Contains("1.4.0", ReleaseNotesService.KnownReleaseVersions);
      }
  
 +    [Fact]
-+    public void KnownReleaseVersions_KeepPreviousDeskCueReleaseAfterVersionBump()
++    public void KnownReleaseVersions_KeepPublishedDeskCueHistoryWithCurrentRelease()
 +    {
++        var versions = ReleaseNotesService.KnownReleaseVersions;
++        string current = AppUpdateService.GetCurrentAppVersion();
++
++        Assert.Equal(current, versions[0]);
 +        Assert.Equal(
 +            ["1.5.9.4", "1.5.9.3"],
-+            ReleaseNotesService.KnownReleaseVersions.Take(2));
++            versions.Where(version => version is "1.5.9.4" or "1.5.9.3"));
++    }
++
++    [Fact]
++    public void MergeKnownReleaseVersions_PreservesHistoryForFutureCurrentAndUpstreamRelease()
++    {
++        IReadOnlyList<string> versions = ReleaseNotesService.MergeKnownReleaseVersions(
++            ["1.5.10", "1.5.10.1", "1.4.0", "1.5.10.1"]);
++
++        Assert.Equal(
++            ["1.5.10.1", "1.5.10", "1.5.9.4", "1.5.9.3", "1.4.0"],
++            versions);
 +    }
 +
      [Fact]

@@ -24,6 +24,20 @@ public sealed class ReleaseNotesService
     private readonly HttpClient _httpClient;
     private readonly string _cacheRootPath;
 
+    static ReleaseNotesService()
+    {
+        KnownReleaseVersions = MergeKnownReleaseVersions(KnownReleaseVersions);
+    }
+
+    /// <summary>Retains published fork history when branding regenerates the current/upstream list.</summary>
+    internal static IReadOnlyList<string> MergeKnownReleaseVersions(
+        IEnumerable<string> currentAndUpstreamVersions) =>
+        currentAndUpstreamVersions
+            .Concat(["1.5.9.4", "1.5.9.3"])
+            .Distinct(StringComparer.Ordinal)
+            .OrderByDescending(version => version, CachedVersionComparer.Instance)
+            .ToArray();
+
     public ReleaseNotesService(string? cacheRootPath = null, HttpClient? httpClient = null)
     {
         _cacheRootPath = string.IsNullOrWhiteSpace(cacheRootPath)
@@ -172,7 +186,7 @@ public sealed class ReleaseNotesService
     /// </summary>
     public static readonly IReadOnlyList<string> KnownReleaseVersions =
     [
-        "1.5.9.4", "1.5.9.3", "1.5.9", "1.5.8", "1.5.7", "1.5.6", "1.5.5", "1.5.4", "1.5.3", "1.5.2",
+        "1.5.9.4", "1.5.9", "1.5.8", "1.5.7", "1.5.6", "1.5.5", "1.5.4", "1.5.3", "1.5.2",
         "1.5.1", "1.5.0", "1.4.9", "1.4.8", "1.4.7", "1.4.6", "1.4.3", "1.4.2",
         "1.4.1", "1.4.0",
     ];

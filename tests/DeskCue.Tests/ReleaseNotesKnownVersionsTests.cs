@@ -34,11 +34,26 @@ public sealed class ReleaseNotesKnownVersionsTests
     }
 
     [Fact]
-    public void KnownReleaseVersions_KeepPreviousDeskCueReleaseAfterVersionBump()
+    public void KnownReleaseVersions_KeepPublishedDeskCueHistoryWithCurrentRelease()
     {
+        var versions = ReleaseNotesService.KnownReleaseVersions;
+        string current = AppUpdateService.GetCurrentAppVersion();
+
+        Assert.Equal(current, versions[0]);
         Assert.Equal(
             ["1.5.9.4", "1.5.9.3"],
-            ReleaseNotesService.KnownReleaseVersions.Take(2));
+            versions.Where(version => version is "1.5.9.4" or "1.5.9.3"));
+    }
+
+    [Fact]
+    public void MergeKnownReleaseVersions_PreservesHistoryForFutureCurrentAndUpstreamRelease()
+    {
+        IReadOnlyList<string> versions = ReleaseNotesService.MergeKnownReleaseVersions(
+            ["1.5.10", "1.5.10.1", "1.4.0", "1.5.10.1"]);
+
+        Assert.Equal(
+            ["1.5.10.1", "1.5.10", "1.5.9.4", "1.5.9.3", "1.4.0"],
+            versions);
     }
 
     [Fact]
