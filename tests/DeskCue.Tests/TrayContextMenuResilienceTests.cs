@@ -14,7 +14,7 @@ public sealed class TrayContextMenuResilienceTests
     [Fact]
     public void Presentation_ObservedShellCloak_ClosesBeforeSwitchingAndShowsNativeOnce()
     {
-        var policy = new TrayContextMenuPresentationPolicy();
+        var policy = new TrayContextMenuPresentationPolicy(static () => true);
         var calls = new List<string>();
         long attempt = policy.BeginAttempt();
         bool nativeMode = false;
@@ -51,7 +51,7 @@ public sealed class TrayContextMenuResilienceTests
     [Fact]
     public void Presentation_HealthyHost_PreservesSecondWindowAndRecordsSuccess()
     {
-        var policy = new TrayContextMenuPresentationPolicy();
+        var policy = new TrayContextMenuPresentationPolicy(static () => true);
         long attempt = policy.BeginAttempt();
         int successes = 0;
         Assert.True(policy.TryComplete(attempt, TrayContextMenuPresentation.Visible,
@@ -62,7 +62,7 @@ public sealed class TrayContextMenuResilienceTests
     [Fact]
     public void Presentation_UnavailableEvidence_DoesNotFallBackOrRecordSuccess()
     {
-        var policy = new TrayContextMenuPresentationPolicy();
+        var policy = new TrayContextMenuPresentationPolicy(static () => true);
         long attempt = policy.BeginAttempt();
         Assert.False(policy.TryComplete(attempt, TrayContextMenuPresentation.Unknown,
             Unexpected, Unexpected, Unexpected, Unexpected));
@@ -74,7 +74,7 @@ public sealed class TrayContextMenuResilienceTests
     [Fact]
     public void Presentation_DismissedOrSupersededAttempt_CannotOpenALateNativeMenu()
     {
-        var policy = new TrayContextMenuPresentationPolicy();
+        var policy = new TrayContextMenuPresentationPolicy(static () => true);
         long first = policy.BeginAttempt();
         long second = policy.BeginAttempt();
         Assert.False(policy.TryComplete(first, TrayContextMenuPresentation.Cloaked,
@@ -85,6 +85,61 @@ public sealed class TrayContextMenuResilienceTests
     }
 
     private static void Unexpected() => Assert.Fail("Unexpected presentation action.");
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Presentation_ShutdownBeforeDeferredProbe_PreventsAllPresentationActions(bool cloaked)
+    {
+        bool shuttingDown = false;
+        var policy = new TrayContextMenuPresentationPolicy(() => !shuttingDown);
+        long attempt = policy.BeginAttempt();
+        Assert.True(policy.IsCurrent(attempt));
+
+        shuttingDown = true;
+
+        Assert.False(policy.IsCurrent(attempt));
+        Assert.False(policy.TryComplete(attempt,
+            cloaked ? TrayContextMenuPresentation.Cloaked : TrayContextMenuPresentation.Visible,
+            Unexpected, Unexpected, Unexpected, Unexpected));
+    }
+
+    [Fact]
+    public void Presentation_ShutdownBetweenUnknownProbes_PreventsTheNextProbe()
+    {
+        bool shuttingDown = false;
+        var policy = new TrayContextMenuPresentationPolicy(() => !shuttingDown);
+        long attempt = policy.BeginAttempt();
+        Assert.False(policy.TryComplete(attempt, TrayContextMenuPresentation.Unknown,
+            Unexpected, Unexpected, Unexpected, Unexpected));
+
+        shuttingDown = true;
+
+        Assert.False(policy.IsCurrent(attempt));
+        Assert.False(policy.TryComplete(attempt, TrayContextMenuPresentation.Cloaked,
+            Unexpected, Unexpected, Unexpected, Unexpected));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Presentation_ShutdownDuringFallback_PreventsRemainingSteps(bool shutdownOnClose)
+    {
+        bool shuttingDown = false;
+        var policy = new TrayContextMenuPresentationPolicy(() => !shuttingDown);
+        var calls = new List<string>();
+        long attempt = policy.BeginAttempt();
+
+        Assert.True(policy.TryComplete(attempt, TrayContextMenuPresentation.Cloaked,
+            Unexpected,
+            () => { calls.Add("close"); if (shutdownOnClose) shuttingDown = true; },
+            () => { calls.Add("switch"); shuttingDown = true; },
+            () => calls.Add("native")));
+
+        Assert.Equal(shutdownOnClose ? new[] { "close" } : new[] { "close", "switch" }, calls);
+        Assert.False(policy.TryComplete(attempt, TrayContextMenuPresentation.Cloaked,
+            Unexpected, Unexpected, Unexpected, Unexpected));
+    }
 
     [Fact]
     public void ModePolicy_FirstFailure_RequestsHostRebuildInsteadOfDegradation()

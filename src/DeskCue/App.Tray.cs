@@ -626,7 +626,8 @@ public partial class App
     }
 
     private readonly TrayContextMenuModePolicy _trayContextMenuModePolicy = new();
-    private readonly TrayContextMenuPresentationPolicy _trayContextMenuPresentationPolicy = new();
+    private readonly TrayContextMenuPresentationPolicy _trayContextMenuPresentationPolicy =
+        new(static () => !IsShuttingDown);
 
     /// <summary>Suppresses a second deferred menu open while the first is
     /// still landing or blocking inside TrackPopupMenuEx's modal loop (the
@@ -847,7 +848,7 @@ public partial class App
 
     private void ShowTrayContextMenuInNativeMode(DrawingPoint point)
     {
-        if (_trayIcon is not { } trayIcon)
+        if (IsShuttingDown || _trayIcon is not { } trayIcon)
         {
             return;
         }

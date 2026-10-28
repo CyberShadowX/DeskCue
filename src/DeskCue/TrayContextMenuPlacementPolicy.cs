@@ -51,8 +51,14 @@ internal enum TrayContextMenuPresentation
 /// <summary>One presentation decision for each actual menu-open attempt.</summary>
 internal sealed class TrayContextMenuPresentationPolicy
 {
+    private readonly Func<bool> _canPresent;
     private long _attempt;
     private bool _completed;
+
+    internal TrayContextMenuPresentationPolicy(Func<bool> canPresent)
+    {
+        _canPresent = canPresent;
+    }
 
     internal long BeginAttempt()
     {
@@ -60,7 +66,7 @@ internal sealed class TrayContextMenuPresentationPolicy
         return ++_attempt;
     }
 
-    internal bool IsCurrent(long attempt) => attempt == _attempt && !_completed;
+    internal bool IsCurrent(long attempt) => attempt == _attempt && !_completed && _canPresent();
 
     internal void Cancel(long attempt)
     {
@@ -96,7 +102,20 @@ internal sealed class TrayContextMenuPresentationPolicy
             // H.NotifyIcon chooses which host to close using the current mode.
             // Closing after the switch would leave its SecondWindow alive.
             closeSecondWindow();
+            // Close/DependencyProperty callbacks can synchronously begin app
+            // shutdown or supersede this attempt. Recheck after each step;
+            // the original probe's liveness no longer establishes permission.
+            if (attempt != _attempt || !_canPresent())
+            {
+                return true;
+            }
+
             switchToNative();
+            if (attempt != _attempt || !_canPresent())
+            {
+                return true;
+            }
+
             showNative();
         }
         else
