@@ -4,6 +4,41 @@ Plan: docs/superpowers/plans/2026-10-27-deskcue-upstream-adoption.md
 
 ## Current authoritative checkpoint (2026-10-28): candidate1.5.9.3
 
+- Product source b05395c1f8a433391dbf30df6e5af46de1ec1cbe is published asv1.5.9.3.
+  Main actuallocalPublish runr-38a424ccb8544121 PASS5859C#+108helpers=5967/0/0,
+  full394-fileAOT/offlineinstaller. ActualCI40553510130 PASS5859/0/0;
+  actualdelivery40553514453 all4jobsSUCCESS, eachnative5967/0/0, payload394/390.
+  All9publicassetbytes/digests/frozeninventory/source/packages verified.
+- Controller GUI smoke launcher used Debug-only DEV_DATA_ROOT in retailAOT;
+  effectiveprofile was defaultLocalAppData, so its isolation claim is withdrawn.
+  Correct variable is DESKCUE_AOT_PREVIEW_DATA_ROOT. RealAbout/ownupdate/latest/
+  secondlaunch0 observed, but unintendednewvalidRun/newdefaultprofile/recovery
+  required guarded recovery. User later explicitly authorized force-exit of
+  stucktest44068; Controller checked exactPID/path/start/hash and ended only it.
+  DeskBox45252 untouched. Correctedrestore1F23E01F...EB1E4F70 passed9Fsynthetic
+  cases and independentreview0C0I0M; main freshclearPlan and actualExecute
+  archived/hash-verified6currentfiles before deleting6files/4emptydirs;1known
+  leaf alreadyabsent separatelyrecorded. ExactincidentRun removed;7oldfiles,
+  profileparents and unrelatedRun fingerprints preserved. RawpriorRun baseline
+  unknown, no OSatomicity claim. Private restore receipt977B17A9...EF0FC0D.
+- CorrectAOT_PREVIEW/Fmanaged-root run52264: effectiveFfiles/log/ledger proven;
+  actualAbout1.5.9.3/ownfeedcurrent/updatebuttonstates/secondlaunch52924exit0
+  passed. OS-injectedrightclick on actualShellDeskCueicon displayed menu;
+  visibleExit Invoke completed normalshutdown and actualPIDabsence09:00:30Z.
+  NormalExit code unavailable/null, not asserted0. Defaultprofile/allRunvalues/
+  Box identity matched afterlaunch/exit. EarlierUIArootchild helper missed
+  flyout, fixedtesthelper uses exactPID-ownedHWNDs; productunchanged. Earlier
+  usertrayfailure rootcause unknown/notreproduced here; no productfix claim.
+  Evidence runtime-v3-isolated/controller-verification-summary.json.
+- Main freshmanagement108/108PASS0fail/skip; EXE/installer hashes unchanged,
+  product5trees unchangedb053. Actualscheduled40593240955/40639466001 success;
+  lattertestedhelpers/detectednopendingstable and skippedbuild/deliver asdesigned.
+  Fresh final independent review PASS0Critical/0Important/0remainingMinor;
+  architecturewording Minor corrected and re-reviewed. Manualplatform/installed
+  upgrade limits remain. No privateprofiles/logs/archive uploaded.
+
+## Historical revision3 preparation (superseded by checkpoint above)
+
 - Rev2 source6b6195c2 passed local5935/0/0 (5827C#+108helpers), full394-file
   NativeAOT/offlineinstaller; actualCI40536288571 passed5827/0/0. Delivery40536288591
   x64passed5935/fullAOT/installer; ARM4315PASS then nativehang, no release/tag/feed.
