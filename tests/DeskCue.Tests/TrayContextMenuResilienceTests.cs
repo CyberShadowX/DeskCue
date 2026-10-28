@@ -12,6 +12,81 @@ namespace DeskCue.Tests;
 public sealed class TrayContextMenuResilienceTests
 {
     [Fact]
+    public void Presentation_ObservedShellCloak_ClosesBeforeSwitchingAndShowsNativeOnce()
+    {
+        var policy = new TrayContextMenuPresentationPolicy();
+        var calls = new List<string>();
+        long attempt = policy.BeginAttempt();
+        bool nativeMode = false;
+        int commands = 0;
+        var interaction = new TrayMenuInteractionGate(_ => { });
+
+        void CloseSecondWindow()
+        {
+            Assert.False(nativeMode);
+            calls.Add("close");
+        }
+        void SwitchToNative()
+        {
+            nativeMode = true;
+            calls.Add("switch");
+        }
+        void ShowNative()
+        {
+            Assert.True(nativeMode);
+            calls.Add("native");
+            if (interaction.TryEnter()) commands++;
+            if (interaction.TryEnter()) commands++;
+        }
+
+        Assert.True(policy.TryComplete(attempt, TrayContextMenuPresentation.Cloaked,
+            () => calls.Add("success"), CloseSecondWindow, SwitchToNative, ShowNative));
+        Assert.False(policy.TryComplete(attempt, TrayContextMenuPresentation.Cloaked,
+            () => calls.Add("success"), CloseSecondWindow, SwitchToNative, ShowNative));
+
+        Assert.Equal(new[] { "close", "switch", "native" }, calls);
+        Assert.Equal(1, commands);
+    }
+
+    [Fact]
+    public void Presentation_HealthyHost_PreservesSecondWindowAndRecordsSuccess()
+    {
+        var policy = new TrayContextMenuPresentationPolicy();
+        long attempt = policy.BeginAttempt();
+        int successes = 0;
+        Assert.True(policy.TryComplete(attempt, TrayContextMenuPresentation.Visible,
+            () => successes++, Unexpected, Unexpected, Unexpected));
+        Assert.Equal(1, successes);
+    }
+
+    [Fact]
+    public void Presentation_UnavailableEvidence_DoesNotFallBackOrRecordSuccess()
+    {
+        var policy = new TrayContextMenuPresentationPolicy();
+        long attempt = policy.BeginAttempt();
+        Assert.False(policy.TryComplete(attempt, TrayContextMenuPresentation.Unknown,
+            Unexpected, Unexpected, Unexpected, Unexpected));
+        Assert.True(policy.IsCurrent(attempt));
+        Assert.True(policy.TryComplete(attempt, TrayContextMenuPresentation.Visible,
+            () => { }, Unexpected, Unexpected, Unexpected));
+    }
+
+    [Fact]
+    public void Presentation_DismissedOrSupersededAttempt_CannotOpenALateNativeMenu()
+    {
+        var policy = new TrayContextMenuPresentationPolicy();
+        long first = policy.BeginAttempt();
+        long second = policy.BeginAttempt();
+        Assert.False(policy.TryComplete(first, TrayContextMenuPresentation.Cloaked,
+            Unexpected, Unexpected, Unexpected, Unexpected));
+        policy.Cancel(second);
+        Assert.False(policy.TryComplete(second, TrayContextMenuPresentation.Cloaked,
+            Unexpected, Unexpected, Unexpected, Unexpected));
+    }
+
+    private static void Unexpected() => Assert.Fail("Unexpected presentation action.");
+
+    [Fact]
     public void ModePolicy_FirstFailure_RequestsHostRebuildInsteadOfDegradation()
     {
         var policy = new TrayContextMenuModePolicy();

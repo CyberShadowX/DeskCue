@@ -626,6 +626,7 @@ public partial class App
     }
 
     private readonly TrayContextMenuModePolicy _trayContextMenuModePolicy = new();
+    private readonly TrayContextMenuPresentationPolicy _trayContextMenuPresentationPolicy = new();
 
     /// <summary>Suppresses a second deferred menu open while the first is
     /// still landing or blocking inside TrackPopupMenuEx's modal loop (the
@@ -708,8 +709,9 @@ public partial class App
 
         try
         {
+            long attempt = _trayContextMenuPresentationPolicy.BeginAttempt();
             trayIcon.ShowContextMenu(point);
-            _trayContextMenuModePolicy.RecordSuccess();
+            SafeFireAndForget(() => VerifyTrayContextMenuPresentationAsync(trayIcon, point, attempt));
         }
         catch (Exception ex) when (IsSecondWindowHostFailure(ex))
         {
@@ -720,6 +722,117 @@ public partial class App
         {
             Log($"[Tray] Failed to show tray context menu: {ex}");
         }
+    }
+
+    private async Task VerifyTrayContextMenuPresentationAsync(
+        TaskbarIcon expectedIcon,
+        DrawingPoint point,
+        long attempt)
+    {
+        // ShowAt/Loaded can complete on a later dispatcher turn. Never inspect
+        // the hidden prewarm host, or count a returned ShowContextMenu as proof
+        // that DWM actually presents it. These checks are bounded to this open.
+        await Task.Yield();
+        try
+        {
+            for (int probe = 0; probe < 3; probe++)
+            {
+                if (probe > 0)
+                {
+                    await Task.Delay(75);
+                }
+
+                if (!ReferenceEquals(_trayIcon, expectedIcon) ||
+                    _trayContextMenuModePolicy.IsDegradedToPopupMenu ||
+                    !_trayContextMenuPresentationPolicy.IsCurrent(attempt))
+                {
+                    return;
+                }
+
+                TrayContextMenuPresentation presentation = GetTrayContextMenuPresentation();
+                if (presentation == TrayContextMenuPresentation.Unknown)
+                {
+                    continue;
+                }
+
+                bool nativeFallback = presentation == TrayContextMenuPresentation.Cloaked;
+                if (nativeFallback)
+                {
+                    // TrackPopupMenuEx pumps this dispatcher. Keep the same
+                    // bounded modal reentry guard as the ordinary open path.
+                    if (Environment.TickCount64 < _trayContextMenuReentrySuppressedUntilTick)
+                    {
+                        return;
+                    }
+
+                    _trayContextMenuReentrySuppressedUntilTick = Environment.TickCount64 + 30_000;
+                }
+
+                try
+                {
+                    _trayContextMenuPresentationPolicy.TryComplete(
+                        attempt,
+                        presentation,
+                        () => { _trayContextMenuModePolicy.RecordSuccess(); },
+                        () => expectedIcon.CloseContextMenu(),
+                        () =>
+                        {
+                            _trayContextMenuModePolicy.RecordUnusablePresentation();
+                            Log("[Tray] Visible SecondWindow menu host is DWM-cloaked; using native PopupMenu");
+                            SetTrayContextMenuNativeMode(expectedIcon);
+                        },
+                        () => ShowTrayContextMenuInNativeMode(point));
+                }
+                finally
+                {
+                    if (nativeFallback)
+                    {
+                        _trayContextMenuReentrySuppressedUntilTick = 0;
+                    }
+                }
+
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"[Tray] Failed to verify tray context menu presentation: {ex.Message}");
+        }
+        finally
+        {
+            _trayContextMenuPresentationPolicy.Cancel(attempt);
+        }
+    }
+
+    private TrayContextMenuPresentation GetTrayContextMenuPresentation()
+    {
+        if (_trayOrganizeDesktopItem is not { IsLoaded: true } anchorItem ||
+            FindVisualAncestor<MenuFlyoutPresenter>(anchorItem) is not { } presenter ||
+            presenter.XamlRoot is not { } xamlRoot)
+        {
+            return TrayContextMenuPresentation.Unknown;
+        }
+
+        // Items are shared with H.NotifyIcon's generated flyout. An owning
+        // open popup establishes that this is the current shown menu, not its
+        // prewarm host or an already dismissed menu from an earlier probe.
+        bool menuOpen = false;
+        foreach (Popup popup in VisualTreeHelper.GetOpenPopupsForXamlRoot(xamlRoot))
+        {
+            if (popup.IsOpen && popup.Child is not null && ContainsVisual(popup.Child, presenter))
+            {
+                menuOpen = true;
+                break;
+            }
+        }
+
+        if (!menuOpen || xamlRoot.ContentIslandEnvironment is not { } environment)
+        {
+            return TrayContextMenuPresentation.Unknown;
+        }
+
+        var host = Microsoft.UI.Win32Interop.GetWindowFromWindowId(environment.AppWindowId);
+        return Win32Helper.GetOwnedTrayMenuPresentation(host);
     }
 
     private static bool IsSecondWindowHostFailure(Exception exception)
@@ -785,8 +898,9 @@ public partial class App
 
         try
         {
+            long attempt = _trayContextMenuPresentationPolicy.BeginAttempt();
             trayIcon.ShowContextMenu(point);
-            _trayContextMenuModePolicy.RecordSuccess();
+            SafeFireAndForget(() => VerifyTrayContextMenuPresentationAsync(trayIcon, point, attempt));
         }
         catch (Exception ex) when (IsSecondWindowHostFailure(ex))
         {
@@ -817,6 +931,12 @@ public partial class App
 
     private void SwitchTrayContextMenuToNativeMode(TaskbarIcon trayIcon)
     {
+        trayIcon.CloseContextMenu();
+        SetTrayContextMenuNativeMode(trayIcon);
+    }
+
+    private void SetTrayContextMenuNativeMode(TaskbarIcon trayIcon)
+    {
         trayIcon.ContextMenuMode = ContextMenuMode.PopupMenu;
         Log("[Tray] Tray context menu degraded to native PopupMenu mode (SecondWindow host failed to initialize)");
     }
@@ -836,7 +956,12 @@ public partial class App
     {
         if (TryGetTrayIconIdentity(out var trayIconWindowHandle, out var trayIconId) &&
             Win32Helper.TryGetNotifyIconRect(trayIconWindowHandle, trayIconId, out var iconRect) &&
-            IsUsableTrayIconRect(iconRect))
+            Win32Helper.TryGetMonitorWorkArea(fallbackPoint.X, fallbackPoint.Y, out var originatingMonitor, out _) &&
+            TrayContextMenuPlacementPolicy.CanUseShellIconRect(
+                iconRect,
+                fallbackPoint,
+                originatingMonitor,
+                Win32Helper.GetDpiScaleForPoint(fallbackPoint.X, fallbackPoint.Y)))
         {
             return GetTrayContextMenuAnchorPointFromIconRect(iconRect, fallbackPoint);
         }
@@ -951,11 +1076,6 @@ public partial class App
         }
 
         return ClampPointToRect(new DrawingPoint(x, y), monitor);
-    }
-
-    private static bool IsUsableTrayIconRect(Win32Helper.RECT rect)
-    {
-        return rect.Right > rect.Left && rect.Bottom > rect.Top;
     }
 
     private static TaskbarEdge GetNearestTaskbarEdge(
@@ -1544,6 +1664,12 @@ internal sealed class TrayContextMenuModePolicy
     internal int ConsecutiveSecondWindowFailures => _consecutiveSecondWindowFailures;
 
     internal bool IsDegradedToPopupMenu => _degradedToPopupMenu;
+
+    internal void RecordUnusablePresentation()
+    {
+        _consecutiveSecondWindowFailures++;
+        _degradedToPopupMenu = true;
+    }
 
     /// <summary>Resets the failure count after a successful open. Degradation
     /// itself is terminal for the session.</summary>
