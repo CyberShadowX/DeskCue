@@ -2,7 +2,40 @@
 
 Plan: docs/superpowers/plans/2026-10-27-deskcue-upstream-adoption.md
 
-## Current authoritative checkpoint (2026-10-28): candidate1.5.9.3
+## Current authoritative checkpoint (2026-10-28): published1.5.9.4
+
+- Product/tag8472699a23166a179ae36bbab08b26eb288bc417, revision4; actual top-Finder
+  failure reproduced on1593(cloaked2/offscreen), repaired through click-origin
+  validation and bounded positive-DWM recovery to nativePopupMenu. Shutdown
+  race review Important fixed/re-reviewed0C/0I/0M. No third-party process change.
+- Version-independent release-history patch/test review Important fixed;
+  complete164663-byte patch e701d684...65cf215 exactly replays1700 product
+  entries over BASE4eec0a5e8. SAME patch applies over private futureBASE5;
+  future5 neverpublished. Identities/upstream/toolpins unchanged.
+- Controller actualsharedPublishr-797b5b2816d04aef PASS5885C#+108=5993/0/0,
+  FullNativeAOT394/offlineinstaller/harnessfalse. Fresh actualTRX5885records
+  allPassed;394current+394previous/frozenhashes andbothinstallers verified.
+- CI40682608024 SUCCESS5885/0/0. Delivery40682612368 all4jobsSUCCESS; each
+  native5993/0/0,394x64/390ARM64. Publiclatest/tagv1.5.9.4/release426624916,
+  published12:13:11Z. All9publicbytes/API/delivery/frozen/source/receipts/
+  checksums/feed verified; Controller independently fetchedlatest/tag/stable
+  andrehashcheckedall9. NativeTRX/payload inventory limits remain explicit.
+- Retail43992/Froot: actualOSFinder rightclick→native12rows/8commandsDWM0,
+  fullworkarea/allrowhitproof; physicalSettings→ownedvisibleSettings;
+  About1594/secondary21844exit0; physicalFinderExit→exit0/absence, noforcekill.
+  Known8Cprofilefiles/Run andDeskBox45252/Dock4816identities preserved forGUI.
+- ExistingRelease tests appended/rotated defaultCApp.Log beforefixedGUI.
+  Original5227490logbytes preservedasprefix in.log.1, hashd0e8ead6...9c1b3f;
+  allnonloghashes unchanged. No whole-test-period C-untouched claim. Logsprivate.
+- Extra1608/Froot: Shellrightclickworked/full12/8DWM0, but3commands physically
+  coveredbyrunningDock; nativeWindowsPARTIAL, nofullclickPASSclaim. Public
+  JumpList--open-settings secondary3312exit0 openedSettings; actualupdatebutton
+  disabledwhilechecking thenenabled/latest1594. Afteruserpausedmouse, fresh
+  physicalFinderExit→exit0/noCue/clean-exitledger12:35:03Z. All8Cfiles/allRun/
+  originalBoxandFinderidentitypreserved. Fresh final independentreviewPASS
+  0C/0I/0M; Mainadditional108helpers/UTF8/docslinksPASS, product5treesunchanged.
+
+## Historical revision3 checkpoint
 
 - Product source b05395c1f8a433391dbf30df6e5af46de1ec1cbe is published asv1.5.9.3.
   Main actuallocalPublish runr-38a424ccb8544121 PASS5859C#+108helpers=5967/0/0,

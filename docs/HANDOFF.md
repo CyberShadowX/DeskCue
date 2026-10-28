@@ -1,18 +1,170 @@
 # DeskCue migration handoff
 
-## Current checkpoint (2026-10-28)
+## Current checkpoint (2026-10-28): revision4
 
-The main workspace is now the complete DeskBox-based DeskCue fork:
-`F:/AI/AIProjects/DeskCue`, branch `main`, own origin `CyberShadowX/DeskCue`.
-Version **1.5.9.3**, branding revision3, has completed local retail publication
-and native x64/ARM64 cloud publication. Product source is
-`b05395c1f8a433391dbf30df6e5af46de1ec1cbe`. The incorrectly isolated GUI smoke
-has been recovered, and a correctly isolated repeat passed About, own-feed
-update, single-instance, actual Shell-icon right-click and normal tray Exit.
-Fresh final independent review passed0Critical/0Important/0remainingMinor;
-the earlier intermittent tray symptom is not claimed fixed.
+The complete DeskBox-based fork remains at `F:/AI/AIProjects/DeskCue`, branch
+`main`, own origin `CyberShadowX/DeskCue`. Version **1.5.9.4**, branding revision4,
+is published locally and on GitHub for native x64/ARM64. Product source/tag is
+`8472699a23166a179ae36bbab08b26eb288bc417`.
 
-## Verified revision3 release
+The actual MyDockFinder top-Finder failure was reproduced and repaired. Real OS
+mouse input verified a visible usable menu, Settings and normal Exit. The
+separately installed DeskBox and MyDockFinder were not closed or changed.
+The update button was subsequently invoked in the actual retail app: checking
+disabled the button, then own-feed1.5.9.4/latest re-enabled it.
+
+Native Windows Shell entry was also checked under the running bottom Dock:
+the callback and complete uncloaked menu worked, but Dock covered three command
+centers. This is a PARTIAL check, not full physical Windows-tray acceptance.
+The extra update-test instance also exited normally through the actual top
+Finder menu. Post-teardown known profile/startup/process preservation checks
+passed. Fresh final independent review passed0Critical/0Important/0Minor;
+Controller's additional108 helper checks and docs checks also passed. Later
+documentation commits do not change the frozen published product source847.
+
+## Revision4 local build and source verification
+
+The user clarified that the failing entry was MyDockFinder's top Finder tray,
+then explicitly instructed the Controller to proceed. Revision3's earlier
+Shell/UIA check did not measure compositor visibility or accept the Finder path.
+
+Actual revision3 Finder input reached the callback, but the WinUI host was
+DWM-cloaked2 and the popup extended above the monitor. Revision4 validates the
+captured click against the Shell icon rectangle and originating monitor, then
+checks the loaded host through public XamlRoot/AppWindow APIs. A positively
+cloaked host switches to the existing native PopupMenu. Unknown evidence keeps
+the existing mode; MyDockFinder's presence alone does not force a fallback.
+Recovery is bounded, generation-scoped and suppressed during shutdown.
+
+- Source review blocked a deferred-menu/shutdown race; the fix and re-review
+  passed0Critical/0Important/0Minor. Metadata review blocked version-pinned
+  patch/history tests; the final additive history merge is independent of the
+  next mechanical version and also passed0C/0I/0M.
+- Source tree `e27d0f37d8a27d3cef55e3b48387bf8930516b29`; upstream remains
+  `1fdf0bd9f84affe889318173a7f3141843c79604`. Identities, toolchain pins,
+  GPL/attribution and native third-party inputs are unchanged.
+- Mechanical BASE4 `eec0a5e83017d6f3b5d4106ff4a6a08687144485`; complete patch
+  164663bytes SHA256
+  `e701d68457d6e72c11c815f224ccc532fcdb32a8082429cb6700f33d265cf215`.
+  Actual replay matches all1700 indexed entries across five product trees. The
+  SAME patch checked/applied over private mechanical revision5, which was never
+  published. Arbitrary future upstream conflicts remain a delivery boundary.
+- Controller ran the authoritative local publisher on the clean frozen source:
+  `r-797b5b2816d04aef`,5885 C# plus108 helpers=5993passed,0fail/skip.
+  FullNativeAOT/offline x64 payload394files, smoke harness false. Controller
+  independently parsed5885 raw TRX records and checked394 current plus394
+  preserved previous runtime files against their corresponding frozen payloads,
+  and both installer hashes. No bare retail publish was used.
+- Local EXE SHA256
+  `248e95c3b0862f3aae8be89edfa53a8f0600e883c62ae360f09a6c712a1ef409`;
+  local x64 installer33717764bytes SHA256
+  `80a177b4a03a5340dd78467a44c1d91d9809f0a605de4754e632f2c90528223d`.
+
+## Revision4 actual cloud publication
+
+- CI40682608024 succeeded; the downloaded original TRX contains5885Passed,
+  0fail/skip. Delivery40682612368 completed candidate122796861597,
+  x64122798246548, ARM64122798246484 and deliver122807960501 successfully.
+  Each native job passed5993/0/0, with394x64/390ARM64 payload files and smoke
+  harness false. SDK10.0.402/Rust1.96.0/Inno6.7.1; ARM64 was built on ARM64.
+- Public [v1.5.9.4](https://github.com/CyberShadowX/DeskCue/releases/tag/v1.5.9.4),
+  release426624916, published2026-10-28T12:13:11Z, stable/latest and direct tag
+  at847 above. All9 public asset bytes match GitHub API digests and delivery
+  output. Source bundle, both installers/receipts/checksum sidecars, all7 checksum
+  records and frozen archive restoration/inventory were verified.
+- Public x64 installer33931089bytes SHA256
+  `3d6028ac04a90cbe59a179d8ead55d6c45537c83a6335a353866d00574e56a29`;
+  ARM64 installer33139481bytes SHA256
+  `77774a4db9285945806bc9919054b4a2ca15baf5141f887c5a2da629493580e4`.
+- Source bundle149800832bytes SHA256
+  `542f7792d8108ab037a43924ca67763bdaaeeba6fbd29cce97b3ce1fadbb52d2`;
+  frozen ZIP216877736bytes SHA256
+  `adab20347b566f893a4fde61a1af25be260b8ac0929800d693099e5ed96522ed`.
+  Controller separately fetched latest/tag and stable.json, checked the stable
+  download against its API digest and rehashed all9 actual public files against
+  that fresh API response. Local Inno6.7.3 and cloud6.7.1 hashes are distinct;
+  there is no bit-for-bit local/cloud reproducibility claim.
+
+Private evidence: `.artifacts/finder-tray-fix/controller-v4-local-final.json`,
+`controller-public/verification.json`, `cloud-v4/verification-summary.json`,
+`native-verification.json`, `ci-trx-verification.json` and original logs/assets.
+Successful native jobs do not upload original native TRX, retail summaries or
+full payload inventories: native counts/completion are evidenced by complete
+raw logs, enforced contracts and downloaded receipts. CI and local original TRX
+were directly parsed. No private profiles or diagnostic logs were uploaded.
+
+## Revision4 actual GUI acceptance and limits
+
+FullNativeAOT43992 used explicit F AOT-preview data and managed roots, with
+startup, organization, backup, hooks and notifications disabled in the fixture.
+Actual top-Finder right-click produced DWM0; all12 native entries including4
+separators were read, all8 command centers hit43992 and the complete menu fit
+the clicked monitor work area. Physical Settings opened a unique owned visible
+uncloaked Settings window. About rendered1.5.9.4. Secondary21844 exited0 while
+the primary remained. A fresh actual Finder right-click and physical Exit
+normally ended43992 with exit0/no remaining DeskCue/forceKillfalse.
+
+Evidence: `fixed-finder-settings-2-action.json`, `fixed-finder-exit-1-action.json`,
+their input records and actual CopyFromScreen PNGs,
+`fixed-evidence/single-instance.json`, `.artifacts/finder-tray-fix-settings/`.
+Private helper pre-use review closed an incomplete-native-enumeration/UIA
+fallback finding; final helper90088...773A passed0C/0I/0M. UIA visibility or
+PrintWindow alone is not accepted as physical Finder accessibility.
+
+The additional1608 process used a new `windows-data` F fixture. Actual generated
+F settings/layout/log/startup-ledger and disabled action flags were checked;
+the initial launch record's unverified flag is retained, with separate proof in
+`windows-evidence/effective-root.json`. The native Windows Shell DeskCue button
+was identified through unique Explorer UIA identity. An initial helper guard
+correctly sent no input when FromPoint exposed only the containing Shell pane;
+an exact host-HWND/runtime/class/DWM guard was reviewed before retry.
+
+The retry delivered a real Shell-icon right-click: complete12/8 native menu,
+DWM0 and full work-area bounds. Five command centers hit1608, but three bottom
+commands hit MyDockFinder4816, so physical Settings/Exit clicks were blocked.
+`windows-shell-settings-2-action.json` remains PARTIAL, not PASS. Subsequent
+pointer/hover guards also stopped on changing or occluded targets. MyDockFinder
+was not hidden/stopped to manufacture acceptance. A later stale-coordinate
+screen crop is not owned-current-menu proof and is excluded from acceptance.
+
+The existing public `--open-settings` JumpList activation then opened Settings
+without global mouse input: secondary3312 exited0, primary1608 retained. UIA
+selected About and invoked the actual OneClickUpdateButton. The captured state
+was checking/button-disabled, followed by latest/button-enabled and1.5.9.4.
+Evidence: `windows-evidence/open-settings-jumplist.json` and
+`.artifacts/finder-tray-v4-update-{ready,invoked,completed}/windows.json`.
+This accepts update-button behavior, not an installer execution or Windows
+Shell physical click. After the user paused mouse activity, a freshly verified
+DeskCue Finder tooltip and the reviewed fixture wrapper produced another fully
+accessible8-command native menu. Physical Exit normally ended1608 with exit0,
+no remaining DeskCue and a clean-exit ledger at2026-10-28T12:35:03Z. All8 known
+default-C files/all Run fingerprints and original DeskBox45252/Dock4816 exact
+path/start identities matched the pre-extra-GUI snapshot. Evidence:
+`final-finder-exit-1608-action.json`, `known-default-state-after-windows.json`
+and `controller-v4-final-runtime.json`. Fresh final independent review checked
+the exact source, replay/future probe, raw tests, both payload versions, cloud
+logs/public bytes, actual GUI and these documented limits: PASS0C/0I/0M.
+Controller subsequently ran108 helper tests again (144.533s,0fail/skip), checked
+UTF-8/local documentation links and confirmed the five product trees unchanged.
+Private review receipt: `.artifacts/finder-tray-fix/final-review/verdict.json`.
+
+### Default-profile logging boundary
+
+The correctly isolated43992 GUI preserved the known eight default-C profile
+file hashes and all Run-value fingerprints from immediately before launch
+through normal Exit. Ordinary Release C# test hosts earlier used the existing
+default App.Log path: they appended and rotated DeskCue.log at the existing5MiB
+limit, creating DeskCue.log.1 BEFORE fixed-GUI launch. The original5227490 log
+bytes remain in order as the exact prefix of DeskCue.log.1, SHA256
+`d0e8ead69054234e118ec2c6e434354a2c90ad1cd514f9c1c068ece05d9c1b3f`.
+All original nonlog database/JSON hashes remain unchanged. Neither log was
+deleted/restored. Individual writer PIDs/each appended byte were not traced;
+the whole implementation/test period is not claimed to leave C untouched.
+For the existing default-C profile, only hashes/lengths were inspected and its
+personal contents were not printed or uploaded. F diagnostic evidence remains
+private and is excluded from source commits and public release assets.
+
+## Historical revision3 release
 
 - Controller actually ran `tools/Publish-DeskCue.ps1`:5859 C# plus108 helper
   tests,5967/5967 passed,0fail/skip; Release20warnings/0errors. FullNativeAOT
@@ -234,7 +386,7 @@ second-launch single-instance behavior. Normal automated tray exit passed for
 1.5.9.1;1.5.9.2 required the manual exit above. Neither accepts1.5.9.3 or its feed.
 
 Not performed: installer installation, real two-version installed upgrade,
-startup/relogin, toast delivery, Windows10, physical DPI/multiple monitors,
+startup/relogin, toast delivery, ARM64 GUI, Windows10, physical DPI/multiple monitors,
 all-language human review, exhaustive parity or user visual acceptance.
 Packages are unsigned; no upstream signing identity is claimed. Existing
 compiler/analyzer warnings remain. Original DeskBox is not closed or modified;
@@ -248,7 +400,7 @@ future two-parent upstream promotion will be accepted by GitHub. No extra token
 or permission has been introduced. SDK disposal also retains the original
 one-second drain cap; longer in-flight work remains an existing boundary.
 
-## Final acceptance sign-off
+## Historical revision3 acceptance sign-off
 
 - Workspace/legacy preservation: completed and checked.
 - Identities, fork-owned services and replayable delivery: scoped reviews passed.
