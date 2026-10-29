@@ -39,6 +39,8 @@ public enum WidgetTitleIconAssetResult
 /// </summary>
 public sealed class WidgetTitleIconAssetStore
 {
+    static WidgetTitleIconAssetStore() { }
+
     public const int MaxRecentEmojis = 12;
 
     private static readonly WidgetTitleIconAssetStore s_default = new(

@@ -9,7 +9,42 @@ public sealed class DeskCueDataPathService
     public const string AotPreviewRootEnvironmentVariable = "DESKCUE_AOT_PREVIEW_DATA_ROOT";
     private const string ProductionInstanceScope = "0F10D29D";
 
-    public static DeskCueDataPathService Current { get; } = new(ResolveConfiguredRoot());
+    private static readonly object CurrentGate = new();
+    private static DeskCueDataPathService? s_current;
+
+    public static DeskCueDataPathService Current
+    {
+        get
+        {
+            lock (CurrentGate)
+            {
+                return s_current ??= new(ResolveConfiguredRoot());
+            }
+        }
+    }
+
+    // Called once by the friend test assembly's module initializer, before
+    // App or a service can capture any process-wide storage paths. Retail
+    // environment-variable behavior remains unchanged.
+    internal static void InitializeForTests(string rootPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
+        var paths = new DeskCueDataPathService(rootPath);
+        if (!paths.IsDevelopmentRoot)
+        {
+            throw new ArgumentException("Tests require an isolated application root.", nameof(rootPath));
+        }
+
+        lock (CurrentGate)
+        {
+            if (s_current is not null)
+            {
+                throw new InvalidOperationException("Application data paths have already been initialized.");
+            }
+
+            s_current = paths;
+        }
+    }
 
     public DeskCueDataPathService(string? rootPath = null)
     {

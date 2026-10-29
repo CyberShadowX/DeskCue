@@ -40,6 +40,10 @@ namespace DeskCue;
 /// </summary>
 public partial class App : Application
 {
+    // Avoid beforefieldinit: test hosts must inject their isolated data paths
+    // before the runtime captures the process-wide log/activation locations.
+    static App() { }
+
     private const double TrayMenuItemWidth = 176;
     private const int TrayContextMenuFallbackOffsetPixels = 24;
     private const int TrayContextMenuEstimatedWidth = (int)TrayMenuItemWidth + 16;

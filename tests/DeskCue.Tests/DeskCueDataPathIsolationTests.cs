@@ -5,6 +5,49 @@ namespace DeskCue.Tests;
 public sealed class DeskCueDataPathIsolationTests
 {
     [Fact]
+    public async Task TestHostCurrent_IsIsolatedBeforeAnyApplicationPathsAreCaptured()
+    {
+        var paths = DeskCueDataPathService.Current;
+        Assert.True(paths.IsDevelopmentRoot);
+        Assert.Equal(TestEnvironment.ApplicationRoot, paths.RootPath);
+        Assert.StartsWith(paths.RootPath, paths.DataDirectory, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith(paths.RootPath, paths.UpdatesDirectory, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith(paths.RootPath, paths.LogFilePath, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal($"{paths.RootPath}-Recovery", paths.RecoveryDirectory);
+        string probe = Path.Combine(paths.DataDirectory, "test-host-isolation-probe.txt");
+        Directory.CreateDirectory(paths.DataDirectory);
+        File.WriteAllText(probe, "isolated");
+        Assert.Equal("isolated", File.ReadAllText(probe));
+        File.Delete(probe);
+
+        string marker = $"test-host-log-{Guid.NewGuid():N}";
+        App.Log(marker);
+        bool found = false;
+        for (int attempt = 0; attempt < 100 && !found; attempt++)
+        {
+            try
+            {
+                found = File.Exists(paths.LogFilePath) &&
+                    File.ReadAllText(paths.LogFilePath).Contains(marker, StringComparison.Ordinal);
+            }
+            catch (IOException) { }
+            if (!found) await Task.Delay(50);
+        }
+        Assert.True(found, "App.Log must write to the isolated test root.");
+    }
+
+    [Fact]
+    public void TestHostRoot_CannotBeReplacedAfterInitialization()
+    {
+        var before = DeskCueDataPathService.Current;
+        Assert.Throws<InvalidOperationException>(() => DeskCueDataPathService.InitializeForTests(
+            TestEnvironment.ApplicationRoot + "-replacement"));
+        Assert.Same(before, DeskCueDataPathService.Current);
+        Assert.Throws<ArgumentException>(() => DeskCueDataPathService.InitializeForTests(
+            new DeskCueDataPathService().RootPath));
+    }
+
+    [Fact]
     public void ProductionRoot_PreservesLegacyInstanceNamesAndRecoveryLocation()
     {
         var service = new DeskCueDataPathService();
