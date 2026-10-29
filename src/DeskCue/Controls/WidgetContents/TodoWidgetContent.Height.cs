@@ -2,6 +2,9 @@ using System.ComponentModel;
 using DeskCue.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Automation.Peers;
+using Microsoft.UI.Xaml.Media;
 using Windows.Foundation;
 
 namespace DeskCue.Controls.WidgetContents;
@@ -27,6 +30,16 @@ public sealed partial class TodoWidgetContent
 
     private void HeightItem_PropertyChanged(object? sender, PropertyChangedEventArgs e) => InvalidatePreferredHeight();
 
+    private static void ExcludeMeasurementInteractions(DependencyObject node)
+    {
+        // Opacity and hit testing alone do not remove controls from Tab traversal
+        // or the automation control/content views. Keep enabled visual metrics.
+        if (node is Control control) control.IsTabStop = false;
+        AutomationProperties.SetAccessibilityView(node, AccessibilityView.Raw);
+        for (int index = 0; index < VisualTreeHelper.GetChildrenCount(node); index++)
+            ExcludeMeasurementInteractions(VisualTreeHelper.GetChild(node, index));
+    }
+
     internal bool TryMeasurePreferredContentHeight(double width, double maxHeight, out double height)
     {
         height = 0;
@@ -44,6 +57,7 @@ public sealed partial class TodoWidgetContent
             _heightMeasurementRow.DataContextChanged -= TodoItem_DataContextChanged;
             _heightMeasurementRow.IsHitTestVisible = false;
             HeightMeasurementCanvas.Children.Add(_heightMeasurementRow);
+            ExcludeMeasurementInteractions(HeightMeasurementCanvas);
         }
         _heightMeasurementRow.Tag = ViewModel;
         double masterWidth = ListArea.ActualWidth;

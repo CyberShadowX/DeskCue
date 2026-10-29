@@ -30,6 +30,16 @@ public class WidgetPreferredHeightPolicyTests
     }
 
     [Fact]
+    public void MeasurementKey_WorkAreaChangeInvalidatesUnchangedWindow()
+    {
+        var bounds = new RectInt32(20, 20, 300, 600);
+        var original = new DeskCue.Views.WidgetPreferredHeightMeasurementKey(bounds, 280, 1.25, new RectInt32(0, 0, 1200, 900));
+        Assert.Equal(original, new DeskCue.Views.WidgetPreferredHeightMeasurementKey(bounds, 280, 1.25, new RectInt32(0, 0, 1200, 900)));
+        Assert.NotEqual(original, new DeskCue.Views.WidgetPreferredHeightMeasurementKey(bounds, 280, 1.25, new RectInt32(0, 0, 1200, 700)));
+        Assert.NotEqual(original, new DeskCue.Views.WidgetPreferredHeightMeasurementKey(bounds, 280, 1.25, new RectInt32(0, 40, 1200, 900)));
+    }
+
+    [Fact]
     public void SamePhysicalResult_IsNoOp()
     {
         var current = new RectInt32(20, 20, 300, 421);

@@ -6,13 +6,16 @@ using Windows.Graphics;
 
 namespace DeskCue.Views;
 
+internal readonly record struct WidgetPreferredHeightMeasurementKey(
+    RectInt32 Bounds, double Width, double Scale, RectInt32 WorkArea);
+
 public sealed partial class ContentWidgetWindow
 {
     private IWidgetPreferredHeightContent? _preferredHeightSource;
     private DispatcherQueueTimer? _preferredHeightTimer;
     private bool _preferredHeightPending;
     private bool _preferredHeightQueued;
-    private (RectInt32 Bounds, double Width, double Scale)? _preferredHeightSignature;
+    private WidgetPreferredHeightMeasurementKey? _preferredHeightSignature;
 
     private void AttachPreferredHeightSource(IWidgetContent? content)
     {
@@ -66,12 +69,14 @@ public sealed partial class ContentWidgetWindow
         var view = CurrentContent!.View;
         double scale = view.XamlRoot?.RasterizationScale ?? 1;
         var current = new RectInt32(AppWindow.Position.X, AppWindow.Position.Y, AppWindow.Size.Width, AppWindow.Size.Height);
-        var signature = (current, view.ActualWidth, scale);
+        // Taskbar/topology work-area changes can leave the HWND geometry unchanged.
+        // Read the available area before considering a prior measurement reusable.
+        var area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest)?.WorkArea;
+        if (area is not { } workArea) return;
+        var signature = new WidgetPreferredHeightMeasurementKey(current, view.ActualWidth, scale, workArea);
         if (!_preferredHeightPending && _preferredHeightSignature?.Equals(signature) == true) return;
         _preferredHeightSignature = signature;
         if (view.ActualWidth <= 0 || view.ActualHeight <= 0) return;
-        var area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest)?.WorkArea;
-        if (area is not { } workArea) return;
         double chrome = Math.Max(0, current.Height / scale - view.ActualHeight);
         if (!_preferredHeightSource.TryMeasurePreferredContentHeight(view.ActualWidth, workArea.Height / scale - chrome, out double height)) return;
         _preferredHeightPending = false;

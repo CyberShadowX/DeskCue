@@ -79,6 +79,9 @@ public sealed partial class TodoWidgetContent : UserControl
     {
         InitializeComponent();
         InitializeDetailNotesAndSteps();
+        // Segmented header restoration runs after several rendering frames. Its
+        // resulting size is a height dependency even when the HWND did not move.
+        ListHeaderArea.SizeChanged += (_, _) => InvalidatePreferredHeight();
         DetailTitleTextBox.AddHandler(
             UIElement.PreviewKeyDownEvent,
             new KeyEventHandler(DetailTitleTextBox_KeyDown),
@@ -410,6 +413,7 @@ public sealed partial class TodoWidgetContent : UserControl
         CancelTodoSegmentedRestore();
         TodoFilterSegmented.Visibility = Visibility.Visible;
         ApplySegmentedStyle();
+        InvalidatePreferredHeight();
     }
 
     private void CancelTodoSegmentedRestore()
