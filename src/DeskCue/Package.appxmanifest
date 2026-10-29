@@ -12,7 +12,7 @@
   <Identity
     Name="CyberShadowX.DeskCue"
     Publisher="CN=32AFF2BA-34E3-56BE-83E3-671BEBBFA32F"
-    Version="1.5.9.4" />
+    Version="1.5.9.5" />
 
   <mp:PhoneIdentity PhoneProductId="D61F048B-B5EE-5CC8-87BC-D28E118A8CBB" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
 

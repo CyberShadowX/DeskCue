@@ -1,5 +1,5 @@
 diff --git a/src/DeskCue/App.Tray.cs b/src/DeskCue/App.Tray.cs
-index 0308a411..a8907e43 100644
+index 0308a4115c9b6b0f2634fa3a8dd1846f7a69b7d5..a8907e43f92786c398617b97a414a5decfe4d774 100644
 --- a/src/DeskCue/App.Tray.cs
 +++ b/src/DeskCue/App.Tray.cs
 @@ -626,6 +626,8 @@ public partial class App
@@ -212,8 +212,576 @@ index 0308a411..a8907e43 100644
      /// <summary>Resets the failure count after a successful open. Degradation
      /// itself is terminal for the session.</summary>
      internal void RecordSuccess()
+diff --git a/src/DeskCue/App.xaml.cs b/src/DeskCue/App.xaml.cs
+index 3eafcd2e638bbcbec11daa54ea8077e596f8d764..6463388ca70c60f9d3a975d65fa5c680e47a03bf 100644
+--- a/src/DeskCue/App.xaml.cs
++++ b/src/DeskCue/App.xaml.cs
+@@ -40,6 +40,10 @@ namespace DeskCue;
+ /// </summary>
+ public partial class App : Application
+ {
++    // Avoid beforefieldinit: test hosts must inject their isolated data paths
++    // before the runtime captures the process-wide log/activation locations.
++    static App() { }
++
+     private const double TrayMenuItemWidth = 176;
+     private const int TrayContextMenuFallbackOffsetPixels = 24;
+     private const int TrayContextMenuEstimatedWidth = (int)TrayMenuItemWidth + 16;
+diff --git a/src/DeskCue/Contracts/IWidgetPreferredHeightContent.cs b/src/DeskCue/Contracts/IWidgetPreferredHeightContent.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..99cb4cf9062b63c360efa6cf8fd85f3df2d54a7b
+--- /dev/null
++++ b/src/DeskCue/Contracts/IWidgetPreferredHeightContent.cs
+@@ -0,0 +1,8 @@
++namespace DeskCue.Contracts;
++
++/// <summary>Optional content measurement; host retains geometry and persistence ownership.</summary>
++public interface IWidgetPreferredHeightContent
++{
++    event EventHandler? PreferredHeightInvalidated;
++    bool TryMeasurePreferredContentHeight(double width, double maxHeight, out double height);
++}
+diff --git a/src/DeskCue/Controls/MarkdownDocumentView.cs b/src/DeskCue/Controls/MarkdownDocumentView.cs
+index 2ca280e659e5a87ddf80c6695cd728fea49c211c..b414b182ce0edf172d008fc3b8ed9f5f65dfbfaa 100644
+--- a/src/DeskCue/Controls/MarkdownDocumentView.cs
++++ b/src/DeskCue/Controls/MarkdownDocumentView.cs
+@@ -76,6 +76,7 @@ public sealed partial class MarkdownDocumentView : UserControl
+     private double _lastRenderedWidth = double.NaN;
+     private MarkdownRenderState _lastRenderedState;
+     private bool _hasRenderedState;
++    private readonly MarkdownReaderPointerGesture _notesPointerGesture = new();
+     private int _renderParseGeneration;
+     private string _renderInvalidationReason = "initial";
+ 
+@@ -221,6 +222,32 @@ public sealed partial class MarkdownDocumentView : UserControl
+ 
+     public void Refresh() => InvalidateRender("explicit-refresh");
+ 
++    // RichTextBlock may handle plain text taps itself. The host can observe
++    // those taps, but must leave inline navigation and text selection alone.
++    internal void BeginNotesPointerGesture() => _notesPointerGesture.BeginPointerGesture();
++
++    internal bool CanBeginNotesEditingAt(object originalSource, bool hasDragged)
++    {
++        bool interactive = originalSource is Hyperlink;
++        DependencyObject? current = originalSource as UIElement;
++        while (current is not null && !ReferenceEquals(current, this))
++        {
++            if (current is Microsoft.UI.Xaml.Controls.Primitives.ButtonBase)
++            {
++                interactive = true;
++                break;
++            }
++
++            current = VisualTreeHelper.GetParent(current);
++        }
++
++        return _notesPointerGesture.CanBeginNotesEditing(
++            !string.IsNullOrEmpty(_documentText.SelectedText), interactive, hasDragged);
++    }
++
++    internal static bool CanBeginNotesEditing(bool hasSelection, bool isInteractive, bool hasDragged) =>
++        !hasSelection && !isInteractive && !hasDragged;
++
+     private static void OnDocumentPropertyChanged(
+         DependencyObject sender,
+         DependencyPropertyChangedEventArgs args) =>
+@@ -1279,12 +1306,20 @@ public sealed partial class MarkdownDocumentView : UserControl
+         destination.Add(hyperlink);
+     }
+ 
+-    private Hyperlink CreateHyperlink() => new()
++    private Hyperlink CreateHyperlink()
+     {
+-        FontWeight = FontWeights.SemiBold,
+-        Foreground = _semanticForeground,
+-        TextDecorations = Windows.UI.Text.TextDecorations.Underline
+-    };
++        var hyperlink = new Hyperlink
++        {
++            FontWeight = FontWeights.SemiBold,
++            Foreground = _semanticForeground,
++            TextDecorations = Windows.UI.Text.TextDecorations.Underline
++        };
++        // Native RichTextBlock activates the inline before its handled tap
++        // reaches the reader host. Mark synchronously, before attachment
++        // callbacks are registered, and retain the marker across re-renders.
++        hyperlink.Click += (_, _) => _notesPointerGesture.RecordHyperlinkActivation();
++        return hyperlink;
++    }
+ 
+     private Span CreateLinkSpan() => new()
+     {
+@@ -1330,6 +1365,20 @@ public sealed partial class MarkdownDocumentView : UserControl
+     }
+ }
+ 
++// State belongs to one reader, not one render. Both navigation and attachment
++// Hyperlink.Click handlers set it before the parent sees the handled tap.
++internal sealed class MarkdownReaderPointerGesture
++{
++    private bool _hyperlinkActivated;
++
++    internal void BeginPointerGesture() => _hyperlinkActivated = false;
++
++    internal void RecordHyperlinkActivation() => _hyperlinkActivated = true;
++
++    internal bool CanBeginNotesEditing(bool hasSelection, bool isInteractive, bool hasDragged) =>
++        !_hyperlinkActivated && MarkdownDocumentView.CanBeginNotesEditing(hasSelection, isInteractive, hasDragged);
++}
++
+ public sealed class MarkdownTaskToggleRequestedEventArgs(int taskIndex) : EventArgs
+ {
+     public int TaskIndex { get; } = taskIndex;
+diff --git a/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.DetailNotesAndSteps.cs b/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.DetailNotesAndSteps.cs
+index cb3d9f19b571c4252fac49a134c7b4220d259e4d..ef918469b62bf235260e79f95a941ed6951fe535 100644
+--- a/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.DetailNotesAndSteps.cs
++++ b/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.DetailNotesAndSteps.cs
+@@ -18,12 +18,26 @@ public sealed partial class TodoWidgetContent
+     private string? _notesEditingItemId;
+     private string _notesOriginalText = string.Empty;
+     private bool _notesExitRequested;
++    private Windows.Foundation.Point? _notesPointerStart;
++    private bool _notesPointerDragged;
+ 
+     private void InitializeDetailNotesAndSteps()
+     {
+         _notesAutosaveTimer.Tick += NotesAutosaveTimer_Tick;
+         DetailNotesView.AttachmentResolver = ResolveSelectedTodoAttachment;
+         DetailNotesView.AttachmentOpenRequested += DetailNotesView_AttachmentOpenRequested;
++        DetailNotesReaderHost.AddHandler(
++            UIElement.TappedEvent,
++            new TappedEventHandler(DetailNotesReaderHost_Tapped),
++            handledEventsToo: true);
++        DetailNotesReaderHost.AddHandler(
++            UIElement.PointerPressedEvent,
++            new PointerEventHandler(DetailNotesReaderHost_PointerPressed),
++            handledEventsToo: true);
++        DetailNotesReaderHost.AddHandler(
++            UIElement.PointerMovedEvent,
++            new PointerEventHandler(DetailNotesReaderHost_PointerMoved),
++            handledEventsToo: true);
+         DetailNotesReaderHost.AddHandler(
+             UIElement.DoubleTappedEvent,
+             new DoubleTappedEventHandler(DetailNotesReaderHost_DoubleTapped),
+@@ -169,12 +183,31 @@ public sealed partial class TodoWidgetContent
+         return await ViewModel.DeleteStepAsync(item.Id, step.Id);
+     }
+ 
++    private void DetailNotesReaderHost_PointerPressed(object sender, PointerRoutedEventArgs e)
++    {
++        DetailNotesView.BeginNotesPointerGesture();
++        _notesPointerStart = e.GetCurrentPoint(DetailNotesReaderHost).Position;
++        _notesPointerDragged = false;
++    }
++
++    private void DetailNotesReaderHost_PointerMoved(object sender, PointerRoutedEventArgs e)
++    {
++        if (_notesPointerStart is not { } start || !e.GetCurrentPoint(DetailNotesReaderHost).IsInContact)
++        {
++            return;
++        }
++
++        Windows.Foundation.Point point = e.GetCurrentPoint(DetailNotesReaderHost).Position;
++        _notesPointerDragged |= Math.Abs(point.X - start.X) > 4 || Math.Abs(point.Y - start.Y) > 4;
++    }
++
+     private async void DetailNotesReaderHost_Tapped(object sender, TappedRoutedEventArgs e)
+     {
+-        if (ViewModel?.SelectedDetailItem is { Notes.Length: 0 })
++        if (ViewModel?.SelectedDetailItem is not null &&
++            DetailNotesView.CanBeginNotesEditingAt(e.OriginalSource, _notesPointerDragged))
+         {
+-            await BeginNotesEditingAsync();
+             e.Handled = true;
++            await BeginNotesEditingAsync();
+         }
+     }
+ 
+@@ -191,8 +224,11 @@ public sealed partial class TodoWidgetContent
+         object sender,
+         DoubleTappedRoutedEventArgs e)
+     {
+-        await BeginNotesEditingAsync();
+-        e.Handled = true;
++        if (DetailNotesView.CanBeginNotesEditingAt(e.OriginalSource, _notesPointerDragged))
++        {
++            e.Handled = true;
++            await BeginNotesEditingAsync();
++        }
+     }
+ 
+     private async Task BeginNotesEditingAsync()
+diff --git a/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.Height.cs b/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.Height.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..dae89a8ade40fc94efee403eb0f3f88eb8e27665
+--- /dev/null
++++ b/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.Height.cs
+@@ -0,0 +1,95 @@
++using System.ComponentModel;
++using DeskCue.ViewModels;
++using Microsoft.UI.Xaml;
++using Microsoft.UI.Xaml.Controls;
++using Microsoft.UI.Xaml.Automation;
++using Microsoft.UI.Xaml.Automation.Peers;
++using Microsoft.UI.Xaml.Media;
++using Windows.Foundation;
++
++namespace DeskCue.Controls.WidgetContents;
++
++public sealed partial class TodoWidgetContent
++{
++    internal event EventHandler? PreferredHeightInvalidated;
++    private FrameworkElement? _heightMeasurementRow;
++    private readonly HashSet<TodoItemViewModel> _heightObservedItems = [];
++
++    private void InvalidatePreferredHeight() => PreferredHeightInvalidated?.Invoke(this, EventArgs.Empty);
++
++    private void RefreshHeightSubscriptions(bool detachOnly = false)
++    {
++        foreach (var item in _heightObservedItems)
++            item.PropertyChanged -= HeightItem_PropertyChanged;
++        _heightObservedItems.Clear();
++        if (!detachOnly && IsLoaded && ViewModel is not null)
++            foreach (var item in ViewModel.VisibleItems)
++                if (_heightObservedItems.Add(item)) item.PropertyChanged += HeightItem_PropertyChanged;
++        InvalidatePreferredHeight();
++    }
++
++    private void HeightItem_PropertyChanged(object? sender, PropertyChangedEventArgs e) => InvalidatePreferredHeight();
++
++    private static void ExcludeMeasurementInteractions(DependencyObject node)
++    {
++        // Opacity and hit testing alone do not remove controls from Tab traversal
++        // or the automation control/content views. Keep enabled visual metrics.
++        if (node is Control control) control.IsTabStop = false;
++        AutomationProperties.SetAccessibilityView(node, AccessibilityView.Raw);
++        for (int index = 0; index < VisualTreeHelper.GetChildrenCount(node); index++)
++            ExcludeMeasurementInteractions(VisualTreeHelper.GetChild(node, index));
++    }
++
++    internal bool TryMeasurePreferredContentHeight(double width, double maxHeight, out double height)
++    {
++        height = 0;
++        if (!IsLoaded || ViewModel is null || ViewModel.IsDetailPageOpen ||
++            _isClosingDetail || _isInteractiveResizeActive || _isResponsiveLayoutTransitionActive ||
++            _draggedTodoItemId is not null || _selectionPointerPressed ||
++            TodoInlineEditor.Visibility == Visibility.Visible || CustomDueDateOverlay.Visibility == Visibility.Visible ||
++            !double.IsFinite(width) || width <= 0 || !double.IsFinite(maxHeight) || maxHeight <= 0)
++            return false;
++
++        // The live panel stays virtualized. Only this single connected row is measured unbounded vertically.
++        if (_heightMeasurementRow is null)
++        {
++            _heightMeasurementRow = (FrameworkElement)TodoListView.ItemTemplate.LoadContent();
++            _heightMeasurementRow.DataContextChanged -= TodoItem_DataContextChanged;
++            _heightMeasurementRow.IsHitTestVisible = false;
++            HeightMeasurementCanvas.Children.Add(_heightMeasurementRow);
++            ExcludeMeasurementInteractions(HeightMeasurementCanvas);
++        }
++        _heightMeasurementRow.Tag = ViewModel;
++        double masterWidth = ListArea.ActualWidth;
++        if (masterWidth <= 0) return false;
++        // Visible scrollbar reserves a stable gutter in the live list. The panel's width
++        // is the actual finite width offered to each item, independent of item realization.
++        double rowWidth = TodoListView.ItemsPanelRoot?.ActualWidth ?? 0;
++        if (rowWidth <= 0) return false;
++        double Measure(FrameworkElement element, double availableWidth)
++        {
++            element.Measure(new Size(availableWidth, double.PositiveInfinity));
++            return element.DesiredSize.Height;
++        }
++        double fixedHeight = RootGrid.Padding.Top + RootGrid.Padding.Bottom + 2 * RootGrid.RowSpacing
++            + Measure(ListHeaderArea, masterWidth) + Measure(ListFooterArea, masterWidth)
++            + TodoListView.Padding.Top + TodoListView.Padding.Bottom;
++        double rowsHeight = TodoListView.Header is FrameworkElement header ? Measure(header, rowWidth) : 0;
++        if (ViewModel.VisibleItems.Count == 0)
++            rowsHeight += Measure(TodoEmptyState, masterWidth);
++        _heightMeasurementRow.Width = rowWidth;
++        try
++        {
++            foreach (var item in ViewModel.VisibleItems)
++            {
++                _heightMeasurementRow.DataContext = item;
++                _heightMeasurementRow.InvalidateMeasure();
++                rowsHeight += Measure(_heightMeasurementRow, rowWidth);
++                if (fixedHeight + rowsHeight >= maxHeight) break;
++            }
++        }
++        finally { _heightMeasurementRow.DataContext = null; }
++        height = Math.Min(maxHeight, fixedHeight + rowsHeight);
++        return true;
++    }
++}
+diff --git a/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml b/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml
+index bf6d0ca15ec1d6f15436c5d86e143a21df1ed429..b9d20556d5254342b99092926b0adfb7496caf9a 100644
+--- a/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml
++++ b/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml
+@@ -145,6 +145,8 @@
+             <ColumnDefinition x:Name="SplitterColumn" Width="0" />
+             <ColumnDefinition x:Name="DetailColumn" Width="0" />
+         </Grid.ColumnDefinitions>
++        <Canvas x:Name="HeightMeasurementCanvas" Grid.RowSpan="3" Grid.ColumnSpan="3" Width="0" Height="0" Opacity="0" IsHitTestVisible="False" HorizontalAlignment="Left" VerticalAlignment="Top" />
++
+ 
+         <StackPanel
+             x:Name="ListHeaderArea"
+@@ -221,7 +223,7 @@
+                 PointerReleased="TodoListView_PointerReleased"
+                 SelectionMode="None"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+-                ScrollViewer.VerticalScrollBarVisibility="Auto">
++                ScrollViewer.VerticalScrollBarVisibility="Visible">
+                 <ListView.Resources>
+                     <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="Transparent" />
+                     <SolidColorBrush x:Key="ListViewItemBackgroundPressed" Color="Transparent" />
+@@ -288,6 +290,7 @@
+                     <DataTemplate>
+                         <Border
+                             x:Name="TodoItemRoot"
++                            Tag="{Binding ElementName=TodoListView, Path=DataContext}"
+                             AllowDrop="True"
+                             Margin="0,2"
+                             MinHeight="50"
+@@ -372,19 +375,29 @@
+                                     Spacing="2">
+                                     <TextBlock
+                                         helpers:WidgetTextShadow.Cast="True"
+-                                        FontSize="{Binding ElementName=TodoListView, Path=DataContext.TextSize}"
+-                                        LineHeight="{Binding ElementName=TodoListView, Path=DataContext.ItemTextLineHeight}"
++                                        FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.TextSize}"
++                                        LineHeight="{Binding ElementName=TodoItemRoot, Path=Tag.ItemTextLineHeight}"
+                                         LineStackingStrategy="BlockLineHeight"
+-                                        MaxLines="{Binding ElementName=TodoListView, Path=DataContext.ItemPreviewLineCount}"
++                                        MaxLines="{Binding ElementName=TodoItemRoot, Path=Tag.ItemPreviewLineCount}"
+                                         Text="{Binding Text}"
+                                         TextDecorations="{Binding TextDecorations}"
+                                         TextTrimming="CharacterEllipsis"
+                                         TextWrapping="Wrap" />
+ 
++                                    <TextBlock
++                                        helpers:WidgetTextShadow.Cast="True"
++                                        FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SecondaryTextSize}"
++                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
++                                        MaxLines="2"
++                                        Text="{Binding NotesPreview}"
++                                        TextTrimming="CharacterEllipsis"
++                                        TextWrapping="Wrap"
++                                        Visibility="{Binding NotesPreviewVisibility}" />
++
+                                     <StackPanel Orientation="Horizontal" Spacing="6">
+                                         <TextBlock
+                                             helpers:WidgetTextShadow.Cast="True"
+-                                            FontSize="{Binding ElementName=TodoListView, Path=DataContext.SecondaryTextSize}"
++                                            FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SecondaryTextSize}"
+                                             Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                             MaxLines="1"
+                                             Text="{Binding DueStatusText}"
+@@ -392,15 +405,15 @@
+                                             Visibility="{Binding DueStatusNormalVisibility}" />
+                                         <TextBlock
+                                             helpers:WidgetTextShadow.Cast="True"
+-                                            FontSize="{Binding ElementName=TodoListView, Path=DataContext.SecondaryTextSize}"
++                                            FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SecondaryTextSize}"
+                                             Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                                             MaxLines="1"
+                                             Text="{Binding DueStatusText}"
+                                             TextTrimming="CharacterEllipsis"
+                                             Visibility="{Binding DueStatusOverdueVisibility}" />
+                                         <StackPanel Orientation="Horizontal" Spacing="2" Visibility="{Binding AttachmentSummaryVisibility}">
+-                                            <FontIcon FontSize="{Binding ElementName=TodoListView, Path=DataContext.SmallIconSize}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Glyph="&#xE723;" />
+-                                            <TextBlock helpers:WidgetTextShadow.Cast="True" FontSize="{Binding ElementName=TodoListView, Path=DataContext.SecondaryTextSize}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Text="{Binding AttachmentSummaryText}" />
++                                            <FontIcon FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SmallIconSize}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Glyph="&#xE723;" />
++                                            <TextBlock helpers:WidgetTextShadow.Cast="True" FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SecondaryTextSize}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Text="{Binding AttachmentSummaryText}" />
+                                         </StackPanel>
+                                     </StackPanel>
+ 
+@@ -412,8 +425,8 @@
+                                         Style="{StaticResource SubtleButtonStyle}"
+                                         Visibility="{Binding RecurringHistoryToggleVisibility}">
+                                         <StackPanel Orientation="Horizontal" Spacing="4">
+-                                            <FontIcon FontSize="{Binding ElementName=TodoListView, Path=DataContext.SmallIconSize}" Glyph="{Binding RecurringHistoryToggleGlyph}" />
+-                                            <TextBlock helpers:WidgetTextShadow.Cast="True" FontSize="{Binding ElementName=TodoListView, Path=DataContext.SecondaryTextSize}" Text="{Binding RecurringHistoryToggleText}" />
++                                            <FontIcon FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SmallIconSize}" Glyph="{Binding RecurringHistoryToggleGlyph}" />
++                                            <TextBlock helpers:WidgetTextShadow.Cast="True" FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SecondaryTextSize}" Text="{Binding RecurringHistoryToggleText}" />
+                                         </StackPanel>
+                                     </Button>
+                                 </StackPanel>
+@@ -436,12 +449,12 @@
+                                             Height="26"
+                                             MinWidth="26"
+                                             MinHeight="26"
+-                                            AutomationProperties.Name="{Binding ElementName=TodoListView, Path=DataContext.CopyText}"
++                                            AutomationProperties.Name="{Binding ElementName=TodoItemRoot, Path=Tag.CopyText}"
+                                             Click="CopyTodoItemButton_Click"
+                                             IsTabStop="False"
+                                             Style="{StaticResource WidgetCompactIconButtonStyle}"
+-                                            ToolTipService.ToolTip="{Binding ElementName=TodoListView, Path=DataContext.CopyText}">
+-                                            <FontIcon FontSize="{Binding ElementName=TodoListView, Path=DataContext.SmallIconSize}" Glyph="&#xE8C8;" />
++                                            ToolTipService.ToolTip="{Binding ElementName=TodoItemRoot, Path=Tag.CopyText}">
++                                            <FontIcon FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SmallIconSize}" Glyph="&#xE8C8;" />
+                                         </Button>
+                                         <Button
+                                             x:Name="TodoImportantItemButton"
+@@ -454,7 +467,7 @@
+                                             IsTabStop="False"
+                                             Style="{StaticResource WidgetCompactIconButtonStyle}"
+                                             ToolTipService.ToolTip="{Binding ImportantToggleText}">
+-                                            <FontIcon FontSize="{Binding ElementName=TodoListView, Path=DataContext.SmallIconSize}" Glyph="{Binding ImportantGlyph}" />
++                                            <FontIcon FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SmallIconSize}" Glyph="{Binding ImportantGlyph}" />
+                                         </Button>
+                                     </StackPanel>
+                                 </Border>
+@@ -469,6 +482,7 @@
+             </Canvas>
+ 
+             <StackPanel
++                x:Name="TodoEmptyState"
+                 Style="{StaticResource WidgetEmptyStatePanelStyle}"
+                 Visibility="{Binding EmptyStateVisibility}">
+                 <FontIcon
+@@ -896,13 +910,13 @@
+ 
+                         <Border
+                             x:Name="DetailNotesReaderHost"
++                            AutomationProperties.AutomationId="TodoNotesReader"
+                             MinHeight="72"
+                             Padding="8,8,8,10"
+                             Background="{ThemeResource WidgetLayerFillSecondaryBrush}"
+                             BorderBrush="Transparent"
+                             BorderThickness="0"
+-                            CornerRadius="{StaticResource WidgetCornerRadiusSmall}"
+-                            Tapped="DetailNotesReaderHost_Tapped">
++                            CornerRadius="{StaticResource WidgetCornerRadiusSmall}">
+                             <Grid>
+                                 <controls:MarkdownDocumentView
+                                     x:Name="DetailNotesView"
+@@ -924,6 +938,7 @@
+ 
+                         <controls:MarkdownSourceEditor
+                             x:Name="DetailNotesEditor"
++                            AutomationProperties.AutomationId="TodoNotesEditor"
+                             MinHeight="116"
+                             MaxHeight="360"
+                             CancelRequested="DetailNotesEditor_CancelRequested"
+diff --git a/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml.cs b/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml.cs
+index 165c77dc946e57d067e19b51e85e98ddf04eddc5..5f7ff1e193ec16e322cbea99266258a4b0319843 100644
+--- a/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml.cs
++++ b/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml.cs
+@@ -79,6 +79,9 @@ public sealed partial class TodoWidgetContent : UserControl
+     {
+         InitializeComponent();
+         InitializeDetailNotesAndSteps();
++        // Segmented header restoration runs after several rendering frames. Its
++        // resulting size is a height dependency even when the HWND did not move.
++        ListHeaderArea.SizeChanged += (_, _) => InvalidatePreferredHeight();
+         DetailTitleTextBox.AddHandler(
+             UIElement.PreviewKeyDownEvent,
+             new KeyEventHandler(DetailTitleTextBox_KeyDown),
+@@ -87,6 +90,7 @@ public sealed partial class TodoWidgetContent : UserControl
+         Unloaded += TodoWidgetContent_Unloaded;
+         ActualThemeChanged += (_, _) =>
+         {
++            InvalidatePreferredHeight();
+             ApplyEditorVisualStyle();
+             ApplySelectionRectangleStyle();
+         };
+@@ -133,6 +137,7 @@ public sealed partial class TodoWidgetContent : UserControl
+             }
+ 
+             DataContext = value;
++            RefreshHeightSubscriptions();
+ 
+             if (value is not null)
+             {
+@@ -161,6 +166,7 @@ public sealed partial class TodoWidgetContent : UserControl
+ 
+         App.Current.LocalizationService.LanguageChanged -= OnLanguageChanged;
+         App.Current.LocalizationService.LanguageChanged += OnLanguageChanged;
++        RefreshHeightSubscriptions();
+         ApplyLocalizedText();
+         ApplyEditorVisualStyle();
+         ApplySelectionRectangleStyle();
+@@ -176,6 +182,7 @@ public sealed partial class TodoWidgetContent : UserControl
+ 
+     private void TodoWidgetContent_Unloaded(object sender, RoutedEventArgs e)
+     {
++        RefreshHeightSubscriptions(detachOnly: true);
+         CancelTodoSegmentedRestore();
+         if (ViewModel is not null)
+         {
+@@ -406,6 +413,7 @@ public sealed partial class TodoWidgetContent : UserControl
+         CancelTodoSegmentedRestore();
+         TodoFilterSegmented.Visibility = Visibility.Visible;
+         ApplySegmentedStyle();
++        InvalidatePreferredHeight();
+     }
+ 
+     private void CancelTodoSegmentedRestore()
+@@ -428,6 +436,7 @@ public sealed partial class TodoWidgetContent : UserControl
+ 
+     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+     {
++        InvalidatePreferredHeight();
+         if (e.PropertyName == nameof(TodoWidgetViewModel.SelectedFilter))
+         {
+             ClearCopySelection();
+@@ -507,6 +516,7 @@ public sealed partial class TodoWidgetContent : UserControl
+ 
+     private void VisibleItems_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+     {
++        RefreshHeightSubscriptions();
+         if (_isDualPane)
+         {
+             DispatcherQueue.TryEnqueue(EnsureWideDetailSelection);
+diff --git a/src/DeskCue/Controls/WidgetContents/TodoWidgetContentAdapter.cs b/src/DeskCue/Controls/WidgetContents/TodoWidgetContentAdapter.cs
+index 704bf2680f37313c2458a92ebbc8771d9e1b5f80..35e0b1434b751b3ad25f57f47319effdc7d47850 100644
+--- a/src/DeskCue/Controls/WidgetContents/TodoWidgetContentAdapter.cs
++++ b/src/DeskCue/Controls/WidgetContents/TodoWidgetContentAdapter.cs
+@@ -18,6 +18,7 @@ public sealed class TodoWidgetContentAdapter :
+     IWidgetTransientStateContent,
+     IWidgetResponsiveLayoutContent,
+     IWidgetInteractiveResizeContent,
++    IWidgetPreferredHeightContent,
+     IWidgetGroupContentCacheable
+ {
+     public TodoWidgetContentAdapter(WidgetConfig config, LocalizationService localizationService)
+@@ -56,12 +57,25 @@ public sealed class TodoWidgetContentAdapter :
+     public bool IsReadyForReuse => ViewModel.IsInitialized && !IsDisposed;
+ 
+     public event EventHandler<WidgetFeedbackRequestedEventArgs>? FeedbackRequested;
++    public event EventHandler? PreferredHeightInvalidated;
++
++    private void TodoContent_PreferredHeightInvalidated(object? sender, EventArgs e) =>
++        PreferredHeightInvalidated?.Invoke(this, e);
++
++    public bool TryMeasurePreferredContentHeight(double width, double maxHeight, out double height)
++    {
++        height = 0;
++        return MaterializedView is TodoWidgetContent content &&
++            content.TryMeasurePreferredContentHeight(width, maxHeight, out height);
++    }
++
+ 
+     protected override void OnViewMaterialized(FrameworkElement view)
+     {
+         if (view is TodoWidgetContent todoContent)
+         {
+             todoContent.FeedbackRequested += TodoContent_FeedbackRequested;
++            todoContent.PreferredHeightInvalidated += TodoContent_PreferredHeightInvalidated;
+         }
+     }
+ 
+@@ -209,6 +223,7 @@ public sealed class TodoWidgetContentAdapter :
+         {
+             todoContent.ReleaseTransientRenderingSubscriptions();
+             todoContent.FeedbackRequested -= TodoContent_FeedbackRequested;
++            todoContent.PreferredHeightInvalidated -= TodoContent_PreferredHeightInvalidated;
+         }
+ 
+         if (ViewModel is IDisposable disposable)
 diff --git a/src/DeskCue/DeskCue.csproj b/src/DeskCue/DeskCue.csproj
-index 93cc7631..9d30b985 100644
+index 93cc76319adbc74456656bbb4aa8940966de5202..9d30b9858f76d71264b5c9bb4dcaa24b12f49c89 100644
 --- a/src/DeskCue/DeskCue.csproj
 +++ b/src/DeskCue/DeskCue.csproj
 @@ -39,6 +39,11 @@
@@ -228,9 +796,38 @@ index 93cc7631..9d30b985 100644
    <!--
      Opt-in Native AOT audit profile. Keep ordinary Debug/Release behavior
      unchanged until the application-level AOT compatibility work is complete.
+diff --git a/src/DeskCue/Helpers/WidgetPreferredHeightPolicy.cs b/src/DeskCue/Helpers/WidgetPreferredHeightPolicy.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..84837843cbeaed56f633761e5ed741368dc41609
+--- /dev/null
++++ b/src/DeskCue/Helpers/WidgetPreferredHeightPolicy.cs
+@@ -0,0 +1,23 @@
++using Windows.Graphics;
++
++namespace DeskCue.Helpers;
++
++/// <summary>Converts measured DIP content into work-area bounded physical geometry.</summary>
++internal static class WidgetPreferredHeightPolicy
++{
++    internal static RectInt32 Resolve(RectInt32 current, RectInt32 workArea,
++        double contentHeight, double chromeHeight, double scale, int minimumHeight)
++    {
++        if (!double.IsFinite(contentHeight) || !double.IsFinite(chromeHeight) ||
++            !double.IsFinite(scale) || scale <= 0 || contentHeight < 0 || chromeHeight < 0 ||
++            workArea.Height < minimumHeight || workArea.Width < current.Width || workArea.Height <= 0)
++            return current;
++
++        int height = (int)Math.Clamp(Math.Ceiling((contentHeight + chromeHeight) * scale),
++            Math.Max(1, minimumHeight), workArea.Height);
++        return new RectInt32(
++            Math.Clamp(current.X, workArea.X, workArea.X + workArea.Width - current.Width),
++            Math.Clamp(current.Y, workArea.Y, workArea.Y + workArea.Height - height),
++            current.Width, height);
++    }
++}
 diff --git a/src/DeskCue/Platform/Win32Helper.TrayMenu.cs b/src/DeskCue/Platform/Win32Helper.TrayMenu.cs
 new file mode 100644
-index 00000000..0450c033
+index 0000000000000000000000000000000000000000..0450c033d0241de9b560b70910002dcd667a6d15
 --- /dev/null
 +++ b/src/DeskCue/Platform/Win32Helper.TrayMenu.cs
 @@ -0,0 +1,37 @@
@@ -272,7 +869,7 @@ index 00000000..0450c033
 +    }
 +}
 diff --git a/src/DeskCue/Services/AppUpdateService.cs b/src/DeskCue/Services/AppUpdateService.cs
-index b73383e9..37d2f43f 100644
+index b73383e9d210fabdd753cca6166644fae6c736f8..37d2f43f234c0f21d4411e19af2a379b6e528937 100644
 --- a/src/DeskCue/Services/AppUpdateService.cs
 +++ b/src/DeskCue/Services/AppUpdateService.cs
 @@ -593,9 +593,12 @@ public sealed partial class AppUpdateService : IAppUpdateService
@@ -371,8 +968,56 @@ index b73383e9..37d2f43f 100644
      }
  
      private static string ExtractSha256FromDigest(string? digest)
+diff --git a/src/DeskCue/Services/DeskCueDataPathService.cs b/src/DeskCue/Services/DeskCueDataPathService.cs
+index 2174d7cf066ee8dcd1c0c80e358eaf189f40c7ff..7129e4073542087818618d6f91cf1f88da369d33 100644
+--- a/src/DeskCue/Services/DeskCueDataPathService.cs
++++ b/src/DeskCue/Services/DeskCueDataPathService.cs
+@@ -9,7 +9,42 @@ public sealed class DeskCueDataPathService
+     public const string AotPreviewRootEnvironmentVariable = "DESKCUE_AOT_PREVIEW_DATA_ROOT";
+     private const string ProductionInstanceScope = "0F10D29D";
+ 
+-    public static DeskCueDataPathService Current { get; } = new(ResolveConfiguredRoot());
++    private static readonly object CurrentGate = new();
++    private static DeskCueDataPathService? s_current;
++
++    public static DeskCueDataPathService Current
++    {
++        get
++        {
++            lock (CurrentGate)
++            {
++                return s_current ??= new(ResolveConfiguredRoot());
++            }
++        }
++    }
++
++    // Called once by the friend test assembly's module initializer, before
++    // App or a service can capture any process-wide storage paths. Retail
++    // environment-variable behavior remains unchanged.
++    internal static void InitializeForTests(string rootPath)
++    {
++        ArgumentException.ThrowIfNullOrWhiteSpace(rootPath);
++        var paths = new DeskCueDataPathService(rootPath);
++        if (!paths.IsDevelopmentRoot)
++        {
++            throw new ArgumentException("Tests require an isolated application root.", nameof(rootPath));
++        }
++
++        lock (CurrentGate)
++        {
++            if (s_current is not null)
++            {
++                throw new InvalidOperationException("Application data paths have already been initialized.");
++            }
++
++            s_current = paths;
++        }
++    }
+ 
+     public DeskCueDataPathService(string? rootPath = null)
+     {
 diff --git a/src/DeskCue/Services/EverythingSearchService.cs b/src/DeskCue/Services/EverythingSearchService.cs
-index d145225f..a1127508 100644
+index d145225fccfb2595d890df746757bcc35ce21f13..a1127508091eb573fcea9b70aff2ec8b8696b530 100644
 --- a/src/DeskCue/Services/EverythingSearchService.cs
 +++ b/src/DeskCue/Services/EverythingSearchService.cs
 @@ -569,28 +569,15 @@ public sealed class EverythingSearchService : IDisposable, ISearchConnectionClie
@@ -412,7 +1057,7 @@ index d145225f..a1127508 100644
  
      private sealed class EverythingIpcException(uint errorCode) : Exception
 diff --git a/src/DeskCue/Services/FeedbackService.cs b/src/DeskCue/Services/FeedbackService.cs
-index d5bef92c..2b783078 100644
+index d5bef92cad91d2294ccf999a1b32b9ca9ddd13e9..2b78307825afe2f5769cdd09eee6a35a1fc44dfb 100644
 --- a/src/DeskCue/Services/FeedbackService.cs
 +++ b/src/DeskCue/Services/FeedbackService.cs
 @@ -62,7 +62,10 @@ public sealed record DeskCueFeedbackMineResult(bool Ok, IReadOnlyList<DeskCueFee
@@ -472,7 +1117,7 @@ index d5bef92c..2b783078 100644
              new DeskCueFeedbackMinePayload(ClientId),
              FeedbackJsonContext.Default.FeedbackMinePayload);
 diff --git a/src/DeskCue/Services/ReleaseNotesService.cs b/src/DeskCue/Services/ReleaseNotesService.cs
-index b56c89bb..452f4a7f 100644
+index b56c89bbc21e11812def377353afc2dd663e4549..452f4a7f66ae4fd854d97cad10a0c664b1c9f121 100644
 --- a/src/DeskCue/Services/ReleaseNotesService.cs
 +++ b/src/DeskCue/Services/ReleaseNotesService.cs
 @@ -24,6 +24,20 @@ public sealed class ReleaseNotesService
@@ -497,7 +1142,7 @@ index b56c89bb..452f4a7f 100644
      {
          _cacheRootPath = string.IsNullOrWhiteSpace(cacheRootPath)
 diff --git a/src/DeskCue/Services/TodoReminderService.cs b/src/DeskCue/Services/TodoReminderService.cs
-index 3f3ffb4e..5d3598be 100644
+index 3f3ffb4e33c68393d1b0bb8980b8ac363a71eb01..5d3598bef8ae97849e5b06c343461a59fd831c44 100644
 --- a/src/DeskCue/Services/TodoReminderService.cs
 +++ b/src/DeskCue/Services/TodoReminderService.cs
 @@ -26,12 +26,6 @@ public sealed class TodoReminderService : IDisposable, ITodoReminderSession
@@ -573,8 +1218,21 @@ index 3f3ffb4e..5d3598be 100644
          if (_disposed || !ShouldBeRunning())
          {
              return;
+diff --git a/src/DeskCue/Services/WidgetTitleIconAssetStore.cs b/src/DeskCue/Services/WidgetTitleIconAssetStore.cs
+index 04ae99e5363c1c2bfa01cfef55c02ee8ee81f77f..c02e6d42b117866cdfe41107d4842c1f33af9c23 100644
+--- a/src/DeskCue/Services/WidgetTitleIconAssetStore.cs
++++ b/src/DeskCue/Services/WidgetTitleIconAssetStore.cs
+@@ -39,6 +39,8 @@ public enum WidgetTitleIconAssetResult
+ /// </summary>
+ public sealed class WidgetTitleIconAssetStore
+ {
++    static WidgetTitleIconAssetStore() { }
++
+     public const int MaxRecentEmojis = 12;
+ 
+     private static readonly WidgetTitleIconAssetStore s_default = new(
 diff --git a/src/DeskCue/Strings/ar-SA.json b/src/DeskCue/Strings/ar-SA.json
-index 438d8ec8..e7fdb538 100644
+index 438d8ec8fc460071cc37a0ef2412b820cbbaaa71..e7fdb538f5475dbab23c855589125d250472636f 100644
 --- a/src/DeskCue/Strings/ar-SA.json
 +++ b/src/DeskCue/Strings/ar-SA.json
 @@ -1299,18 +1299,18 @@
@@ -628,7 +1286,7 @@ index 438d8ec8..e7fdb538 100644
    "Onboarding.WindowTitle": "التعريف بـ DeskCue",
    "Onboarding.Back": "العودة",
 diff --git a/src/DeskCue/Strings/bn-BD.json b/src/DeskCue/Strings/bn-BD.json
-index 243810aa..494a8ea7 100644
+index 243810aa2573d8cf3ad7c2ef49e3a4d9b9cbc60f..494a8ea7ffd58ae35ac7c94d4dd06df1f1d020a4 100644
 --- a/src/DeskCue/Strings/bn-BD.json
 +++ b/src/DeskCue/Strings/bn-BD.json
 @@ -1299,18 +1299,18 @@
@@ -682,7 +1340,7 @@ index 243810aa..494a8ea7 100644
    "Onboarding.WindowTitle": "DeskCue পরিচিতি",
    "Onboarding.Back": "পিছনে",
 diff --git a/src/DeskCue/Strings/de-DE.json b/src/DeskCue/Strings/de-DE.json
-index c121ea06..31688a5f 100644
+index c121ea06258fb85207db9ac81a9fbfac3e7631ff..31688a5f90f3ba01c62d01628ed544793aac7ca3 100644
 --- a/src/DeskCue/Strings/de-DE.json
 +++ b/src/DeskCue/Strings/de-DE.json
 @@ -1296,18 +1296,18 @@
@@ -736,7 +1394,7 @@ index c121ea06..31688a5f 100644
    "Onboarding.WindowTitle": "DeskCue-Onboarding",
    "Onboarding.Back": "Zurück",
 diff --git a/src/DeskCue/Strings/en-US.json b/src/DeskCue/Strings/en-US.json
-index 5ef4780b..c6a7146e 100644
+index 5ef4780b3991d2444dd05c990bc7959fa36499e5..c6a7146ec6bab1bfc1093e4afab321a1a1f0008f 100644
 --- a/src/DeskCue/Strings/en-US.json
 +++ b/src/DeskCue/Strings/en-US.json
 @@ -1299,18 +1299,18 @@
@@ -790,7 +1448,7 @@ index 5ef4780b..c6a7146e 100644
    "Onboarding.WindowTitle": "DeskCue Onboarding",
    "Onboarding.Back": "Back",
 diff --git a/src/DeskCue/Strings/es-ES.json b/src/DeskCue/Strings/es-ES.json
-index 49c31df5..1603f7b5 100644
+index 49c31df5656eca67e73eb2ea31446a866e39496d..1603f7b5a2b6856a5395d483ff897706828cc759 100644
 --- a/src/DeskCue/Strings/es-ES.json
 +++ b/src/DeskCue/Strings/es-ES.json
 @@ -1299,18 +1299,18 @@
@@ -844,7 +1502,7 @@ index 49c31df5..1603f7b5 100644
    "Onboarding.WindowTitle": "Introducción a DeskCue",
    "Onboarding.Back": "Atrás",
 diff --git a/src/DeskCue/Strings/fr-FR.json b/src/DeskCue/Strings/fr-FR.json
-index 9b1c24df..3a93d75a 100644
+index 9b1c24dfd1b1cdad390f1371ce0e6819616a7606..3a93d75a8ba6acbe9b29be95635ebd4c99bdb824 100644
 --- a/src/DeskCue/Strings/fr-FR.json
 +++ b/src/DeskCue/Strings/fr-FR.json
 @@ -1299,18 +1299,18 @@
@@ -898,7 +1556,7 @@ index 9b1c24df..3a93d75a 100644
    "Onboarding.WindowTitle": "Découverte de DeskCue",
    "Onboarding.Back": "Retour",
 diff --git a/src/DeskCue/Strings/hi-IN.json b/src/DeskCue/Strings/hi-IN.json
-index 18630e72..8c4d38d1 100644
+index 18630e7240787a0664224b743add62e0c9dc9d22..8c4d38d134511cc28bfce9be2f99770c93218282 100644
 --- a/src/DeskCue/Strings/hi-IN.json
 +++ b/src/DeskCue/Strings/hi-IN.json
 @@ -1299,18 +1299,18 @@
@@ -952,7 +1610,7 @@ index 18630e72..8c4d38d1 100644
    "Onboarding.WindowTitle": "DeskCue परिचय",
    "Onboarding.Back": "वापस",
 diff --git a/src/DeskCue/Strings/ja-JP.json b/src/DeskCue/Strings/ja-JP.json
-index f8f86355..c8daa0fa 100644
+index f8f863554d5a03d4b6e1a374494603c5b7328b38..c8daa0fa6d065789573c9a7972646a159f88d51f 100644
 --- a/src/DeskCue/Strings/ja-JP.json
 +++ b/src/DeskCue/Strings/ja-JP.json
 @@ -1296,18 +1296,18 @@
@@ -1006,7 +1664,7 @@ index f8f86355..c8daa0fa 100644
    "Onboarding.WindowTitle": "DeskCue オンボーディング",
    "Onboarding.Back": "戻る",
 diff --git a/src/DeskCue/Strings/ko-KR.json b/src/DeskCue/Strings/ko-KR.json
-index 995c5a97..d9b4f17e 100644
+index 995c5a97881b83f8ad57c06e4710302fea51adf0..d9b4f17ec10511d0fa9b5b73452e619fcb69e56a 100644
 --- a/src/DeskCue/Strings/ko-KR.json
 +++ b/src/DeskCue/Strings/ko-KR.json
 @@ -1299,18 +1299,18 @@
@@ -1060,7 +1718,7 @@ index 995c5a97..d9b4f17e 100644
    "Onboarding.WindowTitle": "DeskCue 시작 가이드",
    "Onboarding.Back": "이전",
 diff --git a/src/DeskCue/Strings/pt-BR.json b/src/DeskCue/Strings/pt-BR.json
-index 00c72c30..aa70f3e2 100644
+index 00c72c30e680379c2733371b222932afc68a0797..aa70f3e2fc99790ced57f660137b8cbcbcf48406 100644
 --- a/src/DeskCue/Strings/pt-BR.json
 +++ b/src/DeskCue/Strings/pt-BR.json
 @@ -1296,18 +1296,18 @@
@@ -1114,7 +1772,7 @@ index 00c72c30..aa70f3e2 100644
    "Onboarding.WindowTitle": "Introdução ao DeskCue",
    "Onboarding.Back": "Voltar",
 diff --git a/src/DeskCue/Strings/ru-RU.json b/src/DeskCue/Strings/ru-RU.json
-index 2c8efbee..25c8d49c 100644
+index 2c8efbee08427d9dd3f19165546c5a83ee514fc7..25c8d49c4584d67bb844a2cfda7ca8494d22dd93 100644
 --- a/src/DeskCue/Strings/ru-RU.json
 +++ b/src/DeskCue/Strings/ru-RU.json
 @@ -1299,18 +1299,18 @@
@@ -1168,7 +1826,7 @@ index 2c8efbee..25c8d49c 100644
    "Onboarding.WindowTitle": "Знакомство с DeskCue",
    "Onboarding.Back": "Назад",
 diff --git a/src/DeskCue/Strings/zh-CN.json b/src/DeskCue/Strings/zh-CN.json
-index 8fb59936..7c747e94 100644
+index 8fb59936f3e429a633e8bdef003aa929c264288e..7c747e940fc89d33ae4ac96161cfec2abdc51465 100644
 --- a/src/DeskCue/Strings/zh-CN.json
 +++ b/src/DeskCue/Strings/zh-CN.json
 @@ -190,7 +190,7 @@
@@ -1240,7 +1898,7 @@ index 8fb59936..7c747e94 100644
    "QuickCapture.DropTab.Records": "松开以保存到随记",
    "Settings.QuickCapture.ClipboardReason.Enabled": "等待复制内容",
 diff --git a/src/DeskCue/Strings/zh-TW.json b/src/DeskCue/Strings/zh-TW.json
-index 5c30a440..5d89bc72 100644
+index 5c30a4405c8056c1546e470300da682527e05fbe..5d89bc72e13ce8c1cbc4d1baf155546b11f676ca 100644
 --- a/src/DeskCue/Strings/zh-TW.json
 +++ b/src/DeskCue/Strings/zh-TW.json
 @@ -190,7 +190,7 @@
@@ -1313,7 +1971,7 @@ index 5c30a440..5d89bc72 100644
    "Settings.QuickCapture.ClipboardReason.Enabled": "等待複製內容",
 diff --git a/src/DeskCue/TrayContextMenuPlacementPolicy.cs b/src/DeskCue/TrayContextMenuPlacementPolicy.cs
 new file mode 100644
-index 00000000..7d69c19c
+index 0000000000000000000000000000000000000000..7d69c19ca5c06ff09e0a504be5816b5e92770e5b
 --- /dev/null
 +++ b/src/DeskCue/TrayContextMenuPlacementPolicy.cs
 @@ -0,0 +1,128 @@
@@ -1446,7 +2104,7 @@ index 00000000..7d69c19c
 +    }
 +}
 diff --git a/src/DeskCue/ViewModels/SettingsViewModel.AboutAndUpdates.cs b/src/DeskCue/ViewModels/SettingsViewModel.AboutAndUpdates.cs
-index de8c6ffe..890170ac 100644
+index de8c6ffe7b0ed30dfc0740745c00830deb20b9bd..890170acd81aaf51174badc62ae5e258827aeb59 100644
 --- a/src/DeskCue/ViewModels/SettingsViewModel.AboutAndUpdates.cs
 +++ b/src/DeskCue/ViewModels/SettingsViewModel.AboutAndUpdates.cs
 @@ -21,14 +21,14 @@ public partial class SettingsViewModel
@@ -1467,7 +2125,7 @@ index de8c6ffe..890170ac 100644
          _localizationService.Format(
              "Settings.About.Developer",
 diff --git a/src/DeskCue/ViewModels/SettingsViewModel.cs b/src/DeskCue/ViewModels/SettingsViewModel.cs
-index 1fec32a4..9fd99082 100644
+index 1fec32a47e22b6cfbdc77a4f28b6b175f4e6ed45..9fd99082fc1925f9326a607af5438a0af8429894 100644
 --- a/src/DeskCue/ViewModels/SettingsViewModel.cs
 +++ b/src/DeskCue/ViewModels/SettingsViewModel.cs
 @@ -45,12 +45,8 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
@@ -1485,8 +2143,194 @@ index 1fec32a4..9fd99082 100644
  
      private readonly SettingsService _settingsService;
      private readonly ThemeService _themeService;
+diff --git a/src/DeskCue/ViewModels/TodoItemViewModel.cs b/src/DeskCue/ViewModels/TodoItemViewModel.cs
+index 5629b0443b7c32bbd05e631dcf38eaa73a2ee6ad..b6561eac7ee23777b4a916fbddad261302e3d591 100644
+--- a/src/DeskCue/ViewModels/TodoItemViewModel.cs
++++ b/src/DeskCue/ViewModels/TodoItemViewModel.cs
+@@ -29,10 +29,15 @@ public sealed partial class TodoItemViewModel : ObservableObject
+     private bool _isRecurringHistoryExpanded;
+     private int _recurringHistoryItemCount;
+     private bool _isDetailSelected;
++    private string _notesPreview;
++    private string _notesPreviewSource;
++    private static readonly MarkdownDocumentService s_notesMarkdownService = new();
+ 
+     public TodoItemViewModel(TodoItem item, LocalizationService? localizationService = null)
+     {
+         _item = item;
++        _notesPreviewSource = Notes;
++        _notesPreview = s_notesMarkdownService.ToPlainText(_notesPreviewSource);
+         _localizationService = localizationService;
+         _text = item.Text;
+         _isCompleted = item.IsCompleted;
+@@ -94,6 +99,12 @@ public sealed partial class TodoItemViewModel : ObservableObject
+ 
+     public string Notes => _item.Notes ?? string.Empty;
+ 
++    public string NotesPreview => _notesPreview;
++
++    public Visibility NotesPreviewVisibility => string.IsNullOrWhiteSpace(_notesPreview)
++        ? Visibility.Collapsed
++        : Visibility.Visible;
++
+     public int CompletedStepCount => Steps.Count(step => step.IsCompleted);
+ 
+     public string StepProgressText => Steps.Count == 0 ? string.Empty : $"{CompletedStepCount}/{Steps.Count}";
+@@ -592,6 +603,13 @@ public sealed partial class TodoItemViewModel : ObservableObject
+ 
+     internal void RefreshDetailProperties()
+     {
++        if (!string.Equals(_notesPreviewSource, Notes, StringComparison.Ordinal))
++        {
++            _notesPreviewSource = Notes;
++            _notesPreview = s_notesMarkdownService.ToPlainText(_notesPreviewSource);
++            OnPropertyChanged(nameof(NotesPreview));
++            OnPropertyChanged(nameof(NotesPreviewVisibility));
++        }
+         OnPropertyChanged(nameof(Notes));
+         OnPropertyChanged(nameof(NotesPlaceholderVisibility));
+         OnPropertyChanged(nameof(StepItemsSource));
+diff --git a/src/DeskCue/ViewModels/TodoViewModels.AotBindableProperties.cs b/src/DeskCue/ViewModels/TodoViewModels.AotBindableProperties.cs
+index e7713994202f3e9cd47a02e55b83e38c1aabc428..149080e91f971982af507e25a8ccf8e3b4980bc7 100644
+--- a/src/DeskCue/ViewModels/TodoViewModels.AotBindableProperties.cs
++++ b/src/DeskCue/ViewModels/TodoViewModels.AotBindableProperties.cs
+@@ -12,6 +12,7 @@ public partial class TodoWidgetViewModel
+ [WinRT.GeneratedBindableCustomProperty]
+ public partial class TodoItemViewModel
+ {
++    // Includes NotesPreview and NotesPreviewVisibility used by list row bindings.
+ }
+ 
+ [WinRT.GeneratedBindableCustomProperty]
+diff --git a/src/DeskCue/Views/ContentWidgetWindow.ContentSwitching.cs b/src/DeskCue/Views/ContentWidgetWindow.ContentSwitching.cs
+index 3d519c0d2adcd235ea3536543fbc007d89a36af9..89473c3e1c8768aa3adcea4b66db114d38da1d34 100644
+--- a/src/DeskCue/Views/ContentWidgetWindow.ContentSwitching.cs
++++ b/src/DeskCue/Views/ContentWidgetWindow.ContentSwitching.cs
+@@ -92,6 +92,7 @@ public sealed partial class ContentWidgetWindow
+         }
+         AttachCompactPresentationSource(content);
+         AttachFeedbackSource(content);
++        AttachPreferredHeightSource(content);
+         AttachHostContextMenuSource(content);
+         ApplyLocalizedTitleActionTooltips();
+         // The window chrome changes with the active member. A cached member's
+diff --git a/src/DeskCue/Views/ContentWidgetWindow.PreferredHeight.cs b/src/DeskCue/Views/ContentWidgetWindow.PreferredHeight.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..9bdda62c828f7be2575c2caff6abea183f8cccb4
+--- /dev/null
++++ b/src/DeskCue/Views/ContentWidgetWindow.PreferredHeight.cs
+@@ -0,0 +1,89 @@
++using DeskCue.Contracts;
++using DeskCue.Helpers;
++using Microsoft.UI.Dispatching;
++using Microsoft.UI.Windowing;
++using Windows.Graphics;
++
++namespace DeskCue.Views;
++
++internal readonly record struct WidgetPreferredHeightMeasurementKey(
++    RectInt32 Bounds, double Width, double Scale, RectInt32 WorkArea);
++
++public sealed partial class ContentWidgetWindow
++{
++    private IWidgetPreferredHeightContent? _preferredHeightSource;
++    private DispatcherQueueTimer? _preferredHeightTimer;
++    private bool _preferredHeightPending;
++    private bool _preferredHeightQueued;
++    private WidgetPreferredHeightMeasurementKey? _preferredHeightSignature;
++
++    private void AttachPreferredHeightSource(IWidgetContent? content)
++    {
++        if (_preferredHeightSource is not null)
++            _preferredHeightSource.PreferredHeightInvalidated -= PreferredHeight_Invalidated;
++        _preferredHeightTimer?.Stop();
++        _preferredHeightSource = content as IWidgetPreferredHeightContent;
++        _preferredHeightSignature = null;
++        _preferredHeightPending = _preferredHeightSource is not null;
++        if (_preferredHeightSource is null) return;
++        _preferredHeightSource.PreferredHeightInvalidated += PreferredHeight_Invalidated;
++        if (_preferredHeightTimer is null)
++        {
++            _preferredHeightTimer = DispatcherQueue.CreateTimer();
++            _preferredHeightTimer.Interval = TimeSpan.FromMilliseconds(500);
++            _preferredHeightTimer.Tick += (_, _) => ApplyPreferredHeight();
++        }
++        // One cheap state poll handles unlock and transition completion, which have
++        // several independent host paths. It never measures an inactive cached view.
++        _preferredHeightTimer.Start();
++        QueuePreferredHeight();
++    }
++
++    private void PreferredHeight_Invalidated(object? sender, EventArgs e)
++    {
++        if (!ReferenceEquals(sender, CurrentContent)) return;
++        _preferredHeightPending = true;
++        QueuePreferredHeight();
++    }
++
++    private void QueuePreferredHeight()
++    {
++        if (_preferredHeightQueued || IsClosing) return;
++        _preferredHeightQueued = true;
++        if (!DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
++        {
++            _preferredHeightQueued = false;
++            ApplyPreferredHeight();
++        })) _preferredHeightQueued = false;
++    }
++
++    private void ApplyPreferredHeight()
++    {
++        if (_preferredHeightSource is null || !ReferenceEquals(_preferredHeightSource, CurrentContent) || IsClosing) return;
++        if (!Visible || IsSizeLocked || IsDragging || IsResizing || IsHideAnimationRunning ||
++            IsCompactBoundsStateActive || IsCompactTransitionActive || IsBoundsTransitionActive || !CanPersistBoundsChange(true))
++        {
++            _preferredHeightPending = true;
++            return;
++        }
++        var view = CurrentContent!.View;
++        double scale = view.XamlRoot?.RasterizationScale ?? 1;
++        var current = new RectInt32(AppWindow.Position.X, AppWindow.Position.Y, AppWindow.Size.Width, AppWindow.Size.Height);
++        // Taskbar/topology work-area changes can leave the HWND geometry unchanged.
++        // Read the available area before considering a prior measurement reusable.
++        var area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest)?.WorkArea;
++        if (area is not { } workArea) return;
++        var signature = new WidgetPreferredHeightMeasurementKey(current, view.ActualWidth, scale, workArea);
++        if (!_preferredHeightPending && _preferredHeightSignature?.Equals(signature) == true) return;
++        _preferredHeightSignature = signature;
++        if (view.ActualWidth <= 0 || view.ActualHeight <= 0) return;
++        double chrome = Math.Max(0, current.Height / scale - view.ActualHeight);
++        if (!_preferredHeightSource.TryMeasurePreferredContentHeight(view.ActualWidth, workArea.Height / scale - chrome, out double height)) return;
++        _preferredHeightPending = false;
++        var minimum = GetPhysicalMinimumWindowSize(current.X, current.Y, current.Width, current.Height);
++        if (current.Width < minimum.Width) return;
++        var result = WidgetPreferredHeightPolicy.Resolve(current, workArea, height, chrome, scale, minimum.Height);
++        if (result.Equals(current)) return;
++        ApplyWindowBounds(result.X, result.Y, result.Width, result.Height, persist: true);
++    }
++}
+diff --git a/src/DeskCue/Views/ContentWidgetWindow.xaml.cs b/src/DeskCue/Views/ContentWidgetWindow.xaml.cs
+index 5061beb84b623c32f39b4388a3137660c9190c3a..43b3edad268685fed1d21539b647e4ac80186856 100644
+--- a/src/DeskCue/Views/ContentWidgetWindow.xaml.cs
++++ b/src/DeskCue/Views/ContentWidgetWindow.xaml.cs
+@@ -1090,6 +1090,7 @@ IsHideAnimationRunning = true;
+ 
+         AttachCompactPresentationSource(content);
+         AttachFeedbackSource(content);
++        AttachPreferredHeightSource(content);
+         AttachHostContextMenuSource(content);
+         RefreshCompactPresentation();
+         ApplyTitleActionButtonConfiguration();
+@@ -1350,6 +1351,7 @@ IsHideAnimationRunning = true;
+ 
+         Closed += (_, _) =>
+         {
++            AttachPreferredHeightSource(null);
+             IsClosing = true;
+             Visible = false;
+             ReleaseAutoRestoreTimer();
 diff --git a/src/DeskCue/Views/SettingsWindow.Feedback.cs b/src/DeskCue/Views/SettingsWindow.Feedback.cs
-index bd2fe7c8..58f04f94 100644
+index bd2fe7c8c624f851348d9536553ad81ac636aee9..58f04f943e43efa78c7314b84d718c9c938fccc9 100644
 --- a/src/DeskCue/Views/SettingsWindow.Feedback.cs
 +++ b/src/DeskCue/Views/SettingsWindow.Feedback.cs
 @@ -8,30 +8,23 @@ namespace DeskCue.Views;
@@ -1548,7 +2392,7 @@ index bd2fe7c8..58f04f94 100644
      }
  
 diff --git a/src/DeskCue/Views/SettingsWindow.xaml b/src/DeskCue/Views/SettingsWindow.xaml
-index d23a04bc..08123ad3 100644
+index d23a04bc36149f45e51b540c552c75a7154151d5..08123ad3ebd686996ba52c7e520e183a9b925da2 100644
 --- a/src/DeskCue/Views/SettingsWindow.xaml
 +++ b/src/DeskCue/Views/SettingsWindow.xaml
 @@ -3693,6 +3693,7 @@ Text="DeskCue" />
@@ -1560,7 +2404,7 @@ index d23a04bc..08123ad3 100644
                          Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                          BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
 diff --git a/tests/DeskCue.Tests/AotPublishContractTests.cs b/tests/DeskCue.Tests/AotPublishContractTests.cs
-index 44698235..350afc74 100644
+index 44698235bd444251cd3505d2def06d581471f8da..350afc74f3d7845cb3e2c2d478f8ec19863c8922 100644
 --- a/tests/DeskCue.Tests/AotPublishContractTests.cs
 +++ b/tests/DeskCue.Tests/AotPublishContractTests.cs
 @@ -212,7 +212,7 @@ public sealed class AotPublishContractTests
@@ -1573,7 +2417,7 @@ index 44698235..350afc74 100644
          string rustToolchain = File.ReadAllText(TestPaths.FromRepository("rust-toolchain.toml"));
          Assert.Contains("channel = \"1.96.0\"", rustToolchain, StringComparison.Ordinal);
 diff --git a/tests/DeskCue.Tests/AppUpdateServiceTests.cs b/tests/DeskCue.Tests/AppUpdateServiceTests.cs
-index 4f7f9358..ff2e95fb 100644
+index 4f7f9358540f015594fcdbada1de10f3393d935b..ff2e95fbec32d67fb3c6cef71bb62ba4006e4445 100644
 --- a/tests/DeskCue.Tests/AppUpdateServiceTests.cs
 +++ b/tests/DeskCue.Tests/AppUpdateServiceTests.cs
 @@ -2,6 +2,8 @@ using System.Net;
@@ -1925,7 +2769,7 @@ index 4f7f9358..ff2e95fb 100644
  
          Assert.False(AppUpdateService.IsManifestUsable(manifest));
 diff --git a/tests/DeskCue.Tests/CloudBackupTransportTests.cs b/tests/DeskCue.Tests/CloudBackupTransportTests.cs
-index f465927e..eff321ac 100644
+index f465927e096f5b4dd6e61d584dd26e6dc5e42018..eff321ace3b63c8c55ef52236ae3907022639dc7 100644
 --- a/tests/DeskCue.Tests/CloudBackupTransportTests.cs
 +++ b/tests/DeskCue.Tests/CloudBackupTransportTests.cs
 @@ -125,8 +125,8 @@ public sealed class CloudBackupTransportTests : IDisposable
@@ -1948,9 +2792,71 @@ index f465927e..eff321ac 100644
          Assert.Equal(payload, request.ContentBytes);
      }
  
+diff --git a/tests/DeskCue.Tests/DeskCueDataPathIsolationTests.cs b/tests/DeskCue.Tests/DeskCueDataPathIsolationTests.cs
+index b8eea4bd6eec5318a5e69036bcceb92bee639801..ebd5c88c4f91577fa6804100124a34e282c0c7cf 100644
+--- a/tests/DeskCue.Tests/DeskCueDataPathIsolationTests.cs
++++ b/tests/DeskCue.Tests/DeskCueDataPathIsolationTests.cs
+@@ -4,6 +4,57 @@ namespace DeskCue.Tests;
+ 
+ public sealed class DeskCueDataPathIsolationTests
+ {
++    [Fact]
++    public async Task TestHostCurrent_IsIsolatedBeforeAnyApplicationPathsAreCaptured()
++    {
++        var paths = DeskCueDataPathService.Current;
++        Assert.True(paths.IsDevelopmentRoot);
++        Assert.Equal(TestEnvironment.ApplicationRoot, paths.RootPath);
++        Assert.StartsWith(paths.RootPath, paths.DataDirectory, StringComparison.OrdinalIgnoreCase);
++        Assert.StartsWith(paths.RootPath, paths.UpdatesDirectory, StringComparison.OrdinalIgnoreCase);
++        Assert.StartsWith(paths.RootPath, paths.LogFilePath, StringComparison.OrdinalIgnoreCase);
++        Assert.Equal($"{paths.RootPath}-Recovery", paths.RecoveryDirectory);
++        string probe = Path.Combine(paths.DataDirectory, "test-host-isolation-probe.txt");
++        Directory.CreateDirectory(paths.DataDirectory);
++        File.WriteAllText(probe, "isolated");
++        Assert.Equal("isolated", File.ReadAllText(probe));
++        File.Delete(probe);
++
++        string marker = $"test-host-log-{Guid.NewGuid():N}";
++        App.Log(marker);
++        bool found = false;
++        for (int attempt = 0; attempt < 100 && !found; attempt++)
++        {
++            try
++            {
++                if (File.Exists(paths.LogFilePath))
++                {
++                    // Poll without denying the logger's concurrent append or
++                    // rotation. File.ReadAllText's sharing mode can cause the
++                    // logger to drop the very batch this assertion awaits.
++                    using var stream = new FileStream(paths.LogFilePath,
++                        FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
++                    using var reader = new StreamReader(stream);
++                    found = reader.ReadToEnd().Contains(marker, StringComparison.Ordinal);
++                }
++            }
++            catch (IOException) { }
++            if (!found) await Task.Delay(50);
++        }
++        Assert.True(found, "App.Log must write to the isolated test root.");
++    }
++
++    [Fact]
++    public void TestHostRoot_CannotBeReplacedAfterInitialization()
++    {
++        var before = DeskCueDataPathService.Current;
++        Assert.Throws<InvalidOperationException>(() => DeskCueDataPathService.InitializeForTests(
++            TestEnvironment.ApplicationRoot + "-replacement"));
++        Assert.Same(before, DeskCueDataPathService.Current);
++        Assert.Throws<ArgumentException>(() => DeskCueDataPathService.InitializeForTests(
++            new DeskCueDataPathService().RootPath));
++    }
++
+     [Fact]
+     public void ProductionRoot_PreservesLegacyInstanceNamesAndRecoveryLocation()
+     {
 diff --git a/tests/DeskCue.Tests/DeskCueForkBoundaryTests.cs b/tests/DeskCue.Tests/DeskCueForkBoundaryTests.cs
 new file mode 100644
-index 00000000..23080906
+index 0000000000000000000000000000000000000000..23080906723840e69fba54f50b1bc488f5598472
 --- /dev/null
 +++ b/tests/DeskCue.Tests/DeskCueForkBoundaryTests.cs
 @@ -0,0 +1,121 @@
@@ -2076,7 +2982,7 @@ index 00000000..23080906
 +    }
 +}
 diff --git a/tests/DeskCue.Tests/DesktopAutoOrganizationWatcherDelayTests.cs b/tests/DeskCue.Tests/DesktopAutoOrganizationWatcherDelayTests.cs
-index 12df1a5f..7cf498fd 100644
+index 12df1a5f07e12374b4ab4a19c5590ef452ca6ecb..7cf498fd8e1d320990a9c64c7f5e47a620230a3d 100644
 --- a/tests/DeskCue.Tests/DesktopAutoOrganizationWatcherDelayTests.cs
 +++ b/tests/DeskCue.Tests/DesktopAutoOrganizationWatcherDelayTests.cs
 @@ -1,4 +1,5 @@
@@ -2147,7 +3053,7 @@ index 12df1a5f..7cf498fd 100644
      }
  
 diff --git a/tests/DeskCue.Tests/DesktopOrganizationRecoveryAbandonTests.cs b/tests/DeskCue.Tests/DesktopOrganizationRecoveryAbandonTests.cs
-index 9dd4f2bd..ab74f88c 100644
+index 9dd4f2bd5432c2ed17a3e088a9417aef12b74faf..ab74f88c689c22a8d32190e85642b0651380298b 100644
 --- a/tests/DeskCue.Tests/DesktopOrganizationRecoveryAbandonTests.cs
 +++ b/tests/DeskCue.Tests/DesktopOrganizationRecoveryAbandonTests.cs
 @@ -345,10 +345,13 @@ public sealed class DesktopOrganizationRecoveryAbandonTests : IDisposable
@@ -2217,7 +3123,7 @@ index 9dd4f2bd..ab74f88c 100644
  
      private async Task<DesktopOrganizationPlan> BuildPlanAsync(string desktop, string storage)
 diff --git a/tests/DeskCue.Tests/EverythingIntegrationTests.cs b/tests/DeskCue.Tests/EverythingIntegrationTests.cs
-index 6ba78223..74c3ae68 100644
+index 6ba78223cd3fc9b13dcc072f3548d4978a1e6e14..74c3ae68821490eeed921e61c0c0417ae8279c7d 100644
 --- a/tests/DeskCue.Tests/EverythingIntegrationTests.cs
 +++ b/tests/DeskCue.Tests/EverythingIntegrationTests.cs
 @@ -1,4 +1,7 @@
@@ -2372,7 +3278,7 @@ index 6ba78223..74c3ae68 100644
 +    }
  }
 diff --git a/tests/DeskCue.Tests/GlanceCalendarAndImageServiceTests.cs b/tests/DeskCue.Tests/GlanceCalendarAndImageServiceTests.cs
-index 08b87094..690f0e0c 100644
+index 08b8709473f890f631f28f5d4f634ca0b146d8a3..690f0e0cdd0bd4e3ada22faf6f7f2df057288e86 100644
 --- a/tests/DeskCue.Tests/GlanceCalendarAndImageServiceTests.cs
 +++ b/tests/DeskCue.Tests/GlanceCalendarAndImageServiceTests.cs
 @@ -44,25 +44,34 @@ public sealed class GlanceCalendarAndImageServiceTests : IDisposable
@@ -2416,7 +3322,7 @@ index 08b87094..690f0e0c 100644
  
      [Fact]
 diff --git a/tests/DeskCue.Tests/ReleaseNotesKnownVersionsTests.cs b/tests/DeskCue.Tests/ReleaseNotesKnownVersionsTests.cs
-index 38cb9ecb..32406493 100644
+index 38cb9ecb430df30318f97eeb1b8402d51435fee8..32406493344725b40c9f9cfec8e23cd8c8f6761d 100644
 --- a/tests/DeskCue.Tests/ReleaseNotesKnownVersionsTests.cs
 +++ b/tests/DeskCue.Tests/ReleaseNotesKnownVersionsTests.cs
 @@ -33,6 +33,29 @@ public sealed class ReleaseNotesKnownVersionsTests
@@ -2450,7 +3356,7 @@ index 38cb9ecb..32406493 100644
      public void KnownReleaseVersions_NewestMatchesCurrentRelease()
      {
 diff --git a/tests/DeskCue.Tests/ReleaseNotesTests.cs b/tests/DeskCue.Tests/ReleaseNotesTests.cs
-index 0dac191a..f85a7c60 100644
+index 0dac191a9d797689b646cc6e8dd9d5a7922263a8..f85a7c6056f2b4c26faf9bea69909cac393a5ff8 100644
 --- a/tests/DeskCue.Tests/ReleaseNotesTests.cs
 +++ b/tests/DeskCue.Tests/ReleaseNotesTests.cs
 @@ -155,6 +155,73 @@ public sealed class ReleaseNotesTests : IDisposable
@@ -2528,7 +3434,7 @@ index 0dac191a..f85a7c60 100644
      {
          try
 diff --git a/tests/DeskCue.Tests/SettingsAboutContactTests.cs b/tests/DeskCue.Tests/SettingsAboutContactTests.cs
-index 87492524..ffca19ac 100644
+index 87492524a55915e0938ec2ed9d193c51383906e2..ffca19ac37c92c5c3edb2e9d46004d0f8098cc01 100644
 --- a/tests/DeskCue.Tests/SettingsAboutContactTests.cs
 +++ b/tests/DeskCue.Tests/SettingsAboutContactTests.cs
 @@ -3,7 +3,7 @@
@@ -2562,7 +3468,7 @@ index 87492524..ffca19ac 100644
          Assert.Contains("SupportDeskCueDialog.ShowAsync", storeActions, StringComparison.Ordinal);
          Assert.Contains("ViewModel.StoreSupportCardVisibility != Visibility.Visible", storeActions, StringComparison.Ordinal);
 diff --git a/tests/DeskCue.Tests/SettingsCopyAndHierarchyTests.cs b/tests/DeskCue.Tests/SettingsCopyAndHierarchyTests.cs
-index 0773522c..7f1a50b7 100644
+index 0773522cd656c80717c6ae651d7af88ec004b9d3..7f1a50b72a3e79a441b86267a4f28b08196c93bd 100644
 --- a/tests/DeskCue.Tests/SettingsCopyAndHierarchyTests.cs
 +++ b/tests/DeskCue.Tests/SettingsCopyAndHierarchyTests.cs
 @@ -270,7 +270,8 @@ public sealed class SettingsCopyAndHierarchyTests
@@ -2576,7 +3482,7 @@ index 0773522c..7f1a50b7 100644
  
      [Fact]
 diff --git a/tests/DeskCue.Tests/ShortcutNativeDifferentialTests.cs b/tests/DeskCue.Tests/ShortcutNativeDifferentialTests.cs
-index d8083932..6ca97991 100644
+index d8083932aa7ec83f2173636081ffe18b26a81121..6ca97991af0b8ffae3ec8b6f86a5f6e9e6306d66 100644
 --- a/tests/DeskCue.Tests/ShortcutNativeDifferentialTests.cs
 +++ b/tests/DeskCue.Tests/ShortcutNativeDifferentialTests.cs
 @@ -65,7 +65,8 @@ public sealed class ShortcutNativeDifferentialTests : IDisposable
@@ -2589,8 +3495,170 @@ index d8083932..6ca97991 100644
          Assert.Matches("^[0-9A-F]{64}$", diagnostic.ModuleSha256 ?? string.Empty);
          Assert.Equal(loadWasAlreadyCreated, diagnostic.LoadAttempted);
          if (!loadWasAlreadyCreated)
+diff --git a/tests/DeskCue.Tests/TestEnvironment.cs b/tests/DeskCue.Tests/TestEnvironment.cs
+index 6764d49e449ec729d694658b57047ab3859051a0..f32cf6f65796face9e354847f8509b357a552ffa 100644
+--- a/tests/DeskCue.Tests/TestEnvironment.cs
++++ b/tests/DeskCue.Tests/TestEnvironment.cs
+@@ -4,18 +4,18 @@ using DeskCue.Services;
+ namespace DeskCue.Tests;
+ 
+ /// <summary>
+-/// Assembly-wide test environment. DeviceIdentity resolves through
+-/// DeskCueDataPathService.Current, which falls back to the real production
+-/// root when no dev-root environment variable is set — without this
+-/// override every store-normalization test would read or write device.id
+-/// under the real application data directory.
++/// Isolate process-wide application paths before services or App capture them,
++/// including ordinary Release hosts which do not accept a development root.
+ /// </summary>
+ internal static class TestEnvironment
+ {
++    internal static string ApplicationRoot { get; } = Path.Combine(
++        TestPaths.FromRepository(".artifacts/test-data"),
++        $"application-{Environment.ProcessId}-{Guid.NewGuid():N}", "root");
++
+     [ModuleInitializer]
+     internal static void Initialize()
+     {
+-        DeviceIdentity.DataRootOverride = Path.Combine(
+-            Path.GetTempPath(), "deskcue-tests", "device-root");
++        DeskCueDataPathService.InitializeForTests(ApplicationRoot);
+     }
+ }
+diff --git a/tests/DeskCue.Tests/TodoNotesGestureTests.cs b/tests/DeskCue.Tests/TodoNotesGestureTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..0c10d374f6b378231d448880c73bd5350ba7d93e
+--- /dev/null
++++ b/tests/DeskCue.Tests/TodoNotesGestureTests.cs
+@@ -0,0 +1,64 @@
++using DeskCue.Controls;
++
++namespace DeskCue.Tests;
++
++public sealed class TodoNotesGestureTests
++{
++    [Fact]
++    public void HyperlinkClick_BlocksFollowingHandledTextTapUntilNextPointerPress()
++    {
++        var gesture = new MarkdownReaderPointerGesture();
++        gesture.BeginPointerGesture();
++        Assert.True(gesture.CanBeginNotesEditing(false, false, false));
++
++        // Native RichTextBlock raises Hyperlink.Click and then forwards its
++        // handled tap with RichTextBlock as OriginalSource (not Hyperlink).
++        gesture.RecordHyperlinkActivation();
++        Assert.False(gesture.CanBeginNotesEditing(false, false, false));
++        Assert.False(gesture.CanBeginNotesEditing(false, false, false));
++
++        // A subsequent click in blank space must not inherit the activation.
++        gesture.BeginPointerGesture();
++        Assert.True(gesture.CanBeginNotesEditing(false, false, false));
++    }
++
++    [Fact]
++    public void AttachmentActivation_IsVisibleToSubsequentCallbackAndTapObserver()
++    {
++        var gesture = new MarkdownReaderPointerGesture();
++        gesture.BeginPointerGesture();
++        bool attachmentCallbackObservedBlockedEdit = false;
++        void OpenAttachment() => attachmentCallbackObservedBlockedEdit =
++            !gesture.CanBeginNotesEditing(false, false, false);
++
++        // CreateHyperlink installs the common marker before AppendLink adds
++        // its attachment callback; rendering never resets pointer state.
++        gesture.RecordHyperlinkActivation();
++        OpenAttachment();
++        Assert.True(attachmentCallbackObservedBlockedEdit);
++        Assert.False(gesture.CanBeginNotesEditing(false, false, false));
++    }
++
++    [Fact]
++    public void KeyboardLinkActivation_DoesNotPoisonNextPointerGesture()
++    {
++        var gesture = new MarkdownReaderPointerGesture();
++        gesture.RecordHyperlinkActivation();
++        gesture.BeginPointerGesture();
++        Assert.True(gesture.CanBeginNotesEditing(false, false, false));
++    }
++
++    [Theory]
++    [InlineData(false, false, false, true)]
++    [InlineData(true, false, false, false)]
++    [InlineData(false, true, false, false)]
++    [InlineData(false, false, true, false)]
++    [InlineData(true, true, true, false)]
++    public void ClickEditing_LeavesSelectionDragAndInteractiveContentAlone(
++        bool hasSelection, bool isInteractive, bool hasDragged, bool expected)
++    {
++        var gesture = new MarkdownReaderPointerGesture();
++        gesture.BeginPointerGesture();
++        Assert.Equal(expected, gesture.CanBeginNotesEditing(hasSelection, isInteractive, hasDragged));
++    }
++}
+diff --git a/tests/DeskCue.Tests/TodoNotesPreviewTests.cs b/tests/DeskCue.Tests/TodoNotesPreviewTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..c547590123ef6039967d43711640f0eb97c4cc79
+--- /dev/null
++++ b/tests/DeskCue.Tests/TodoNotesPreviewTests.cs
+@@ -0,0 +1,56 @@
++using DeskCue.Models;
++using DeskCue.ViewModels;
++using Microsoft.UI.Xaml;
++
++namespace DeskCue.Tests;
++
++public sealed class TodoNotesPreviewTests
++{
++    [Fact]
++    public void Preview_UsesPlainTextAndPreservesRawMarkdown()
++    {
++        const string notes = "  # Planning\n\n**Review** [guide](https://example.com)  \n";
++        var item = new TodoItemViewModel(new TodoItem { Text = "Review", Notes = notes });
++
++        Assert.Equal("Planning" + Environment.NewLine + "Review guide", Preview(item));
++        Assert.Equal(Visibility.Visible, PreviewVisibility(item));
++        Assert.Equal(notes, item.Notes);
++    }
++
++    [Theory]
++    [InlineData(null)]
++    [InlineData("")]
++    [InlineData(" \n\t ")]
++    public void EmptyPreview_OccupiesNoSpace(string? notes)
++    {
++        var item = new TodoItemViewModel(new TodoItem { Notes = notes! });
++        Assert.True(string.IsNullOrWhiteSpace(Preview(item)));
++        Assert.Equal(Visibility.Collapsed, PreviewVisibility(item));
++    }
++
++    [Fact]
++    public void Refresh_UpdatesCachedPreviewAndNotifiesBindingsIncludingRollback()
++    {
++        var model = new TodoItem { Notes = "**Original**" };
++        var item = new TodoItemViewModel(model);
++        var notifications = new List<string?>();
++        item.PropertyChanged += (_, e) => notifications.Add(e.PropertyName);
++        Assert.Equal("Original", Preview(item));
++        model.Notes = "# Revised";
++        Assert.Equal("Original", Preview(item));
++        item.RefreshDetailProperties();
++        Assert.Equal("Revised", Preview(item));
++        Assert.Contains("NotesPreview", notifications);
++        Assert.Contains("NotesPreviewVisibility", notifications);
++        model.Notes = "**Original**";
++        item.RefreshDetailProperties();
++        Assert.Equal("Original", Preview(item));
++    }
++
++    // Reflection keeps the initial red run executable before the binding exists.
++    private static string Preview(TodoItemViewModel item) =>
++        Assert.IsType<string>(typeof(TodoItemViewModel).GetProperty("NotesPreview")?.GetValue(item));
++
++    private static Visibility PreviewVisibility(TodoItemViewModel item) =>
++        Assert.IsType<Visibility>(typeof(TodoItemViewModel).GetProperty("NotesPreviewVisibility")?.GetValue(item));
++}
 diff --git a/tests/DeskCue.Tests/TodoReminderServiceTests.cs b/tests/DeskCue.Tests/TodoReminderServiceTests.cs
-index 0c3686aa..75e895f9 100644
+index 0c3686aa6045826e787875ea18bdd83e94db4427..75e895f979e7610a21e07dd93ca62b4aa294ff6e 100644
 --- a/tests/DeskCue.Tests/TodoReminderServiceTests.cs
 +++ b/tests/DeskCue.Tests/TodoReminderServiceTests.cs
 @@ -116,6 +116,78 @@ public sealed class TodoReminderServiceTests : IDisposable
@@ -2672,9 +3740,33 @@ index 0c3686aa..75e895f9 100644
      [Fact]
      public async Task CheckNowAsync_SkipsWhenReminderSettingDisabled()
      {
+diff --git a/tests/DeskCue.Tests/TodoWidgetContentAdapterTests.cs b/tests/DeskCue.Tests/TodoWidgetContentAdapterTests.cs
+index 0cf1ca6e579f15856ef84ab004d118a3bb902440..a55cc542f21b76e9f7701d760fd01cba69fe97a4 100644
+--- a/tests/DeskCue.Tests/TodoWidgetContentAdapterTests.cs
++++ b/tests/DeskCue.Tests/TodoWidgetContentAdapterTests.cs
+@@ -40,6 +40,19 @@ public sealed class TodoWidgetContentAdapterTests : IDisposable
+         adapter.Dispose();
+     }
+ 
++    [Fact]
++    public void PreferredHeight_DoesNotMaterializeInactiveOrDisposedContent()
++    {
++        var config = CreateConfig("todo-height-lazy");
++        var adapter = new TodoWidgetContentAdapter(config, CreateViewModel(config),
++            _ => throw new InvalidOperationException("Measurement must not materialize a cached view."));
++        Assert.False(adapter.TryMeasurePreferredContentHeight(300, 800, out double height));
++        Assert.Equal(0, height);
++        adapter.Dispose();
++        Assert.False(adapter.TryMeasurePreferredContentHeight(300, 800, out height));
++        Assert.Equal(0, height);
++    }
++
+     [Fact]
+     public async Task InitializeAsync_LoadsTodoDataForCreatableTodoKind()
+     {
 diff --git a/tests/DeskCue.Tests/TrayContextMenuPlacementPolicyTests.cs b/tests/DeskCue.Tests/TrayContextMenuPlacementPolicyTests.cs
 new file mode 100644
-index 00000000..1bc756c2
+index 0000000000000000000000000000000000000000..1bc756c2e0e947f8166324af08227b42a8813c50
 --- /dev/null
 +++ b/tests/DeskCue.Tests/TrayContextMenuPlacementPolicyTests.cs
 @@ -0,0 +1,89 @@
@@ -2768,7 +3860,7 @@ index 00000000..1bc756c2
 +        new() { Left = left, Top = top, Right = right, Bottom = bottom };
 +}
 diff --git a/tests/DeskCue.Tests/TrayContextMenuResilienceTests.cs b/tests/DeskCue.Tests/TrayContextMenuResilienceTests.cs
-index 268a3c33..65a0a62c 100644
+index 268a3c3386801510b9b4655b8a46af4de27d2eb0..65a0a62c686da2e4fb388c603ee59adbaaea098a 100644
 --- a/tests/DeskCue.Tests/TrayContextMenuResilienceTests.cs
 +++ b/tests/DeskCue.Tests/TrayContextMenuResilienceTests.cs
 @@ -11,6 +11,136 @@ namespace DeskCue.Tests;
@@ -2908,3 +4000,78 @@ index 268a3c33..65a0a62c 100644
      [Fact]
      public void ModePolicy_FirstFailure_RequestsHostRebuildInsteadOfDegradation()
      {
+diff --git a/tests/DeskCue.Tests/WidgetPreferredHeightPolicyTests.cs b/tests/DeskCue.Tests/WidgetPreferredHeightPolicyTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..375eb6d044b5f8196e1d412f1fc9efeb30a33b94
+--- /dev/null
++++ b/tests/DeskCue.Tests/WidgetPreferredHeightPolicyTests.cs
+@@ -0,0 +1,56 @@
++using DeskCue.Helpers;
++using Windows.Graphics;
++
++namespace DeskCue.Tests;
++
++public class WidgetPreferredHeightPolicyTests
++{
++    [Theory]
++    [InlineData(100, 200)]
++    [InlineData(480, 500)]
++    [InlineData(2000, 900)]
++    public void Height_GrowsShrinksAndCaps(double content, int expected)
++    {
++        var result = WidgetPreferredHeightPolicy.Resolve(new RectInt32(10, 10, 320, 400), new RectInt32(0, 0, 1200, 900), content, 20, 1, 200);
++        Assert.Equal(expected, result.Height);
++        Assert.Equal(320, result.Width);
++    }
++
++    [Theory]
++    [InlineData(1.0, 421)]
++    [InlineData(1.25, 526)]
++    [InlineData(1.5, 631)]
++    public void Dpi_RoundsUpAndMovesOnlyEnoughToFit(double scale, int expected)
++    {
++        var result = WidgetPreferredHeightPolicy.Resolve(new RectInt32(-1000, 800, 333, 200), new RectInt32(-1200, 0, 1200, 1000), 400.1, 20, scale, 100);
++        Assert.Equal(expected, result.Height);
++        Assert.Equal(1000 - expected, result.Y);
++        Assert.Equal(-1000, result.X);
++        Assert.Equal(333, result.Width);
++    }
++
++    [Fact]
++    public void MeasurementKey_WorkAreaChangeInvalidatesUnchangedWindow()
++    {
++        var bounds = new RectInt32(20, 20, 300, 600);
++        var original = new DeskCue.Views.WidgetPreferredHeightMeasurementKey(bounds, 280, 1.25, new RectInt32(0, 0, 1200, 900));
++        Assert.Equal(original, new DeskCue.Views.WidgetPreferredHeightMeasurementKey(bounds, 280, 1.25, new RectInt32(0, 0, 1200, 900)));
++        Assert.NotEqual(original, new DeskCue.Views.WidgetPreferredHeightMeasurementKey(bounds, 280, 1.25, new RectInt32(0, 0, 1200, 700)));
++        Assert.NotEqual(original, new DeskCue.Views.WidgetPreferredHeightMeasurementKey(bounds, 280, 1.25, new RectInt32(0, 40, 1200, 900)));
++    }
++
++    [Fact]
++    public void SamePhysicalResult_IsNoOp()
++    {
++        var current = new RectInt32(20, 20, 300, 421);
++        Assert.Equal(current, WidgetPreferredHeightPolicy.Resolve(current, new RectInt32(0, 0, 1000, 900), 400.2, 20, 1, 200));
++    }
++
++    [Fact]
++    public void ImpossibleMinimumOrWidth_PreservesExistingBounds()
++    {
++        var current = new RectInt32(0, 0, 1200, 400);
++        Assert.Equal(current, WidgetPreferredHeightPolicy.Resolve(current, new RectInt32(0, 0, 1000, 900), 100, 20, 1, 200));
++        Assert.Equal(current, WidgetPreferredHeightPolicy.Resolve(current, new RectInt32(0, 0, 1400, 100), 100, 20, 1, 200));
++    }
++}
+diff --git a/tests/DeskCue.Tests/WidgetTextShadowContractTests.cs b/tests/DeskCue.Tests/WidgetTextShadowContractTests.cs
+index c78b04c8aa51c19100b26b59a693fe41e761e191..1b5059684ebd0169de7bff0f8d985aeeeb20473a 100644
+--- a/tests/DeskCue.Tests/WidgetTextShadowContractTests.cs
++++ b/tests/DeskCue.Tests/WidgetTextShadowContractTests.cs
+@@ -101,7 +101,7 @@ public sealed class WidgetTextShadowContractTests
+         // in locally; icon glyphs drawn through TextBlocks opt out.
+         string todo = File.ReadAllText(TestPaths.FromRepository(
+             "src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml"));
+-        Assert.Equal(7, CountOccurrences(todo, "helpers:WidgetTextShadow.Cast=\"True\""));
++        Assert.Equal(8, CountOccurrences(todo, "helpers:WidgetTextShadow.Cast=\"True\""));
+         string titleIcon = File.ReadAllText(TestPaths.FromRepository(
+             "src/DeskCue/Controls/WidgetTitleIcon.xaml"));
+         Assert.Equal(2, CountOccurrences(titleIcon, "helpers:WidgetTextShadow.Cast=\"False\""));
