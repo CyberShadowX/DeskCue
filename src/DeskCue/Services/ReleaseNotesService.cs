@@ -33,7 +33,7 @@ public sealed class ReleaseNotesService
     internal static IReadOnlyList<string> MergeKnownReleaseVersions(
         IEnumerable<string> currentAndUpstreamVersions) =>
         currentAndUpstreamVersions
-            .Concat(["1.5.9.4", "1.5.9.3"])
+            .Concat(["1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3"])
             .Distinct(StringComparer.Ordinal)
             .OrderByDescending(version => version, CachedVersionComparer.Instance)
             .ToArray();
