@@ -2,6 +2,28 @@
 
 Plan: docs/superpowers/plans/2026-10-27-deskcue-upstream-adoption.md
 
+## Project-local compiler environment (2026-10-29)
+
+- Parent `.archives` and `.deskcue-tools` were manually deleted and verified
+  absent. Old legacy recovery archives are no longer available.
+- Tools now live ONLY in `F:/AI/AIProjects/DeskCue/.deskcue-tools`, shared by
+  main/nested worktrees through the canonical common Git root. Scoped caches,
+  downloads and temporary files remain inside the project; new ignore rules
+  cover local tools and future explicitly requested private archives.
+- Local reviewed commits02dce4e5/a28c1d56 add initializer/shared environment/build
+  resolution. Actual initialization, validation, idempotent reuse and nested
+  worktree validation passed: SDK10.0.402/Rust1.96.0/Rustup1.29.2/Inno6.7.3.
+- Main fresh132 environment/helper tests PASS0fail/skip; actual x64Release
+  app/nativeRust compilation0errors/20existingwarnings. ActualNuGetcache inside
+  project. All394 formal runtime hashes and five product trees unchanged.
+- Only one obsolete rawUserPATH entry removed; rawpercent expressions/kind and
+  every other segment preserved. No newPATH entry; subsequent12persisted values
+  unchanged and16process variables restored. Source tooling changes remain local;
+  published1.5.9.4/tag847 and remote repository were not changed.
+- Scopedreview0C/0I/0M after twoImportant/oneMinor fixes. Fresh finalwhole-task
+  reviewPASS0C/0I/0remainingMinor. FullC#runtime tests/AOTpublication/installer/GUI/ARM64compile notrun;
+  existing shared system prerequisites and appuserdata were not relocated.
+
 ## Current authoritative checkpoint (2026-10-28): published1.5.9.4
 
 - Product/tag8472699a23166a179ae36bbab08b26eb288bc417, revision4; actual top-Finder

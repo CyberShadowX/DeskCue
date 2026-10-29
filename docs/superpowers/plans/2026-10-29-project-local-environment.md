@@ -37,12 +37,12 @@
 
 **Files:** `deskcue/LocalEnvironment.ps1`, `deskcue/Build-DeskCue.ps1`, `.gitignore`, focused new `deskcue/tests` coverage.
 
-- [ ] Specify and share the helper API with the initializer owner.
-- [ ] Observe failing behavioral tests for root/worktree containment and environment restoration.
-- [ ] Implement canonical root resolution, project-local write paths and first-use suppression.
-- [ ] Preserve hosted explicit tools/caches when portable tools are absent.
-- [ ] Ignore local tools/future archives and run focused plus existing helper tests.
-- [ ] Independently review spec compliance/code quality; resolve all Critical/Important findings.
+- [x] Specify and share the helper API with the initializer owner.
+- [x] Observe failing behavioral tests for root/worktree containment and environment restoration.
+- [x] Implement canonical root resolution, project-local write paths and first-use suppression.
+- [x] Preserve hosted explicit tools/caches when portable tools are absent.
+- [x] Ignore local tools/future archives and run focused plus existing helper tests.
+- [x] Independently review spec compliance/code quality; resolve all Critical/Important findings.
 
 ### Task 2: Repeatable verified bootstrap
 
@@ -50,25 +50,25 @@
 
 **Files:** `tools/Initialize-DeskCueEnvironment.ps1`, bootstrap-specific helper/test files if necessary; no overlap with Task1 ownership.
 
-- [ ] Use the shared canonical-root/environment contract.
-- [ ] Stage official pinned downloads under local tools, verify hashes/signature before execution.
-- [ ] Install .NET/Rust/Inno locally without global PATH or installer registration changes.
-- [ ] Support verification/idempotent reuse and record actual tool versions/receipts.
-- [ ] Run behavioral negative/probe tests and parser checks before actual downloads.
-- [ ] Independently review before Controller executes bootstrap.
+- [x] Use the shared canonical-root/environment contract.
+- [x] Stage official pinned downloads under local tools, verify hashes/signature before execution.
+- [x] Install .NET/Rust/Inno locally without global PATH or installer registration changes.
+- [x] Support verification/idempotent reuse and record actual tool versions/receipts.
+- [x] Run behavioral negative/probe tests and parser checks before actual downloads.
+- [x] Independently review before Controller executes bootstrap.
 
 ### Task 3: Integrate, initialize and verify
 
 **Owner:** Controller.
 
 - [x] Confirm both deleted parent directories are absent; preserve the clean current project.
-- [ ] Integrate reviewed changes and clean the single obsolete PATH item with comparison guard.
-- [ ] Execute reviewed initialization with all new downloads/cache/temp files under the canonical project.
-- [ ] Run initializer verification again to prove reuse and exact version pins.
-- [ ] Perform a real x64 Release application/native Rust compile in a contained source checkout and verify package/cache/temp locations.
-- [ ] Run fresh environment/helper tests and confirm persistent environment, parent directories and published-runtime hashes.
-- [ ] Update AGENTS, usage guidance and HANDOFF with the new policy and actual results.
-- [ ] Fresh final independent review, fix/re-review, local verified commits. No remote push/release is needed for this local-environment task.
+- [x] Integrate reviewed changes and clean the single obsolete PATH item with comparison guard.
+- [x] Execute reviewed initialization with all new downloads/cache/temp files under the canonical project.
+- [x] Run initializer verification again to prove reuse and exact version pins.
+- [x] Perform a real x64 Release application/native Rust compile in a contained source checkout and verify package/cache/temp locations.
+- [x] Run fresh environment/helper tests and confirm persistent environment, parent directories and published-runtime hashes.
+- [x] Update AGENTS, usage guidance and HANDOFF with the new policy and actual results.
+- [x] Fresh final independent review, fix/re-review, local verified commits. No remote push/release is needed for this local-environment task.
 
 ## Verification boundary
 

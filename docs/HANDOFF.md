@@ -1,5 +1,70 @@
 # DeskCue migration handoff
 
+## Project-local environment checkpoint (2026-10-29)
+
+The user manually deleted the old sibling `.archives` and `.deskcue-tools`,
+then explicitly required all project-owned development files to stay inside
+`F:/AI/AIProjects/DeskCue` and authorized rebuilding the compiler environment.
+The Controller verified both sibling directories absent before and after setup.
+Old recovery archives were not recreated. Published1.5.9.4 remains unchanged.
+
+- Reviewed local commits `02dce4e5` and `a28c1d56` add canonical-root resolution,
+  process-scoped environment management and repeatable verified initialization.
+  Main checkout and nested worktrees share ONE
+  `F:/AI/AIProjects/DeskCue/.deskcue-tools`; no duplicate worktree tool folders
+  exist. Toolchain, downloads, tool homes, NuGet/Cargo caches and temporary paths
+  are contained in the project. Existing shared OS/VS/Windows SDK/Git/Python/
+  PowerShell prerequisites and application user data are not relocated.
+- Actual initializer passed, then `-ValidateOnly`, ordinary reuse and a
+  post-compilation `-ValidateOnly` invoked from the nested implementation
+  worktree all passed. Exact tools: .NET SDK10.0.402, Rust1.96.0,
+  Rustup1.29.2, Inno6.7.3. Rust x64 and ARM64 standard-library targets are present.
+  Official pinned download hashes, Inno vendor signature and installed immutable
+  file manifests are checked before acceptance; no machine-wide installer
+  registration or project tool PATH addition is used.
+- One obsolete User PATH segment pointing to the deleted parent tool directory
+  was removed with a private recovery snapshot and compare-before-write guard.
+  Other raw entries, percent-variable expressions and ExpandString kind were
+  preserved. The first read-only-handle write failed without changing the value;
+  the corrected writable-handle operation was independently reviewed and verified.
+  Bootstrap blocks .NET first-use PATH addition. Subsequent actual setup/reuse/
+  compilation left all12 recorded persisted environment values unchanged;
+  before/after checks also verified restoration of16 process variables.
+- Controller freshly ran132 Python/PowerShell environment and delivery tests:
+  all passed in152.859s,0fail/skip. Task reviews closed two Important findings
+  (containment before any write; Rust directory/executable-link validation) and
+  one Minor (restrict file-link exception to Rust shims). Scoped verdicts0C/0I/0M.
+- Real compile used the short contained checkout `.artifacts/e/compile` at
+  `a28c1d565b012ab4c9ce2afa8c64e9647924d89d`. Restore exited0; actual x64
+  Release application/native Rust build exited0,20 existing warnings/0errors.
+  NuGet's actual `project.assets.json` package folder is exclusively
+  `F:/AI/AIProjects/DeskCue/.deskcue-tools/nuget/packages`.
+- All394 published runtime files still match the original accepted retail
+  manifest. Five product trees (`src/tests/native/scripts/installer`) are
+  unchanged from79f960e; no product/GUID/version/patch changes, installer execution,
+  application replacement, force-kill, release or remote push occurred.
+
+Evidence is private under `.artifacts/local-environment-controller/`:
+`initialize.log`, `validate-only.log`, `initialize-reuse.log`,
+`validate-after-compile.log`, `main-helper-tests.log`, `compile-run/{result.json,
+restore.log,build.log}`, `commissioning-verification.json`,
+`initialization-process-environment.json`, `persistent-environment-verification.json`.
+PATH snapshots contain private environment data and must never be printed or
+uploaded. Task RED/GREEN/review evidence remains inside the implementation
+worktree's ignored `.artifacts`. Fresh final whole-task review passed
+0Critical/0Important/0remainingMinor after correcting the stale archive wording.
+The reviewer independently checked394 runtime hashes, all3 cached distribution
+digests, persisted/raw environment values, current process identities and final
+documentation. Private verdict: `final-review.json` in the Controller evidence.
+
+Not re-executed for this tooling task: full C# runtime test suite, NativeAOT retail
+publication, installer installation/update, GUI acceptance or ARM64 compilation.
+Ordinary Release C# tests have an existing App.Log path into the real app profile;
+this task deliberately verified tools and real compilation without invoking that
+unrelated runtime behavior or expanding the product patch. ARM64 compilation
+still requires the corresponding installed VS C++ components. No warning cleanup
+or shared system prerequisite relocation is claimed.
+
 ## Current checkpoint (2026-10-28): revision4
 
 The complete DeskBox-based fork remains at `F:/AI/AIProjects/DeskCue`, branch
