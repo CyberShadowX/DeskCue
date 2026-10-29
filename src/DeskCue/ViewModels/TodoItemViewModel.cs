@@ -29,10 +29,15 @@ public sealed partial class TodoItemViewModel : ObservableObject
     private bool _isRecurringHistoryExpanded;
     private int _recurringHistoryItemCount;
     private bool _isDetailSelected;
+    private string _notesPreview;
+    private string _notesPreviewSource;
+    private static readonly MarkdownDocumentService s_notesMarkdownService = new();
 
     public TodoItemViewModel(TodoItem item, LocalizationService? localizationService = null)
     {
         _item = item;
+        _notesPreviewSource = Notes;
+        _notesPreview = s_notesMarkdownService.ToPlainText(_notesPreviewSource);
         _localizationService = localizationService;
         _text = item.Text;
         _isCompleted = item.IsCompleted;
@@ -93,6 +98,12 @@ public sealed partial class TodoItemViewModel : ObservableObject
     public object[] AttachmentItemsSource => Attachments.Cast<object>().ToArray();
 
     public string Notes => _item.Notes ?? string.Empty;
+
+    public string NotesPreview => _notesPreview;
+
+    public Visibility NotesPreviewVisibility => string.IsNullOrWhiteSpace(_notesPreview)
+        ? Visibility.Collapsed
+        : Visibility.Visible;
 
     public int CompletedStepCount => Steps.Count(step => step.IsCompleted);
 
@@ -592,6 +603,13 @@ public sealed partial class TodoItemViewModel : ObservableObject
 
     internal void RefreshDetailProperties()
     {
+        if (!string.Equals(_notesPreviewSource, Notes, StringComparison.Ordinal))
+        {
+            _notesPreviewSource = Notes;
+            _notesPreview = s_notesMarkdownService.ToPlainText(_notesPreviewSource);
+            OnPropertyChanged(nameof(NotesPreview));
+            OnPropertyChanged(nameof(NotesPreviewVisibility));
+        }
         OnPropertyChanged(nameof(Notes));
         OnPropertyChanged(nameof(NotesPlaceholderVisibility));
         OnPropertyChanged(nameof(StepItemsSource));

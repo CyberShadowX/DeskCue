@@ -76,6 +76,7 @@ public sealed partial class MarkdownDocumentView : UserControl
     private double _lastRenderedWidth = double.NaN;
     private MarkdownRenderState _lastRenderedState;
     private bool _hasRenderedState;
+    private readonly List<Hyperlink> _renderedHyperlinks = [];
     private int _renderParseGeneration;
     private string _renderInvalidationReason = "initial";
 
@@ -220,6 +221,42 @@ public sealed partial class MarkdownDocumentView : UserControl
     public event EventHandler<MarkdownAttachmentRequestedEventArgs>? AttachmentOpenRequested;
 
     public void Refresh() => InvalidateRender("explicit-refresh");
+
+    // RichTextBlock may handle plain text taps itself. The host can observe
+    // those taps, but must leave inline navigation and text selection alone.
+    internal bool CanBeginNotesEditingAt(object originalSource, Windows.Foundation.Point point, bool hasDragged)
+    {
+        bool interactive = originalSource is Hyperlink;
+        DependencyObject? current = originalSource as UIElement;
+        while (current is not null && !ReferenceEquals(current, this))
+        {
+            if (current is Microsoft.UI.Xaml.Controls.Primitives.ButtonBase)
+            {
+                interactive = true;
+                break;
+            }
+
+            current = VisualTreeHelper.GetParent(current);
+        }
+
+        Windows.Foundation.Point textPoint = TransformToVisual(_documentText).TransformPoint(point);
+        TextPointer? position = _documentText.GetPositionFromPoint(textPoint);
+        if (position is not null)
+        {
+            // Inline Hyperlinks are not visual children, and OriginalSource
+            // can be the containing RichTextBlock rather than the hyperlink.
+            Windows.Foundation.Rect forward = position.GetCharacterRect(LogicalDirection.Forward);
+            Windows.Foundation.Rect backward = position.GetCharacterRect(LogicalDirection.Backward);
+            bool overText = forward.Contains(textPoint) || backward.Contains(textPoint);
+            interactive |= overText && _renderedHyperlinks.Any(link =>
+                position.Offset >= link.ElementStart.Offset && position.Offset <= link.ElementEnd.Offset);
+        }
+
+        return CanBeginNotesEditing(!string.IsNullOrEmpty(_documentText.SelectedText), interactive, hasDragged);
+    }
+
+    internal static bool CanBeginNotesEditing(bool hasSelection, bool isInteractive, bool hasDragged) =>
+        !hasSelection && !isInteractive && !hasDragged;
 
     private static void OnDocumentPropertyChanged(
         DependencyObject sender,
@@ -380,6 +417,7 @@ public sealed partial class MarkdownDocumentView : UserControl
             $"length={source.Length} format={ContentFormat} width={ActualWidth:F1}");
         UpdateForegrounds();
         _documentText.Blocks.Clear();
+        _renderedHyperlinks.Clear();
         _taskListIndex = 0;
         WasTruncated = false;
         if (source.Length == 0)
@@ -1279,12 +1317,17 @@ public sealed partial class MarkdownDocumentView : UserControl
         destination.Add(hyperlink);
     }
 
-    private Hyperlink CreateHyperlink() => new()
+    private Hyperlink CreateHyperlink()
     {
-        FontWeight = FontWeights.SemiBold,
-        Foreground = _semanticForeground,
-        TextDecorations = Windows.UI.Text.TextDecorations.Underline
-    };
+        var hyperlink = new Hyperlink
+        {
+            FontWeight = FontWeights.SemiBold,
+            Foreground = _semanticForeground,
+            TextDecorations = Windows.UI.Text.TextDecorations.Underline
+        };
+        _renderedHyperlinks.Add(hyperlink);
+        return hyperlink;
+    }
 
     private Span CreateLinkSpan() => new()
     {

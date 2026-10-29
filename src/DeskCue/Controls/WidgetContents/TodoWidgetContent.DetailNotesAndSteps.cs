@@ -18,12 +18,26 @@ public sealed partial class TodoWidgetContent
     private string? _notesEditingItemId;
     private string _notesOriginalText = string.Empty;
     private bool _notesExitRequested;
+    private Windows.Foundation.Point? _notesPointerStart;
+    private bool _notesPointerDragged;
 
     private void InitializeDetailNotesAndSteps()
     {
         _notesAutosaveTimer.Tick += NotesAutosaveTimer_Tick;
         DetailNotesView.AttachmentResolver = ResolveSelectedTodoAttachment;
         DetailNotesView.AttachmentOpenRequested += DetailNotesView_AttachmentOpenRequested;
+        DetailNotesReaderHost.AddHandler(
+            UIElement.TappedEvent,
+            new TappedEventHandler(DetailNotesReaderHost_Tapped),
+            handledEventsToo: true);
+        DetailNotesReaderHost.AddHandler(
+            UIElement.PointerPressedEvent,
+            new PointerEventHandler(DetailNotesReaderHost_PointerPressed),
+            handledEventsToo: true);
+        DetailNotesReaderHost.AddHandler(
+            UIElement.PointerMovedEvent,
+            new PointerEventHandler(DetailNotesReaderHost_PointerMoved),
+            handledEventsToo: true);
         DetailNotesReaderHost.AddHandler(
             UIElement.DoubleTappedEvent,
             new DoubleTappedEventHandler(DetailNotesReaderHost_DoubleTapped),
@@ -169,12 +183,30 @@ public sealed partial class TodoWidgetContent
         return await ViewModel.DeleteStepAsync(item.Id, step.Id);
     }
 
+    private void DetailNotesReaderHost_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        _notesPointerStart = e.GetCurrentPoint(DetailNotesReaderHost).Position;
+        _notesPointerDragged = false;
+    }
+
+    private void DetailNotesReaderHost_PointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (_notesPointerStart is not { } start || !e.GetCurrentPoint(DetailNotesReaderHost).IsInContact)
+        {
+            return;
+        }
+
+        Windows.Foundation.Point point = e.GetCurrentPoint(DetailNotesReaderHost).Position;
+        _notesPointerDragged |= Math.Abs(point.X - start.X) > 4 || Math.Abs(point.Y - start.Y) > 4;
+    }
+
     private async void DetailNotesReaderHost_Tapped(object sender, TappedRoutedEventArgs e)
     {
-        if (ViewModel?.SelectedDetailItem is { Notes.Length: 0 })
+        if (ViewModel?.SelectedDetailItem is not null &&
+            DetailNotesView.CanBeginNotesEditingAt(e.OriginalSource, e.GetPosition(DetailNotesView), _notesPointerDragged))
         {
-            await BeginNotesEditingAsync();
             e.Handled = true;
+            await BeginNotesEditingAsync();
         }
     }
 
@@ -191,8 +223,11 @@ public sealed partial class TodoWidgetContent
         object sender,
         DoubleTappedRoutedEventArgs e)
     {
-        await BeginNotesEditingAsync();
-        e.Handled = true;
+        if (DetailNotesView.CanBeginNotesEditingAt(e.OriginalSource, e.GetPosition(DetailNotesView), _notesPointerDragged))
+        {
+            e.Handled = true;
+            await BeginNotesEditingAsync();
+        }
     }
 
     private async Task BeginNotesEditingAsync()

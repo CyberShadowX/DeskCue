@@ -381,6 +381,16 @@
                                         TextTrimming="CharacterEllipsis"
                                         TextWrapping="Wrap" />
 
+                                    <TextBlock
+                                        helpers:WidgetTextShadow.Cast="True"
+                                        FontSize="{Binding ElementName=TodoListView, Path=DataContext.SecondaryTextSize}"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        MaxLines="2"
+                                        Text="{Binding NotesPreview}"
+                                        TextTrimming="CharacterEllipsis"
+                                        TextWrapping="Wrap"
+                                        Visibility="{Binding NotesPreviewVisibility}" />
+
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <TextBlock
                                             helpers:WidgetTextShadow.Cast="True"
@@ -896,13 +906,13 @@
 
                         <Border
                             x:Name="DetailNotesReaderHost"
+                            AutomationProperties.AutomationId="TodoNotesReader"
                             MinHeight="72"
                             Padding="8,8,8,10"
                             Background="{ThemeResource WidgetLayerFillSecondaryBrush}"
                             BorderBrush="Transparent"
                             BorderThickness="0"
-                            CornerRadius="{StaticResource WidgetCornerRadiusSmall}"
-                            Tapped="DetailNotesReaderHost_Tapped">
+                            CornerRadius="{StaticResource WidgetCornerRadiusSmall}">
                             <Grid>
                                 <controls:MarkdownDocumentView
                                     x:Name="DetailNotesView"
@@ -924,6 +934,7 @@
 
                         <controls:MarkdownSourceEditor
                             x:Name="DetailNotesEditor"
+                            AutomationProperties.AutomationId="TodoNotesEditor"
                             MinHeight="116"
                             MaxHeight="360"
                             CancelRequested="DetailNotesEditor_CancelRequested"

@@ -12,6 +12,7 @@ public partial class TodoWidgetViewModel
 [WinRT.GeneratedBindableCustomProperty]
 public partial class TodoItemViewModel
 {
+    // Includes NotesPreview and NotesPreviewVisibility used by list row bindings.
 }
 
 [WinRT.GeneratedBindableCustomProperty]
