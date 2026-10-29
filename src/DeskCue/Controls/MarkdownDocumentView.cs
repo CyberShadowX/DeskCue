@@ -76,7 +76,7 @@ public sealed partial class MarkdownDocumentView : UserControl
     private double _lastRenderedWidth = double.NaN;
     private MarkdownRenderState _lastRenderedState;
     private bool _hasRenderedState;
-    private readonly List<Hyperlink> _renderedHyperlinks = [];
+    private readonly MarkdownReaderPointerGesture _notesPointerGesture = new();
     private int _renderParseGeneration;
     private string _renderInvalidationReason = "initial";
 
@@ -224,7 +224,9 @@ public sealed partial class MarkdownDocumentView : UserControl
 
     // RichTextBlock may handle plain text taps itself. The host can observe
     // those taps, but must leave inline navigation and text selection alone.
-    internal bool CanBeginNotesEditingAt(object originalSource, Windows.Foundation.Point point, bool hasDragged)
+    internal void BeginNotesPointerGesture() => _notesPointerGesture.BeginPointerGesture();
+
+    internal bool CanBeginNotesEditingAt(object originalSource, bool hasDragged)
     {
         bool interactive = originalSource is Hyperlink;
         DependencyObject? current = originalSource as UIElement;
@@ -239,20 +241,8 @@ public sealed partial class MarkdownDocumentView : UserControl
             current = VisualTreeHelper.GetParent(current);
         }
 
-        Windows.Foundation.Point textPoint = TransformToVisual(_documentText).TransformPoint(point);
-        TextPointer? position = _documentText.GetPositionFromPoint(textPoint);
-        if (position is not null)
-        {
-            // Inline Hyperlinks are not visual children, and OriginalSource
-            // can be the containing RichTextBlock rather than the hyperlink.
-            Windows.Foundation.Rect forward = position.GetCharacterRect(LogicalDirection.Forward);
-            Windows.Foundation.Rect backward = position.GetCharacterRect(LogicalDirection.Backward);
-            bool overText = forward.Contains(textPoint) || backward.Contains(textPoint);
-            interactive |= overText && _renderedHyperlinks.Any(link =>
-                position.Offset >= link.ElementStart.Offset && position.Offset <= link.ElementEnd.Offset);
-        }
-
-        return CanBeginNotesEditing(!string.IsNullOrEmpty(_documentText.SelectedText), interactive, hasDragged);
+        return _notesPointerGesture.CanBeginNotesEditing(
+            !string.IsNullOrEmpty(_documentText.SelectedText), interactive, hasDragged);
     }
 
     internal static bool CanBeginNotesEditing(bool hasSelection, bool isInteractive, bool hasDragged) =>
@@ -417,7 +407,6 @@ public sealed partial class MarkdownDocumentView : UserControl
             $"length={source.Length} format={ContentFormat} width={ActualWidth:F1}");
         UpdateForegrounds();
         _documentText.Blocks.Clear();
-        _renderedHyperlinks.Clear();
         _taskListIndex = 0;
         WasTruncated = false;
         if (source.Length == 0)
@@ -1325,7 +1314,10 @@ public sealed partial class MarkdownDocumentView : UserControl
             Foreground = _semanticForeground,
             TextDecorations = Windows.UI.Text.TextDecorations.Underline
         };
-        _renderedHyperlinks.Add(hyperlink);
+        // Native RichTextBlock activates the inline before its handled tap
+        // reaches the reader host. Mark synchronously, before attachment
+        // callbacks are registered, and retain the marker across re-renders.
+        hyperlink.Click += (_, _) => _notesPointerGesture.RecordHyperlinkActivation();
         return hyperlink;
     }
 
@@ -1371,6 +1363,20 @@ public sealed partial class MarkdownDocumentView : UserControl
         return NeutralInteractionBrush.ResolveThemedResource(key, this) ??
                new SolidColorBrush(Microsoft.UI.Colors.Gray);
     }
+}
+
+// State belongs to one reader, not one render. Both navigation and attachment
+// Hyperlink.Click handlers set it before the parent sees the handled tap.
+internal sealed class MarkdownReaderPointerGesture
+{
+    private bool _hyperlinkActivated;
+
+    internal void BeginPointerGesture() => _hyperlinkActivated = false;
+
+    internal void RecordHyperlinkActivation() => _hyperlinkActivated = true;
+
+    internal bool CanBeginNotesEditing(bool hasSelection, bool isInteractive, bool hasDragged) =>
+        !_hyperlinkActivated && MarkdownDocumentView.CanBeginNotesEditing(hasSelection, isInteractive, hasDragged);
 }
 
 public sealed class MarkdownTaskToggleRequestedEventArgs(int taskIndex) : EventArgs

@@ -185,6 +185,7 @@ public sealed partial class TodoWidgetContent
 
     private void DetailNotesReaderHost_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
+        DetailNotesView.BeginNotesPointerGesture();
         _notesPointerStart = e.GetCurrentPoint(DetailNotesReaderHost).Position;
         _notesPointerDragged = false;
     }
@@ -203,7 +204,7 @@ public sealed partial class TodoWidgetContent
     private async void DetailNotesReaderHost_Tapped(object sender, TappedRoutedEventArgs e)
     {
         if (ViewModel?.SelectedDetailItem is not null &&
-            DetailNotesView.CanBeginNotesEditingAt(e.OriginalSource, e.GetPosition(DetailNotesView), _notesPointerDragged))
+            DetailNotesView.CanBeginNotesEditingAt(e.OriginalSource, _notesPointerDragged))
         {
             e.Handled = true;
             await BeginNotesEditingAsync();
@@ -223,7 +224,7 @@ public sealed partial class TodoWidgetContent
         object sender,
         DoubleTappedRoutedEventArgs e)
     {
-        if (DetailNotesView.CanBeginNotesEditingAt(e.OriginalSource, e.GetPosition(DetailNotesView), _notesPointerDragged))
+        if (DetailNotesView.CanBeginNotesEditingAt(e.OriginalSource, _notesPointerDragged))
         {
             e.Handled = true;
             await BeginNotesEditingAsync();
