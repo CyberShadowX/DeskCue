@@ -1,6 +1,6 @@
 {
   "brandingRevision": 5,
-  "configSha256": "e6580417566fe120b6bd2fc3314a3a2a63fbcdcbdbb1737fe8cdc4ff6c799dac",
+  "configSha256": "70f753a26c6d122b287c890ce9f6e023c4449f80a06a65f1fba3f5eecc115b9f",
   "forkPatches": [
     "001-fork-boundaries.patch"
   ],
