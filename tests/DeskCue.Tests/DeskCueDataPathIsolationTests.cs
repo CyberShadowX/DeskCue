@@ -27,8 +27,16 @@ public sealed class DeskCueDataPathIsolationTests
         {
             try
             {
-                found = File.Exists(paths.LogFilePath) &&
-                    File.ReadAllText(paths.LogFilePath).Contains(marker, StringComparison.Ordinal);
+                if (File.Exists(paths.LogFilePath))
+                {
+                    // Poll without denying the logger's concurrent append or
+                    // rotation. File.ReadAllText's sharing mode can cause the
+                    // logger to drop the very batch this assertion awaits.
+                    using var stream = new FileStream(paths.LogFilePath,
+                        FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                    using var reader = new StreamReader(stream);
+                    found = reader.ReadToEnd().Contains(marker, StringComparison.Ordinal);
+                }
             }
             catch (IOException) { }
             if (!found) await Task.Delay(50);
