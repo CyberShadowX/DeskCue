@@ -360,18 +360,26 @@ no repository write credential. See [使用与更新](../deskcue/使用与更新
 
 ## Legacy preservation and local safety
 
-The complete former WPF project and Git history are preserved at
-`F:/AI/AIProjects/DeskCue-legacy-20261027` (master `e98b255`). A separate all-ref
-bundle, former EXE and consistent SQLite backup are under the private archive
-`F:/AI/AIProjects/.archives/DeskCue/2026-10-27-before-deskbox`.
-No old data is automatically imported or uploaded. Cutover transactionally moved
-owned top-level entries and repaired owned worktrees; `.artifacts/cutover-result.json`.
+The migration originally preserved the former WPF tree/history and an independent
+EXE/SQLite/source-bundle archive. The user subsequently manually deleted the
+legacy/migration working directories, then explicitly accepted deleting the old
+archive and parent-level portable tools. On2026-10-29 the Controller verified
+that both `F:/AI/AIProjects/.archives` and `F:/AI/AIProjects/.deskcue-tools` are
+absent. Those old recovery copies must not be advertised as available. No old
+data was automatically imported or uploaded. The historical cutover receipt is
+`.artifacts/cutover-result.json`; historical preservation claims describe that
+earlier checkpoint only.
 
 `tools/Publish-DeskCue.ps1` builds the complete offline runtime and installer,
 verifies source/tests/package bytes, preserves the previous release and blocks
 replacement while its app is running. It never kills, installs or starts apps.
-Portable tools are under `F:/AI/AIProjects/.deskcue-tools`, using process-only
-environment changes. The former WPF single-file EXE contract no longer applies.
+Project-owned portable tools now belong under
+`F:/AI/AIProjects/DeskCue/.deskcue-tools`; the canonical common-Git project root
+is shared by linked worktrees. Downloads, tool homes, dependency caches and
+temporary build files stay under the project. New private backups, if explicitly
+requested, belong under its ignored `.archives`; deleted old backups are not
+recreated. Shared existing OS/VS/Windows SDK prerequisites and app user data are
+not relocated. The former WPF single-file EXE contract no longer applies.
 
 ## Verification boundaries
 

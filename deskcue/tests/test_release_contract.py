@@ -320,8 +320,9 @@ class ReleaseContractTests(unittest.TestCase):
         wrapper = MODULE.with_name("Build-DeskCue.ps1")
         self.assertTrue(wrapper.is_file(), "shared build wrapper has not been implemented")
         (self.root / "deskcue/Build-DeskCue.ps1").write_bytes(wrapper.read_bytes())
+        (self.root / "deskcue/LocalEnvironment.ps1").write_bytes(MODULE.with_name("LocalEnvironment.ps1").read_bytes())
         (self.root / "deskcue/release_contract.py").write_bytes(MODULE.read_bytes())
-        (self.root / ".gitignore").write_text(".artifacts/\n", encoding="utf-8")
+        (self.root / ".gitignore").write_text(".artifacts/\n.deskcue-tools/\n", encoding="utf-8")
         (self.root / "DeskCue.sln").write_text("fixture solution\n", encoding="utf-8")
         for name in ("src/DeskCue/DeskCue.csproj", "scripts/publish-aot-retail.ps1", "installer/DeskCue.iss"):
             path = self.root / name
@@ -354,6 +355,95 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("exit 19", result.stdout + result.stderr)
         self.assertEqual(self.previous_receipt.read_bytes(), previous)
+
+    def assert_failed_builder_environment(self, hosted):
+        self.fixture_build_source()
+        observed = self.root / ".artifacts/observed-build-environment.json"
+        probe = self.root / "probe-environment.ps1"
+        keys = ("DOTNET_ROOT", "DOTNET_CLI_HOME", "DOTNET_ADD_GLOBAL_TOOLS_TO_PATH", "NUGET_PACKAGES",
+                "NUGET_HTTP_CACHE_PATH", "NUGET_PLUGINS_CACHE_PATH", "CARGO_HOME", "RUSTUP_HOME",
+                "MSBUILDUSEREXTENSIONSPATH", "TEMP", "TMP", "DESKCUE_TEST_TEMP_ROOT", "PATH")
+        quote = lambda value: "'" + str(value).replace("'", "''") + "'"
+        probe.write_text(
+            "$values=@{}\nforeach($key in @(" + ",".join(quote(key) for key in keys) + ")) "
+            "{$values[$key]=[Environment]::GetEnvironmentVariable($key,'Process')}\n"
+            f"$values|ConvertTo-Json|Set-Content -LiteralPath {quote(observed)} -Encoding utf8\n",
+            encoding="utf-8-sig")
+        self.fake_dotnet.write_text(
+            '@"%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" '
+            '-NoProfile -File "%~dp0probe-environment.ps1"\n@exit /b 19\n', encoding="ascii")
+        subprocess.run(["git", "-C", str(self.root), "add", "."], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(self.root), "-c", "user.name=Fixture", "-c",
+                        "user.email=fixture@example.invalid", "commit", "-qm", "environment fixture"],
+                       check=True, capture_output=True)
+        harness = self.root / ".artifacts/run-environment-check.ps1"
+        harness.write_text(
+            "$ErrorActionPreference='Stop'\n"
+            f"$env:GITHUB_ACTIONS='{str(hosted).lower()}'\n"
+            f"$env:DOTNET_CLI_HOME={quote(self.root / 'hosted-dotnet-home')}\n"
+            f"$env:NUGET_PACKAGES={quote(self.root / 'hosted-nuget')}\n"
+            f"$env:CARGO_HOME={quote(self.root / 'hosted-cargo')}\n"
+            "$env:DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='original-path-flag'\n"
+            "$keys=@(" + ",".join(quote(key) for key in keys) + ")\n"
+            "$before=@{};foreach($key in $keys){$before[$key]=[Environment]::GetEnvironmentVariable($key,'Process')}\n"
+            "$userPath=[Environment]::GetEnvironmentVariable('PATH','User')\n"
+            "$machinePath=[Environment]::GetEnvironmentVariable('PATH','Machine')\n"
+            "$message=$null\ntry {\n"
+            f"& {quote(self.root / 'deskcue/Build-DeskCue.ps1')} -SourceRoot {quote(self.root)} "
+            f"-DotNetPath {quote(self.fake_dotnet)} -IsccPath {quote(self.fake_iscc)}\n"
+            "}catch{$message=$_.Exception.Message}\n"
+            "$restored=$true;foreach($key in $keys){if([Environment]::GetEnvironmentVariable($key,'Process') "
+            "-cne $before[$key]){$restored=$false}}\n"
+            "$answer=@{failure=$message;allSelectedProcessValuesRestored=$restored;"
+            "userPathUnchanged=([Environment]::GetEnvironmentVariable('PATH','User') -ceq $userPath);"
+            "machinePathUnchanged=([Environment]::GetEnvironmentVariable('PATH','Machine') -ceq $machinePath)}\n"
+            "Write-Output ('DESKCUE_ENV_RESULT '+($answer|ConvertTo-Json -Compress))\n",
+            encoding="utf-8-sig")
+        child = subprocess.run([shutil.which("pwsh") or "pwsh", "-NoProfile", "-File", str(harness)],
+                               capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=80)
+        self.assertEqual(child.returncode, 0, child.stdout + child.stderr)
+        results = [line.removeprefix("DESKCUE_ENV_RESULT ") for line in child.stdout.splitlines()
+                   if line.startswith("DESKCUE_ENV_RESULT ")]
+        self.assertEqual(len(results), 1, child.stdout + child.stderr)
+        answer = json.loads(results[0])
+        self.assertIn("exit 19", answer["failure"])
+        self.assertTrue(answer["allSelectedProcessValuesRestored"])
+        self.assertTrue(answer["userPathUnchanged"])
+        self.assertTrue(answer["machinePathUnchanged"])
+        during = json.loads(observed.read_text(encoding="utf-8-sig"))
+        self.assertEqual(during["DOTNET_ADD_GLOBAL_TOOLS_TO_PATH"], "0")
+        Path(during["TEMP"]).relative_to(self.root / ".artifacts")
+        Path(during["MSBUILDUSEREXTENSIONSPATH"]).relative_to(self.root / ".deskcue-tools")
+        if hosted:
+            self.assertEqual(Path(during["DOTNET_CLI_HOME"]), self.root / "hosted-dotnet-home")
+            self.assertEqual(Path(during["NUGET_PACKAGES"]), self.root / "hosted-nuget")
+            self.assertEqual(Path(during["CARGO_HOME"]), self.root / "hosted-cargo")
+        else:
+            for key in ("DOTNET_CLI_HOME", "NUGET_PACKAGES", "NUGET_HTTP_CACHE_PATH",
+                        "NUGET_PLUGINS_CACHE_PATH", "CARGO_HOME", "RUSTUP_HOME"):
+                Path(during[key]).relative_to(self.root / ".deskcue-tools")
+
+    def test_failed_local_build_keeps_caches_in_project_and_restores_environment(self):
+        self.assert_failed_builder_environment(hosted=False)
+
+    def test_failed_hosted_build_preserves_configured_caches_and_restores_environment(self):
+        self.assert_failed_builder_environment(hosted=True)
+
+    def test_actual_build_rejects_external_worktree_before_creating_any_artifacts(self):
+        self.fixture_build_source()
+        outside_temp = tempfile.TemporaryDirectory(prefix="external-case-", dir=self.root.parent)
+        self.addCleanup(outside_temp.cleanup)
+        outside = Path(outside_temp.name) / "linked-source"
+        subprocess.run(["git", "-C", str(self.root), "worktree", "add", "--detach", str(outside), "HEAD"],
+                       check=True, capture_output=True)
+        self.assertFalse((outside / ".artifacts").exists())
+        result = subprocess.run([
+            shutil.which("pwsh") or "pwsh", "-NoProfile", "-File", str(outside / "deskcue/Build-DeskCue.ps1"),
+            "-SourceRoot", str(outside), "-DotNetPath", str(self.fake_dotnet), "-IsccPath", str(self.fake_iscc),
+        ], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertRegex((result.stdout + result.stderr).lower(), "outside|escape|contain")
+        self.assertFalse((outside / ".artifacts").exists(), "rejected external source must receive no build files")
 
     def test_actual_freeze_uses_a_short_guarded_source_directory(self):
         self.fixture_build_source()

@@ -18,6 +18,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 Set-StrictMode -Version Latest
+. (Join-Path $PSScriptRoot 'LocalEnvironment.ps1')
 
 function Assert-SafeDeskCuePath {
     param([string]$Root, [string]$Path)
@@ -99,6 +100,9 @@ $repoRoot = [IO.Path]::GetFullPath($inputRoot)
 $head = Assert-CleanSource $repoRoot
 $branch = Read-Git $repoRoot @('branch', '--show-current')
 Write-Host "DeskCue source: $repoRoot; branch: $branch; commit: $head"
+# Resolve and validate the common project boundary before the first build write.
+# An external linked worktree must not receive even a lock or log directory.
+$localEnvironment = Get-DeskCueLocalEnvironment -SourceRoot $repoRoot
 $rid = if ($Platform -eq 'ARM64') { 'win-arm64' } else { 'win-x64' }
 $releaseRoot = Join-Path $repoRoot ".artifacts\deskcue-release\$rid"
 Assert-SafeDeskCuePath $repoRoot $releaseRoot
@@ -125,8 +129,8 @@ try {
     Assert-SafeDeskCuePath $runRoot (Join-Path $runRoot 'logs')
     Assert-SafeDeskCuePath $runRoot (Join-Path $runRoot 'tmp')
     New-Item -ItemType Directory -Path (Join-Path $runRoot 'logs'), (Join-Path $runRoot 'tmp') -Force | Out-Null
-    $toolRoot = Join-Path (Split-Path -Parent $repoRoot) '.deskcue-tools'
-    Assert-SafeDeskCuePath (Split-Path -Parent $repoRoot) $toolRoot
+    $toolRoot = $localEnvironment.ToolRoot
+    Assert-SafeDeskCuePath $localEnvironment.CanonicalRoot $toolRoot
     $dotnet = Resolve-Tool $DotNetPath @((Join-Path $toolRoot 'dotnet\dotnet.exe')) 'dotnet'
     $isccCandidates = @((Join-Path $toolRoot 'inno\ISCC.exe'))
     foreach ($programRoot in @(${env:ProgramFiles(x86)}, $env:ProgramFiles)) {
@@ -138,18 +142,21 @@ try {
     $processValues = @{
         DOTNET_ROOT = Split-Path -Parent $dotnet
         DOTNET_NOLOGO = '1'; DOTNET_CLI_TELEMETRY_OPTOUT = '1'
+        DOTNET_ADD_GLOBAL_TOOLS_TO_PATH = '0'
         DOTNET_GENERATE_ASPNET_CERTIFICATE = 'false'; MSBUILDDISABLENODEREUSE = '1'
+        MSBUILDUSEREXTENSIONSPATH = $localEnvironment.Paths.MSBuildUserExtensions
         RestoreLockedMode = 'true'; PYTHONUTF8 = '1'
         TEMP = Join-Path $runRoot 'tmp'; TMP = Join-Path $runRoot 'tmp'
         DESKCUE_TEST_TEMP_ROOT = Join-Path $runRoot 'tmp\release-tests'
     }
-    # Existing portable caches are optional. Hosted builders retain their own configured caches.
-    if (Test-Path -LiteralPath (Join-Path $toolRoot 'dotnet') -PathType Container) {
-        $processValues['DOTNET_CLI_HOME'] = Join-Path $toolRoot 'dotnet-home'
-        $processValues['NUGET_PACKAGES'] = Join-Path $toolRoot 'nuget\packages'
-        $processValues['NUGET_HTTP_CACHE_PATH'] = Join-Path $toolRoot 'nuget\http-cache'
-        $processValues['NUGET_PLUGINS_CACHE_PATH'] = Join-Path $toolRoot 'nuget\plugins-cache'
-        foreach ($name in @('DOTNET_CLI_HOME', 'NUGET_PACKAGES', 'NUGET_HTTP_CACHE_PATH', 'NUGET_PLUGINS_CACHE_PATH')) {
+    # Local builds always own their caches, including when an explicit SDK is
+    # used. A hosted builder without our portable SDK keeps its configured caches.
+    $useLocalCaches = $env:GITHUB_ACTIONS -cne 'true' -or
+        (Test-Path -LiteralPath $localEnvironment.Paths.DotNetRoot -PathType Container)
+    if ($useLocalCaches) {
+        foreach ($name in @('DOTNET_CLI_HOME', 'NUGET_PACKAGES', 'NUGET_HTTP_CACHE_PATH',
+                'NUGET_PLUGINS_CACHE_PATH', 'CARGO_HOME', 'RUSTUP_HOME')) {
+            $processValues[$name] = $localEnvironment.ProcessValues[$name]
             Assert-SafeDeskCuePath $toolRoot $processValues[$name]
         }
     }
@@ -160,10 +167,7 @@ try {
         $pathParts += Join-Path $toolRoot 'cargo\bin'
     }
     $processValues['PATH'] = ($pathParts + @($env:PATH)) -join [IO.Path]::PathSeparator
-    foreach ($entry in $processValues.GetEnumerator()) {
-        $environmentBefore[$entry.Key] = [Environment]::GetEnvironmentVariable($entry.Key, 'Process')
-        [Environment]::SetEnvironmentVariable($entry.Key, $entry.Value, 'Process')
-    }
+    $environmentBefore = Push-DeskCueProcessEnvironment -Values $processValues
 
     # MSVC/Rust output paths can exceed MAX_PATH when a checkout sits below the
     # full evidence hierarchy. Keep source shallow; retain logs/receipts in runRoot.
@@ -246,8 +250,6 @@ try {
     }
 }
 finally {
-    foreach ($entry in $environmentBefore.GetEnumerator()) {
-        [Environment]::SetEnvironmentVariable($entry.Key, $entry.Value, 'Process')
-    }
+    Restore-DeskCueProcessEnvironment -Snapshot $environmentBefore
     $releaseLock.Dispose()
 }

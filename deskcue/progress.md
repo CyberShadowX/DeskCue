@@ -256,10 +256,12 @@ Plan: docs/superpowers/plans/2026-10-27-deskcue-upstream-adoption.md
 - Network diagnosis: Git did not inherit Windows system proxy; a command/local
   repo-specific proxy fixed access. No global proxy configuration changed.
 
-## Current checkpoint
+## Historical initial adoption checkpoint
 
 - Legacy archive: F:/AI/AIProjects/.archives/DeskCue/2026-10-27-before-deskbox;
   verified bundle1B9B9050..., old EXE D6AFB867..., SQLite backup quick_check ok.
+  Historical only: the user deleted this archive on2026-10-29 after accepting
+  loss of these recovery copies. Current storage policy is project-local.
 - Independent clone branch codex/deskbox-adoption, origin own fork, upstream
   push URL DISABLED. Fork source1fdf0bd; tagv1.5.9 commit4cae1d4....
 - Portable tools ready; baseline .artifacts/baseline verification5804/5804PASS,

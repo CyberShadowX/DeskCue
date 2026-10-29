@@ -112,3 +112,7 @@ store-listing/
 
 # Agent scratch workspace (review/fix iteration artifacts)
 .scratch/
+
+# Project-owned portable toolchains, caches and private archives
+/.deskcue-tools/
+/.archives/

@@ -5,8 +5,9 @@
 The user explicitly approved replacing the former WPF DeskCue with the complete
 DeskBox-based DeskCue fork, including product renaming, upstream synchronization,
 cloud releases, and a local build fallback. This is the one-time migration of
-project-specific rules. The old project and its instructions remain in the local
-archive; the upstream author's machine paths and Git identity are not adopted.
+project-specific rules. The user subsequently deleted the old working copies
+and legacy archive; do not assume those recovery copies still exist. The
+upstream author's machine paths and Git identity are not adopted.
 
 ## Controller workflow
 
@@ -34,8 +35,18 @@ archive; the upstream author's machine paths and Git identity are not adopted.
 
 - Solution: DeskCue.sln. WinUI3/.NET10/Rust, explicit x64 or ARM64 architecture.
 - SDK/toolchain pins and source provenance are authoritative. Do not run AnyCPU.
-- Local tooling may be placed at F:\AI\AIProjects\.deskcue-tools; use process-only
-  environment changes. No global PATH/toolchain changes are required.
+- All project-owned local files must stay under F:\AI\AIProjects\DeskCue.
+  Tools, downloaded installers, tool homes, dependency caches and temporary
+  build/test files belong in the ignored project .deskcue-tools or .artifacts;
+  future private backups belong in the ignored project .archives. Never create
+  these folders beside the project in F:\AI\AIProjects.
+- Resolve the canonical project root from Git's common directory: nested linked
+  worktrees share the main project's .deskcue-tools instead of duplicating tools.
+  Do not relocate existing shared OS/VS/Windows SDK prerequisites or app user data.
+- Initialize project tools with tools/Initialize-DeskCueEnvironment.ps1. Use
+  process-only environment changes and restore them on failure/success. Set
+  DOTNET_ADD_GLOBAL_TOOLS_TO_PATH=0 before dotnet's first use; never add project
+  tools to global PATH or register portable compilers as system installations.
 - Main build/release entry: tools/Publish-DeskCue.ps1; shared implementation under
   deskcue/. Cloud and local builds use the same source selection, transformation,
   version, tests and package generation. No bare publish shortcut for retail.

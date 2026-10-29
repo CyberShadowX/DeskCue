@@ -91,7 +91,8 @@ tools/Publish-DeskCue.ps1 is the normal local release entry and calls the shared
 deskcue build recipe. A separate explicit local-sync command stages new upstream
 source using the same transformation. Validate it before promoting or installing.
 It never silently starts a large compilation after a cloud download failure.
-Portable SDK/Rust/Inno tools live outside the repo under .deskcue-tools. Existing
+Portable SDK/Rust/Inno tools live inside the canonical project under .deskcue-tools
+(updated by the user's 2026-10-29 storage instruction). Existing
 VS2022 x64 C++/Windows SDK prerequisites are usable. Local ARM64 may require extra
 C++ tools; cloud ARM64 validation must be reported separately from local x64.
 
