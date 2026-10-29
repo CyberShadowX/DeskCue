@@ -18,6 +18,7 @@ public sealed class TodoWidgetContentAdapter :
     IWidgetTransientStateContent,
     IWidgetResponsiveLayoutContent,
     IWidgetInteractiveResizeContent,
+    IWidgetPreferredHeightContent,
     IWidgetGroupContentCacheable
 {
     public TodoWidgetContentAdapter(WidgetConfig config, LocalizationService localizationService)
@@ -56,12 +57,25 @@ public sealed class TodoWidgetContentAdapter :
     public bool IsReadyForReuse => ViewModel.IsInitialized && !IsDisposed;
 
     public event EventHandler<WidgetFeedbackRequestedEventArgs>? FeedbackRequested;
+    public event EventHandler? PreferredHeightInvalidated;
+
+    private void TodoContent_PreferredHeightInvalidated(object? sender, EventArgs e) =>
+        PreferredHeightInvalidated?.Invoke(this, e);
+
+    public bool TryMeasurePreferredContentHeight(double width, double maxHeight, out double height)
+    {
+        height = 0;
+        return MaterializedView is TodoWidgetContent content &&
+            content.TryMeasurePreferredContentHeight(width, maxHeight, out height);
+    }
+
 
     protected override void OnViewMaterialized(FrameworkElement view)
     {
         if (view is TodoWidgetContent todoContent)
         {
             todoContent.FeedbackRequested += TodoContent_FeedbackRequested;
+            todoContent.PreferredHeightInvalidated += TodoContent_PreferredHeightInvalidated;
         }
     }
 
@@ -209,6 +223,7 @@ public sealed class TodoWidgetContentAdapter :
         {
             todoContent.ReleaseTransientRenderingSubscriptions();
             todoContent.FeedbackRequested -= TodoContent_FeedbackRequested;
+            todoContent.PreferredHeightInvalidated -= TodoContent_PreferredHeightInvalidated;
         }
 
         if (ViewModel is IDisposable disposable)

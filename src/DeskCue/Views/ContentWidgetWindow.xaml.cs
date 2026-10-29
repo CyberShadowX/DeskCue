@@ -1090,6 +1090,7 @@ IsHideAnimationRunning = true;
 
         AttachCompactPresentationSource(content);
         AttachFeedbackSource(content);
+        AttachPreferredHeightSource(content);
         AttachHostContextMenuSource(content);
         RefreshCompactPresentation();
         ApplyTitleActionButtonConfiguration();
@@ -1350,6 +1351,7 @@ IsHideAnimationRunning = true;
 
         Closed += (_, _) =>
         {
+            AttachPreferredHeightSource(null);
             IsClosing = true;
             Visible = false;
             ReleaseAutoRestoreTimer();

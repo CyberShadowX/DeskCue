@@ -41,6 +41,19 @@ public sealed class TodoWidgetContentAdapterTests : IDisposable
     }
 
     [Fact]
+    public void PreferredHeight_DoesNotMaterializeInactiveOrDisposedContent()
+    {
+        var config = CreateConfig("todo-height-lazy");
+        var adapter = new TodoWidgetContentAdapter(config, CreateViewModel(config),
+            _ => throw new InvalidOperationException("Measurement must not materialize a cached view."));
+        Assert.False(adapter.TryMeasurePreferredContentHeight(300, 800, out double height));
+        Assert.Equal(0, height);
+        adapter.Dispose();
+        Assert.False(adapter.TryMeasurePreferredContentHeight(300, 800, out height));
+        Assert.Equal(0, height);
+    }
+
+    [Fact]
     public async Task InitializeAsync_LoadsTodoDataForCreatableTodoKind()
     {
         await CreateStore("todo-widget").SaveAsync(new TodoWidgetData

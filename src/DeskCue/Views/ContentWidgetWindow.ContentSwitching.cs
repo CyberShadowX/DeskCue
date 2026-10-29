@@ -92,6 +92,7 @@ public sealed partial class ContentWidgetWindow
         }
         AttachCompactPresentationSource(content);
         AttachFeedbackSource(content);
+        AttachPreferredHeightSource(content);
         AttachHostContextMenuSource(content);
         ApplyLocalizedTitleActionTooltips();
         // The window chrome changes with the active member. A cached member's

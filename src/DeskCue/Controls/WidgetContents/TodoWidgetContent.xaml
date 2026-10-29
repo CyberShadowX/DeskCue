@@ -145,6 +145,8 @@
             <ColumnDefinition x:Name="SplitterColumn" Width="0" />
             <ColumnDefinition x:Name="DetailColumn" Width="0" />
         </Grid.ColumnDefinitions>
+        <Canvas x:Name="HeightMeasurementCanvas" Grid.RowSpan="3" Grid.ColumnSpan="3" Width="0" Height="0" Opacity="0" IsHitTestVisible="False" HorizontalAlignment="Left" VerticalAlignment="Top" />
+
 
         <StackPanel
             x:Name="ListHeaderArea"
@@ -221,7 +223,7 @@
                 PointerReleased="TodoListView_PointerReleased"
                 SelectionMode="None"
                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                ScrollViewer.VerticalScrollBarVisibility="Auto">
+                ScrollViewer.VerticalScrollBarVisibility="Visible">
                 <ListView.Resources>
                     <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="Transparent" />
                     <SolidColorBrush x:Key="ListViewItemBackgroundPressed" Color="Transparent" />
@@ -288,6 +290,7 @@
                     <DataTemplate>
                         <Border
                             x:Name="TodoItemRoot"
+                            Tag="{Binding ElementName=TodoListView, Path=DataContext}"
                             AllowDrop="True"
                             Margin="0,2"
                             MinHeight="50"
@@ -372,10 +375,10 @@
                                     Spacing="2">
                                     <TextBlock
                                         helpers:WidgetTextShadow.Cast="True"
-                                        FontSize="{Binding ElementName=TodoListView, Path=DataContext.TextSize}"
-                                        LineHeight="{Binding ElementName=TodoListView, Path=DataContext.ItemTextLineHeight}"
+                                        FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.TextSize}"
+                                        LineHeight="{Binding ElementName=TodoItemRoot, Path=Tag.ItemTextLineHeight}"
                                         LineStackingStrategy="BlockLineHeight"
-                                        MaxLines="{Binding ElementName=TodoListView, Path=DataContext.ItemPreviewLineCount}"
+                                        MaxLines="{Binding ElementName=TodoItemRoot, Path=Tag.ItemPreviewLineCount}"
                                         Text="{Binding Text}"
                                         TextDecorations="{Binding TextDecorations}"
                                         TextTrimming="CharacterEllipsis"
@@ -383,7 +386,7 @@
 
                                     <TextBlock
                                         helpers:WidgetTextShadow.Cast="True"
-                                        FontSize="{Binding ElementName=TodoListView, Path=DataContext.SecondaryTextSize}"
+                                        FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SecondaryTextSize}"
                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                         MaxLines="2"
                                         Text="{Binding NotesPreview}"
@@ -394,7 +397,7 @@
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <TextBlock
                                             helpers:WidgetTextShadow.Cast="True"
-                                            FontSize="{Binding ElementName=TodoListView, Path=DataContext.SecondaryTextSize}"
+                                            FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SecondaryTextSize}"
                                             Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                                             MaxLines="1"
                                             Text="{Binding DueStatusText}"
@@ -402,15 +405,15 @@
                                             Visibility="{Binding DueStatusNormalVisibility}" />
                                         <TextBlock
                                             helpers:WidgetTextShadow.Cast="True"
-                                            FontSize="{Binding ElementName=TodoListView, Path=DataContext.SecondaryTextSize}"
+                                            FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SecondaryTextSize}"
                                             Foreground="{ThemeResource SystemFillColorCautionBrush}"
                                             MaxLines="1"
                                             Text="{Binding DueStatusText}"
                                             TextTrimming="CharacterEllipsis"
                                             Visibility="{Binding DueStatusOverdueVisibility}" />
                                         <StackPanel Orientation="Horizontal" Spacing="2" Visibility="{Binding AttachmentSummaryVisibility}">
-                                            <FontIcon FontSize="{Binding ElementName=TodoListView, Path=DataContext.SmallIconSize}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Glyph="&#xE723;" />
-                                            <TextBlock helpers:WidgetTextShadow.Cast="True" FontSize="{Binding ElementName=TodoListView, Path=DataContext.SecondaryTextSize}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Text="{Binding AttachmentSummaryText}" />
+                                            <FontIcon FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SmallIconSize}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Glyph="&#xE723;" />
+                                            <TextBlock helpers:WidgetTextShadow.Cast="True" FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SecondaryTextSize}" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Text="{Binding AttachmentSummaryText}" />
                                         </StackPanel>
                                     </StackPanel>
 
@@ -422,8 +425,8 @@
                                         Style="{StaticResource SubtleButtonStyle}"
                                         Visibility="{Binding RecurringHistoryToggleVisibility}">
                                         <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <FontIcon FontSize="{Binding ElementName=TodoListView, Path=DataContext.SmallIconSize}" Glyph="{Binding RecurringHistoryToggleGlyph}" />
-                                            <TextBlock helpers:WidgetTextShadow.Cast="True" FontSize="{Binding ElementName=TodoListView, Path=DataContext.SecondaryTextSize}" Text="{Binding RecurringHistoryToggleText}" />
+                                            <FontIcon FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SmallIconSize}" Glyph="{Binding RecurringHistoryToggleGlyph}" />
+                                            <TextBlock helpers:WidgetTextShadow.Cast="True" FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SecondaryTextSize}" Text="{Binding RecurringHistoryToggleText}" />
                                         </StackPanel>
                                     </Button>
                                 </StackPanel>
@@ -446,12 +449,12 @@
                                             Height="26"
                                             MinWidth="26"
                                             MinHeight="26"
-                                            AutomationProperties.Name="{Binding ElementName=TodoListView, Path=DataContext.CopyText}"
+                                            AutomationProperties.Name="{Binding ElementName=TodoItemRoot, Path=Tag.CopyText}"
                                             Click="CopyTodoItemButton_Click"
                                             IsTabStop="False"
                                             Style="{StaticResource WidgetCompactIconButtonStyle}"
-                                            ToolTipService.ToolTip="{Binding ElementName=TodoListView, Path=DataContext.CopyText}">
-                                            <FontIcon FontSize="{Binding ElementName=TodoListView, Path=DataContext.SmallIconSize}" Glyph="&#xE8C8;" />
+                                            ToolTipService.ToolTip="{Binding ElementName=TodoItemRoot, Path=Tag.CopyText}">
+                                            <FontIcon FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SmallIconSize}" Glyph="&#xE8C8;" />
                                         </Button>
                                         <Button
                                             x:Name="TodoImportantItemButton"
@@ -464,7 +467,7 @@
                                             IsTabStop="False"
                                             Style="{StaticResource WidgetCompactIconButtonStyle}"
                                             ToolTipService.ToolTip="{Binding ImportantToggleText}">
-                                            <FontIcon FontSize="{Binding ElementName=TodoListView, Path=DataContext.SmallIconSize}" Glyph="{Binding ImportantGlyph}" />
+                                            <FontIcon FontSize="{Binding ElementName=TodoItemRoot, Path=Tag.SmallIconSize}" Glyph="{Binding ImportantGlyph}" />
                                         </Button>
                                     </StackPanel>
                                 </Border>
@@ -479,6 +482,7 @@
             </Canvas>
 
             <StackPanel
+                x:Name="TodoEmptyState"
                 Style="{StaticResource WidgetEmptyStatePanelStyle}"
                 Visibility="{Binding EmptyStateVisibility}">
                 <FontIcon

@@ -87,6 +87,7 @@ public sealed partial class TodoWidgetContent : UserControl
         Unloaded += TodoWidgetContent_Unloaded;
         ActualThemeChanged += (_, _) =>
         {
+            InvalidatePreferredHeight();
             ApplyEditorVisualStyle();
             ApplySelectionRectangleStyle();
         };
@@ -133,6 +134,7 @@ public sealed partial class TodoWidgetContent : UserControl
             }
 
             DataContext = value;
+            RefreshHeightSubscriptions();
 
             if (value is not null)
             {
@@ -161,6 +163,7 @@ public sealed partial class TodoWidgetContent : UserControl
 
         App.Current.LocalizationService.LanguageChanged -= OnLanguageChanged;
         App.Current.LocalizationService.LanguageChanged += OnLanguageChanged;
+        RefreshHeightSubscriptions();
         ApplyLocalizedText();
         ApplyEditorVisualStyle();
         ApplySelectionRectangleStyle();
@@ -176,6 +179,7 @@ public sealed partial class TodoWidgetContent : UserControl
 
     private void TodoWidgetContent_Unloaded(object sender, RoutedEventArgs e)
     {
+        RefreshHeightSubscriptions(detachOnly: true);
         CancelTodoSegmentedRestore();
         if (ViewModel is not null)
         {
@@ -428,6 +432,7 @@ public sealed partial class TodoWidgetContent : UserControl
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        InvalidatePreferredHeight();
         if (e.PropertyName == nameof(TodoWidgetViewModel.SelectedFilter))
         {
             ClearCopySelection();
@@ -507,6 +512,7 @@ public sealed partial class TodoWidgetContent : UserControl
 
     private void VisibleItems_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        RefreshHeightSubscriptions();
         if (_isDualPane)
         {
             DispatcherQueue.TryEnqueue(EnsureWideDetailSelection);
