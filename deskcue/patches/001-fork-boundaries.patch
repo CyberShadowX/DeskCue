@@ -414,7 +414,7 @@ index cb3d9f19b571c4252fac49a134c7b4220d259e4d..ef918469b62bf235260e79f95a941ed6
      private async Task BeginNotesEditingAsync()
 diff --git a/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.Height.cs b/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.Height.cs
 new file mode 100644
-index 0000000000000000000000000000000000000000..dae89a8ade40fc94efee403eb0f3f88eb8e27665
+index 0000000000000000000000000000000000000000..22af7349d587ca587876ebb0539e8bf44915e1e2
 --- /dev/null
 +++ b/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.Height.cs
 @@ -0,0 +1,95 @@
@@ -496,7 +496,7 @@ index 0000000000000000000000000000000000000000..dae89a8ade40fc94efee403eb0f3f88e
 +            + TodoListView.Padding.Top + TodoListView.Padding.Bottom;
 +        double rowsHeight = TodoListView.Header is FrameworkElement header ? Measure(header, rowWidth) : 0;
 +        if (ViewModel.VisibleItems.Count == 0)
-+            rowsHeight += Measure(TodoEmptyState, masterWidth);
++            rowsHeight += Measure(TodoEmptyState, rowWidth);
 +        _heightMeasurementRow.Width = rowWidth;
 +        try
 +        {
@@ -514,7 +514,7 @@ index 0000000000000000000000000000000000000000..dae89a8ade40fc94efee403eb0f3f88e
 +    }
 +}
 diff --git a/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml b/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml
-index bf6d0ca15ec1d6f15436c5d86e143a21df1ed429..b9d20556d5254342b99092926b0adfb7496caf9a 100644
+index bf6d0ca15ec1d6f15436c5d86e143a21df1ed429..7eb45a619ce1336eda7dd4cef34af4db2ad6ca1e 100644
 --- a/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml
 +++ b/src/DeskCue/Controls/WidgetContents/TodoWidgetContent.xaml
 @@ -145,6 +145,8 @@
@@ -535,7 +535,40 @@ index bf6d0ca15ec1d6f15436c5d86e143a21df1ed429..b9d20556d5254342b99092926b0adfb7
                  <ListView.Resources>
                      <SolidColorBrush x:Key="ListViewItemBackgroundPointerOver" Color="Transparent" />
                      <SolidColorBrush x:Key="ListViewItemBackgroundPressed" Color="Transparent" />
-@@ -288,6 +290,7 @@
+@@ -264,6 +266,32 @@
+                     </Button>
+                 </ListView.Header>
+ 
++                <ListView.Footer>
++                    <StackPanel
++                        x:Name="TodoEmptyState"
++                        Style="{StaticResource WidgetEmptyStatePanelStyle}"
++                        Visibility="{Binding EmptyStateVisibility}">
++                        <FontIcon
++                            FontSize="24"
++                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
++                            Glyph="&#xE73E;"
++                            Style="{StaticResource WidgetEmptyStateIconStyle}" />
++                        <TextBlock
++                            helpers:WidgetTextShadow.Cast="True"
++                            FontSize="{Binding TitleTextSize}"
++                            FontWeight="SemiBold"
++                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
++                            Style="{StaticResource WidgetEmptyStateTitleTextStyle}"
++                            Text="{Binding EmptyStateTitle}" />
++                        <TextBlock
++                            helpers:WidgetTextShadow.Cast="True"
++                            FontSize="{Binding SecondaryTextSize}"
++                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
++                            Style="{StaticResource WidgetEmptyStateDescriptionTextStyle}"
++                            Text="{Binding EmptyStateText}" />
++                    </StackPanel>
++                </ListView.Footer>
++
+                 <ListView.ItemContainerStyle>
+                     <Style TargetType="ListViewItem">
+                         <Setter Property="Padding" Value="0" />
+@@ -288,6 +316,7 @@
                      <DataTemplate>
                          <Border
                              x:Name="TodoItemRoot"
@@ -543,7 +576,7 @@ index bf6d0ca15ec1d6f15436c5d86e143a21df1ed429..b9d20556d5254342b99092926b0adfb7
                              AllowDrop="True"
                              Margin="0,2"
                              MinHeight="50"
-@@ -372,19 +375,29 @@
+@@ -372,19 +401,29 @@
                                      Spacing="2">
                                      <TextBlock
                                          helpers:WidgetTextShadow.Cast="True"
@@ -577,7 +610,7 @@ index bf6d0ca15ec1d6f15436c5d86e143a21df1ed429..b9d20556d5254342b99092926b0adfb7
                                              Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                                              MaxLines="1"
                                              Text="{Binding DueStatusText}"
-@@ -392,15 +405,15 @@
+@@ -392,15 +431,15 @@
                                              Visibility="{Binding DueStatusNormalVisibility}" />
                                          <TextBlock
                                              helpers:WidgetTextShadow.Cast="True"
@@ -596,7 +629,7 @@ index bf6d0ca15ec1d6f15436c5d86e143a21df1ed429..b9d20556d5254342b99092926b0adfb7
                                          </StackPanel>
                                      </StackPanel>
  
-@@ -412,8 +425,8 @@
+@@ -412,8 +451,8 @@
                                          Style="{StaticResource SubtleButtonStyle}"
                                          Visibility="{Binding RecurringHistoryToggleVisibility}">
                                          <StackPanel Orientation="Horizontal" Spacing="4">
@@ -607,7 +640,7 @@ index bf6d0ca15ec1d6f15436c5d86e143a21df1ed429..b9d20556d5254342b99092926b0adfb7
                                          </StackPanel>
                                      </Button>
                                  </StackPanel>
-@@ -436,12 +449,12 @@
+@@ -436,12 +475,12 @@
                                              Height="26"
                                              MinWidth="26"
                                              MinHeight="26"
@@ -623,7 +656,7 @@ index bf6d0ca15ec1d6f15436c5d86e143a21df1ed429..b9d20556d5254342b99092926b0adfb7
                                          </Button>
                                          <Button
                                              x:Name="TodoImportantItemButton"
-@@ -454,7 +467,7 @@
+@@ -454,7 +493,7 @@
                                              IsTabStop="False"
                                              Style="{StaticResource WidgetCompactIconButtonStyle}"
                                              ToolTipService.ToolTip="{Binding ImportantToggleText}">
@@ -632,15 +665,37 @@ index bf6d0ca15ec1d6f15436c5d86e143a21df1ed429..b9d20556d5254342b99092926b0adfb7
                                          </Button>
                                      </StackPanel>
                                  </Border>
-@@ -469,6 +482,7 @@
+@@ -467,29 +506,6 @@
+             <Canvas x:Name="TodoSelectionOverlay" Background="Transparent" IsHitTestVisible="False">
+                 <Border x:Name="TodoSelectionRectangle" Width="0" Height="0" BorderThickness="1" Visibility="Collapsed" />
              </Canvas>
+-
+-            <StackPanel
+-                Style="{StaticResource WidgetEmptyStatePanelStyle}"
+-                Visibility="{Binding EmptyStateVisibility}">
+-                <FontIcon
+-                    FontSize="24"
+-                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+-                    Glyph="&#xE73E;"
+-                    Style="{StaticResource WidgetEmptyStateIconStyle}" />
+-                <TextBlock
+-                    helpers:WidgetTextShadow.Cast="True"
+-                    FontSize="{Binding TitleTextSize}"
+-                    FontWeight="SemiBold"
+-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+-                    Style="{StaticResource WidgetEmptyStateTitleTextStyle}"
+-                    Text="{Binding EmptyStateTitle}" />
+-                <TextBlock
+-                    helpers:WidgetTextShadow.Cast="True"
+-                    FontSize="{Binding SecondaryTextSize}"
+-                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+-                    Style="{StaticResource WidgetEmptyStateDescriptionTextStyle}"
+-                    Text="{Binding EmptyStateText}" />
+-            </StackPanel>
+         </Grid>
  
-             <StackPanel
-+                x:Name="TodoEmptyState"
-                 Style="{StaticResource WidgetEmptyStatePanelStyle}"
-                 Visibility="{Binding EmptyStateVisibility}">
-                 <FontIcon
-@@ -896,13 +910,13 @@
+         <Grid x:Name="ListFooterArea" Grid.Row="2" Grid.Column="0" ColumnSpacing="8">
+@@ -896,13 +912,13 @@
  
                          <Border
                              x:Name="DetailNotesReaderHost"
@@ -656,7 +711,7 @@ index bf6d0ca15ec1d6f15436c5d86e143a21df1ed429..b9d20556d5254342b99092926b0adfb7
                              <Grid>
                                  <controls:MarkdownDocumentView
                                      x:Name="DetailNotesView"
-@@ -924,6 +938,7 @@
+@@ -924,6 +940,7 @@
  
                          <controls:MarkdownSourceEditor
                              x:Name="DetailNotesEditor"
@@ -781,7 +836,7 @@ index 704bf2680f37313c2458a92ebbc8771d9e1b5f80..35e0b1434b751b3ad25f57f47319effd
  
          if (ViewModel is IDisposable disposable)
 diff --git a/src/DeskCue/DeskCue.csproj b/src/DeskCue/DeskCue.csproj
-index 93cc76319adbc74456656bbb4aa8940966de5202..9d30b9858f76d71264b5c9bb4dcaa24b12f49c89 100644
+index 5db9a837b50d82233a4c0a9cc80188f433746f1d..65dc91ec4a7fe3348ce274e9695a13c8dd15cb3e 100644
 --- a/src/DeskCue/DeskCue.csproj
 +++ b/src/DeskCue/DeskCue.csproj
 @@ -39,6 +39,11 @@
@@ -1117,7 +1172,7 @@ index d5bef92cad91d2294ccf999a1b32b9ca9ddd13e9..2b78307825afe2f5769cdd09eee6a35a
              new DeskCueFeedbackMinePayload(ClientId),
              FeedbackJsonContext.Default.FeedbackMinePayload);
 diff --git a/src/DeskCue/Services/ReleaseNotesService.cs b/src/DeskCue/Services/ReleaseNotesService.cs
-index b56c89bbc21e11812def377353afc2dd663e4549..452f4a7f66ae4fd854d97cad10a0c664b1c9f121 100644
+index c690b17b97be908a12906d4f44b45d29d1b7ca76..b42d1955202cc19d8814223a588b4f8d5541b226 100644
 --- a/src/DeskCue/Services/ReleaseNotesService.cs
 +++ b/src/DeskCue/Services/ReleaseNotesService.cs
 @@ -24,6 +24,20 @@ public sealed class ReleaseNotesService
