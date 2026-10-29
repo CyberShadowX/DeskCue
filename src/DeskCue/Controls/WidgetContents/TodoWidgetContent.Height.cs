@@ -76,7 +76,7 @@ public sealed partial class TodoWidgetContent
             + TodoListView.Padding.Top + TodoListView.Padding.Bottom;
         double rowsHeight = TodoListView.Header is FrameworkElement header ? Measure(header, rowWidth) : 0;
         if (ViewModel.VisibleItems.Count == 0)
-            rowsHeight += Measure(TodoEmptyState, masterWidth);
+            rowsHeight += Measure(TodoEmptyState, rowWidth);
         _heightMeasurementRow.Width = rowWidth;
         try
         {

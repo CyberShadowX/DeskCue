@@ -266,6 +266,32 @@
                     </Button>
                 </ListView.Header>
 
+                <ListView.Footer>
+                    <StackPanel
+                        x:Name="TodoEmptyState"
+                        Style="{StaticResource WidgetEmptyStatePanelStyle}"
+                        Visibility="{Binding EmptyStateVisibility}">
+                        <FontIcon
+                            FontSize="24"
+                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                            Glyph="&#xE73E;"
+                            Style="{StaticResource WidgetEmptyStateIconStyle}" />
+                        <TextBlock
+                            helpers:WidgetTextShadow.Cast="True"
+                            FontSize="{Binding TitleTextSize}"
+                            FontWeight="SemiBold"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource WidgetEmptyStateTitleTextStyle}"
+                            Text="{Binding EmptyStateTitle}" />
+                        <TextBlock
+                            helpers:WidgetTextShadow.Cast="True"
+                            FontSize="{Binding SecondaryTextSize}"
+                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                            Style="{StaticResource WidgetEmptyStateDescriptionTextStyle}"
+                            Text="{Binding EmptyStateText}" />
+                    </StackPanel>
+                </ListView.Footer>
+
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
                         <Setter Property="Padding" Value="0" />
@@ -480,30 +506,6 @@
             <Canvas x:Name="TodoSelectionOverlay" Background="Transparent" IsHitTestVisible="False">
                 <Border x:Name="TodoSelectionRectangle" Width="0" Height="0" BorderThickness="1" Visibility="Collapsed" />
             </Canvas>
-
-            <StackPanel
-                x:Name="TodoEmptyState"
-                Style="{StaticResource WidgetEmptyStatePanelStyle}"
-                Visibility="{Binding EmptyStateVisibility}">
-                <FontIcon
-                    FontSize="24"
-                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                    Glyph="&#xE73E;"
-                    Style="{StaticResource WidgetEmptyStateIconStyle}" />
-                <TextBlock
-                    helpers:WidgetTextShadow.Cast="True"
-                    FontSize="{Binding TitleTextSize}"
-                    FontWeight="SemiBold"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    Style="{StaticResource WidgetEmptyStateTitleTextStyle}"
-                    Text="{Binding EmptyStateTitle}" />
-                <TextBlock
-                    helpers:WidgetTextShadow.Cast="True"
-                    FontSize="{Binding SecondaryTextSize}"
-                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                    Style="{StaticResource WidgetEmptyStateDescriptionTextStyle}"
-                    Text="{Binding EmptyStateText}" />
-            </StackPanel>
         </Grid>
 
         <Grid x:Name="ListFooterArea" Grid.Row="2" Grid.Column="0" ColumnSpacing="8">
