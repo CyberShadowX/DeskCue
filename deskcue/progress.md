@@ -1,8 +1,36 @@
 # DeskCue adoption progress
 
 Plan: docs/superpowers/plans/2026-10-27-deskcue-upstream-adoption.md
+Todo plan: docs/superpowers/plans/2026-10-29-todo-ux.md
 
-## Project-local compiler environment (2026-10-29)
+## Current checkpoint (2026-10-29): Todo UX1.5.9.6
+
+- Approved Todo natural height, max-two-line note previews and single-click note
+  editing are implemented. Empty-list Footer avoids Add overlap; retained
+  history6/5/4/3 survives regeneration and future version sorting.
+- Product source `3d6705d9091c3b26d684c6eb7c53e2b8539029df`, complete patch230356 bytes,
+  SHA256 f50396319f94dbac75c0ac69dbb59bbec7309413b72c58df7a95498fca78977a.
+  Mechanical6 replay equals all five product trees; synthetic7 replay differs
+  only at seven version anchors. Upstream/recipe/inventory/identity pins unchanged.
+- Main shared Native x64 build r-227e1afca15943e5:5912C#+132helpers=6044PASS,
+  zero fail/skip,394-file FullAOT/offline payload/harnessfalse. Official publisher
+  reused exact verified binaries; production6 runs and userTodo hashes unchanged.
+  Old/test processes normally exited, Finder unaffected, no force-kill.
+- Fresh6 real Add-center/editor-focus/first-save and empty-footer separation;
+  four rows340x437/two-line previews/collapsed empty state. Historical unchanged5
+  paths additionally cover grow/shrink/wrapping/body+blank clicks/links/checks/
+  drag/cap+scroll. See HANDOFF for exact evidence and GUI limits.
+- Independent final source/local reviewPASS0C/0I/0M. Source CI40865623447 passed
+  5912 C# tests; native x64+ARM64 delivery40865627627 passed6044 tests per
+  architecture. Publicv1.5.9.6/release
+  427805859; all9 public assets, feed, source bundle and both receipts
+  freshly rehashed/verified. Exact cloud/local installer hashes in HANDOFF.
+- Revision5 immutable, superseded after late zero-list overlap finding. No live
+  ARM64 GUI/mixedDPI, valid attachment launch, keyboard link, selection-highlight,
+  independent autosave timing or installer installation proof. Private evidence
+  stays inside project; no personal data or logs uploaded.
+
+## Historical project-local compiler environment (2026-10-29)
 
 - Parent `.archives` and `.deskcue-tools` were manually deleted and verified
   absent. Old legacy recovery archives are no longer available.
@@ -24,7 +52,7 @@ Plan: docs/superpowers/plans/2026-10-27-deskcue-upstream-adoption.md
   reviewPASS0C/0I/0remainingMinor. FullC#runtime tests/AOTpublication/installer/GUI/ARM64compile notrun;
   existing shared system prerequisites and appuserdata were not relocated.
 
-## Current authoritative checkpoint (2026-10-28): published1.5.9.4
+## Historical checkpoint (2026-10-28): published1.5.9.4
 
 - Product/tag8472699a23166a179ae36bbab08b26eb288bc417, revision4; actual top-Finder
   failure reproduced on1593(cloaked2/offscreen), repaired through click-origin

@@ -1,12 +1,115 @@
 # DeskCue migration handoff
 
-## Project-local environment checkpoint (2026-10-29)
+## Current checkpoint (2026-10-29): Todo UX, published1.5.9.6
+
+The user explicitly approved these Todo changes with `方案确认，开始执行`.
+Reviewed product source is `3d6705d9091c3b26d684c6eb7c53e2b8539029df`, branding revision6, based on
+DeskBox v1.5.9/`1fdf0bd9f84affe889318173a7f3141843c79604`.
+GPL-3.0-only, original copyright and upstream attribution are retained.
+
+- The Todo host preserves width and adjusts height to rendered content, including
+  wrapped titles/notes. It caps to the current display work area and then scrolls;
+  active-content, size-lock, capsule and transition guards remain. A reused hidden
+  row uses the real ItemTemplate; live rows stay virtualized. Work-area changes
+  and delayed filter-header reveal invalidate the cached measurement.
+- Each task shows a smaller secondary note preview, at most two lines with
+  ellipsis; empty notes collapse. Plain-body/blank single-click enters the existing
+  focused editor. Raw Markdown and the save pipeline remain. Per-reader gesture
+  state preserves hyperlink/attachment activation, checkbox and drag handling.
+- Revision6 places the empty state in the ListView Footer, below the Add card,
+  fixing an overlap found by actual Native AOT zero-item testing after revision5.
+  Release history retains6/5/4/3, with future-version sorting/deduplication tests.
+- Release test processes now inject a unique project-owned data root before
+  static service initialization; concurrent log verification uses shared reads.
+  All project tools, worktrees, fixtures and evidence remain inside this project.
+
+### Local build and acceptance
+
+Controller shared build `r-227e1afca15943e5` froze the exact clean source and
+passed **5912 C# +132 management =6044/6044 tests**, zero failed/skipped.
+Full Native AOT x64/offline runtime has394 files; smoke harness is disabled.
+Local EXE SHA256 `1d9794fafcbbf3ef1dd629c60255c3b0a637f41bebdef5dd4fac1d12dfe4bd1b`.
+Local Inno6.7.3 installer 33702096 bytes, SHA256
+`c34c2208f37b62f269eae9e2c4af802cb892e4811f4e60f982cbf1415351d2d8`. Cloud uses its pinned Inno6.7.1 and therefore
+has separately verified installer hashes below.
+
+Native6 synthetic zero-item fixture: Add card center physically clicked and
+DetailTitleTextBox focused; empty title y371/description y394 are below the card.
+Saving a generic first task changed340x268 to340x255 because the empty panel
+collapsed. Four-task fixture remains340x437, note rows render14/28px previews,
+and the empty Footer is collapsed. The unchanged revision5 interaction paths
+were physically checked at source3f94e52e: add/delete437→491→437, wrapping447,
+body/blank editor focus, raw Chinese Markdown save, real link activation without
+editing, checkbox persistence, drag without editing, and70-task cap1416px/y24
+with item70 reachable by scrolling. These are explicitly historical5 input
+checks, supplemented by fresh6 checks for the changed Footer and full runtime.
+
+`tools/Publish-DeskCue.ps1` reused the exact verified build through BuildOperation
+and performed normal staging/hash/move validation. All394 published payload
+files and the installer were independently rehashed. Old production and test
+processes exited normally through real Finder menu Exit after PID/row ownership
+checks. Production1.5.9.6 launched from the published directory; existing Todo
+JSON hashes stayed unchanged. MyDockFinder was left running. No force-kill,
+personal-data fixture, installer execution, startup change or auto-organization
+was used. Previous runtime remains in the contained release run.
+
+Task reviews fixed link activation, work-area invalidation, header reveal,
+empty layout and release-history findings. Fresh final whole-source/local x64
+review: **PASS,0Critical/0Important/0Minor**. Reviewer independently checked
+runtime hashes, source/patch, receipts, geometry and live process identities.
+Fresh final integrated delivery/document review also passed0Critical/0Important/
+0remainingMinor. Two documentation findings (stale guide version and ambiguous
+CI test counts) were corrected and re-reviewed. The follow-up changes are
+documentation only; product source and published binaries remain unchanged.
+
+### Cloud delivery and source replay
+
+Own source CI [40865623447](https://github.com/CyberShadowX/DeskCue/actions/runs/40865623447)
+and delivery [40865627627](https://github.com/CyberShadowX/DeskCue/actions/runs/40865627627)
+passed. Both native architectures passed6044/6044 tests. Public
+[v1.5.9.6](https://github.com/CyberShadowX/DeskCue/releases/tag/v1.5.9.6), release
+427805859, published `2026-10-29T11:56:16Z`. Controller downloaded and
+rehashed all9 public assets against GitHub digests; stable.json, checksums,
+source bundle head, frozen delivery and both architecture receipts agree.
+
+- Cloud x64 installer: 33709967 bytes, SHA256 `e963ebb1dbe5847cb48ce7695e6ee1560f174f86e7897d9f9c8e4bca2499a2dd`.
+- Cloud ARM64 installer: 33145243 bytes, SHA256 `54581667e19ab78e58aa3997296c80017006ec2c831dd4fe5e000b4101e7f844`.
+- Complete fork patch:230356 bytes, SHA256
+  `f50396319f94dbac75c0ac69dbb59bbec7309413b72c58df7a95498fca78977a`.
+  Independently replayed all65 paths against mechanical6 and synthetic7;
+  all five6 product trees match, and7 differs only at seven version anchors.
+- Config SHA256 `6d19f17b3d6e0df5e3079f4d1c08a0bf69224c083d383ccdb3dc58001531f56b`.
+  Recipe, original1930-file inventory, application identities and upstream pins
+  remain unchanged. Only CyberShadowX/DeskCue receives source/releases; upstream
+  push remains disabled. Private logs, backups and personal data are not uploaded.
+
+Limits: no live ARM64 GUI or mixed-DPI transition test. Valid attachment shell
+launch, keyboard link activation, selected-text highlight and independently
+observed600ms autosave timing were not established. Saved raw Markdown and the
+unchanged shared paths have source/unit evidence; these are not GUI proof.
+Installer installation and system integration were not executed for smoke.
+Private evidence is under `.artifacts/todo-ux-controller/`, including
+`final-product-acceptance-v6.json`, `final-review-v6.json`,
+`shared-build-result-v6.json`, `local-publish-result-v6.json`,
+`production-launch-v6.json`, `revision6-final-replay.json`,
+`cloud-acceptance-v6.json` and isolated fixture UIA records. The shared run contains
+TRX, management results, retail inventory, receipt and command logs.
+
+### Superseded revision5
+
+Revision5/source3f94e52e9b2423c4754053eb47b41c3f6cbe9550 remains immutable.
+CI40854152837 and delivery40854299433 passed; public release427723591 was
+published2026-10-29T10:28:49Z. Local6042/6042 and positive GUI cases passed,
+but subsequent zero-list acceptance found the overlap fixed above. Revision6
+supersedes5; the earlier whole-task review did not cover that empty case.
+
+## Historical project-local environment checkpoint (2026-10-29)
 
 The user manually deleted the old sibling `.archives` and `.deskcue-tools`,
 then explicitly required all project-owned development files to stay inside
 `F:/AI/AIProjects/DeskCue` and authorized rebuilding the compiler environment.
 The Controller verified both sibling directories absent before and after setup.
-Old recovery archives were not recreated. Published1.5.9.4 remains unchanged.
+Old recovery archives were not recreated. That tooling-only task left published1.5.9.4 unchanged.
 
 - Reviewed local commits `02dce4e5` and `a28c1d56` add canonical-root resolution,
   process-scoped environment management and repeatable verified initialization.
@@ -65,7 +168,7 @@ unrelated runtime behavior or expanding the product patch. ARM64 compilation
 still requires the corresponding installed VS C++ components. No warning cleanup
 or shared system prerequisite relocation is claimed.
 
-## Current checkpoint (2026-10-28): revision4
+## Historical checkpoint (2026-10-28): revision4
 
 The complete DeskBox-based fork remains at `F:/AI/AIProjects/DeskCue`, branch
 `main`, own origin `CyberShadowX/DeskCue`. Version **1.5.9.4**, branding revision4,
