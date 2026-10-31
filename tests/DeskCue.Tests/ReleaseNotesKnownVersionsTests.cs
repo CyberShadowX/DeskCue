@@ -41,8 +41,8 @@ public sealed class ReleaseNotesKnownVersionsTests
 
         Assert.Equal(current, versions[0]);
         Assert.Equal(
-            ["1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3"],
-            versions.Where(version => version is "1.5.9.6" or "1.5.9.5" or "1.5.9.4" or "1.5.9.3"));
+            ["1.5.9.7", "1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3"],
+            versions.Where(version => version is "1.5.9.7" or "1.5.9.6" or "1.5.9.5" or "1.5.9.4" or "1.5.9.3"));
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public sealed class ReleaseNotesKnownVersionsTests
             ["1.5.10", "1.5.10.1", "1.4.0", "1.5.10.1"]);
 
         Assert.Equal(
-            ["1.5.10.1", "1.5.10", "1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3", "1.4.0"],
+            ["1.5.10.1", "1.5.10", "1.5.9.7", "1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3", "1.4.0"],
             versions);
     }
 
@@ -60,10 +60,10 @@ public sealed class ReleaseNotesKnownVersionsTests
     public void MergeKnownReleaseVersions_FutureRevisionRetainsForkHistoryWithoutCache()
     {
         IReadOnlyList<string> versions = ReleaseNotesService.MergeKnownReleaseVersions(
-            ["1.5.9.7", "1.5.9", "1.5.9.7"]);
+            ["1.5.9.8", "1.5.9", "1.5.9.8"]);
 
         Assert.Equal(
-            ["1.5.9.7", "1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3", "1.5.9"],
+            ["1.5.9.8", "1.5.9.7", "1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3", "1.5.9"],
             versions);
     }
 
@@ -71,10 +71,10 @@ public sealed class ReleaseNotesKnownVersionsTests
     public void MergeKnownReleaseVersions_CurrentRevisionIsDeduplicatedAgainstForkHistory()
     {
         IReadOnlyList<string> versions = ReleaseNotesService.MergeKnownReleaseVersions(
-            ["1.5.9.6", "1.5.9", "1.5.9.6"]);
+            ["1.5.9.7", "1.5.9", "1.5.9.7"]);
 
         Assert.Equal(
-            ["1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3", "1.5.9"],
+            ["1.5.9.7", "1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3", "1.5.9"],
             versions);
     }
 
