@@ -1,6 +1,90 @@
 # DeskCue migration handoff
 
-## Current checkpoint (2026-10-29): Todo UX, published1.5.9.6
+## Current checkpoint (2026-10-31): startup elevation repair1.5.9.7
+
+Approved with `方案确认，开始执行`. Product source
+`0cdb78b959928aae51abe989ecf776987cc76193`, branding revision7, DeskBox v1.5.9/
+`1fdf0bd9f84affe889318173a7f3141843c79604`; GPL and upstream attribution retained.
+
+The actual boot started DeskCue about three seconds before Explorer. Its missing
+token was collapsed to false and cached, causing a false AppAboveShell/Exit-only
+notice. Current-session DeskCue, Explorer and MyDockFinder are all High. The fix
+preserves Unknown, probes the real session shell, and performs bounded asynchronous
+assessment before widget initialization plus fresh later decisions. Unknown cannot
+trigger compatibility-flag removal/relaunch. A repairable relaunch checks the exact
+opened shell parent token and preserves startup/wait arguments; no unverified
+ShellExecute fallback. Isolated test profiles cannot perform automatic repair.
+
+The explicit startup repair tool defaults to Preview. Apply accepts only the exact
+owned enabled legacy task, backs up declaration-correct XML, creates and verifies
+the supported task before deleting the old one, and journals rollback evidence.
+Actual Apply returned Repaired; after launching from that canonical task, fresh
+Preview returned AlreadyRepaired. The production backend recognized and reconciled
+ScheduledTask and removed its owned legacy Run entry. No account/UAC changes.
+The raw settings autoStart snapshot is not authoritative; settings UI reads the
+startup service. This task did not drive that settings toggle.
+
+### Fresh local verification and replacement
+
+Controller shared Native x64 run `r-c08e97aa9fd74f79`: **5939 C# +162 management
+=6101/6101**, zero failed/skipped. Full AOT/offline runtime394 files, smoke harness
+disabled. Official publisher reused the exact verified build and revalidated its
+complete payload. All394 installed runtime files were independently rehashed.
+Local EXE SHA256 `12d1b1ff8e2e0c469fb840f88013e74bda749ec85d80b23b17f08f22f111a089`.
+Local Inno6.7.3 installer33714817 bytes, SHA256
+`7d218f07590bacd31020a4f42ce45d3415dc8bac7872497b555510b7d15dd059`.
+
+Exact Native synthetic admin/startup fixture: High/High, mismatch=None, startup
+0degraded/0failed. Physical input verified add/save, single-click note editor focus,
+Chinese note persistence, deletion and height437→491→437, and a modern picker
+importing a generic attachment. Deletion persisted as isDeleted:true; post-relaunch
+visibility was not exercised. Fixture exited normally through its attested Finder
+menu. No production business content was used as test input.
+
+Production replacement used a different exit path: ordinary Windows Restart Manager
+shutdown(flags0) requested the app's query/end-session settings flush but returned351
+with the old process alive. The user then separately authorized force-closing only
+that precisely identified old DeskCue process. Three profile files were privately
+backed up inside the project; only that process was ended, without its children.
+Do not describe production teardown as a normal exit. Todo hashes matched before
+and after replacement and after starting installed7 from the repaired task.
+Production7 startup logged High/High, mismatch=None,42steps/0degraded/0failed.
+
+### Cloud delivery and review
+
+[Source CI](https://github.com/CyberShadowX/DeskCue/actions/runs/41190238550) passed.
+[Native x64/ARM64 delivery](https://github.com/CyberShadowX/DeskCue/actions/runs/41190303508)
+passed all four jobs with6101 tests per architecture. Public
+[v1.5.9.7](https://github.com/CyberShadowX/DeskCue/releases/tag/v1.5.9.7),
+release429862962, published2026-10-31T10:20:58Z.
+All9 public assets, frozen ZIP entries, exact source-bundle head, both Native
+receipts, installer sidecars, checksum inventory and stable/latest feed were freshly
+verified against downloaded bytes. Cloud uses pinned Inno6.7.1; hashes differ from
+the local6.7.3 package and are recorded separately.
+
+- Cloud x64: 33702587 bytes, SHA256 `d7b72cb008438830d8a38d35f1feb1ece4547f5710440b98a24bc108c4866664`.
+- Cloud arm64: 33152488 bytes, SHA256 `2c8f4ff885489ff24de7c667e8c9ab7ddbd05b6b27098b345aa9e8bf0aa78161`.
+
+Complete75-path fork patch343190 bytes, SHA256
+`312bb9f7c59d016d82019eda19818b92567c5415c9c80b0569c80fbd0eb83e17`.
+Mechanical7 replay matches all five product trees; future8 changes only seven
+version anchors. History7/6/5/4/3 retained, upstream/recipe/inventory/identity pins
+unchanged. Final whole-delivery review PASS0Critical/0Important/0Minor.
+
+Limits: **physical reboot/logon acceptance remains pending**. Starting the real
+canonical task once does not prove the early-logon timing scenario. No live ARM64
+GUI, elevated XAML StartDragAsync recovery, native drag-in, notification actions,
+post-relaunch deletion visibility or installer execution was established. Existing
+Todo editing/modern pickers/tray-balloon fallback are retained; platform-limited
+drag and native notification actions are not advertised as universally repaired.
+All13 notice locales accurately state these limits.
+
+Private evidence stays under `.artifacts/elevation-controller/` and project-owned
+`.archives`, including local/cloud acceptance, exact transaction XML/journal,
+production-data hashes, authorized close trace, synthetic UIA/screenshots and shared
+build receipts. Personal data, backup XML, logs and credentials were not uploaded.
+
+## Historical Todo UX checkpoint (2026-10-29): published1.5.9.6
 
 The user explicitly approved these Todo changes with `方案确认，开始执行`.
 Reviewed product source is `3d6705d9091c3b26d684c6eb7c53e2b8539029df`, branding revision6, based on

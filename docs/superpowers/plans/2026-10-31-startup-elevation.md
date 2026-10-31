@@ -50,13 +50,16 @@ Files: tools/Repair-DeskCueStartup.ps1, pure emit/validate modes in tests/DeskCu
 
 Files: fork patch/config/provenance/version/release notes, shared build records and docs/HANDOFF.md.
 
-- [ ] Record actual administrator compatibility paths and remaining framework limits; handle user-reported failing functions if supplied.
-- [ ] Rebuild/replay the complete fork patch for current and a future mechanical branding revision; independently review metadata.
-- [ ] Main-session fresh full tests and shared Native AOT build; isolated startup/GUI acceptance and normal fixture teardown.
-- [ ] Preserve production profile, normally exit current application, stage the exact verified complete runtime and launch it.
-- [ ] Publish through authorized own-repository delivery and verify exact source, receipts, packages and update feed.
-- [ ] Fresh final independent review, final main-session checks and honest handoff. Real reboot acceptance remains pending until actually performed with the user.
+- [x] Record actual administrator compatibility paths and remaining framework limits; handle user-reported failing functions if supplied.
+- [x] Rebuild/replay the complete fork patch for current and a future mechanical branding revision; independently review metadata.
+- [x] Main-session fresh full tests and shared Native AOT build; isolated startup/GUI acceptance and normal fixture teardown.
+- [x] Preserve production profile, attempt normal exit and honor a separately authorized force-close only if needed, stage the exact verified complete runtime and launch it.
+- [x] Publish through authorized own-repository delivery and verify exact source, receipts, packages and update feed.
+- [x] Fresh final independent review, final main-session checks and honest handoff. Real reboot acceptance remains pending until actually performed with the user.
+- [ ] User-performed real reboot/logon acceptance: verify a new boot, the owned task launch and absence of the false Exit-only notice.
 
-Task1 gate: commits fea05ab5/06a75ddf; initial full5938/5938, final focused218/218. Independent review0Critical/0Important/0Minor after M1 ordering fix. Native/GUI/reboot pending.
+Historical Task1 source gate: fea05ab5/06a75ddf; initial full5938/5938, focused218/218. Independent review0Critical/0Important/0Minor after M1 ordering fix. Native/GUI were pending at that checkpoint; current integrated evidence follows. Real reboot remains pending.
 
-Task2 source gate: ea4cd788, latest26 synthetic+1 fresh purehelper passed, independent review0Critical/0Important/0Minor. Native read-only Preview validated the actual owned legacy task; no Apply/system task mutation yet. Historical management154 is not the final integrated count; shared build reruns the final suite.
+Task2 final source gate: ea4cd788/6322bd81,30/30 focused incl fresh pure helper; encoding-aware recovery XML verified. Independent review0Critical/0Important/0Minor. Actual Apply/Repaired and post-launch Preview/AlreadyRepaired verified. Final main shared management162 and C#5939 all passed.
+
+Integrated acceptance: exact0cdb78b9/main shared6101PASS, Native synthetic GUI and production replacement/startup normalized. Production ordinary shutdown351 was followed by user-specific force-close permission, recorded honestly. Cloud41190303508/all4jobs/all9assets verified. Real reboot/logon remains a manual pending boundary.

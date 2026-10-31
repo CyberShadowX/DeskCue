@@ -3,7 +3,28 @@
 Plan: docs/superpowers/plans/2026-10-27-deskcue-upstream-adoption.md
 Todo plan: docs/superpowers/plans/2026-10-29-todo-ux.md
 
-## Current checkpoint (2026-10-29): Todo UX1.5.9.6
+## Current checkpoint (2026-10-31): startup elevation1.5.9.7
+
+- Plan: docs/superpowers/plans/2026-10-31-startup-elevation.md.
+- Product source0cdb78b959928aae51abe989ecf776987cc76193; unknown-shell startup
+  misclassification fixed with bounded/current-session assessment. Administrator
+  account and UAC preserved. Explicit owned startup normalization applied and
+  independently validated; actual canonical-task invocation succeeded.
+- Fresh main shared6101/6101 tests;394-file Native x64 payload and real synthetic
+  admin/startup GUI passed. Notes, add/delete/height and modern attachment import
+  checked. Installed7 matches exact accepted build; userTodo hashes unchanged.
+- Production ordinary shutdown returned351; only after separate user permission
+  was the precisely identified old process force-closed. Fixture teardown normal.
+- Source CI41190238550 and four-job delivery41190303508 passed. Native x64/ARM64
+  each6101/6101. Release429862962/v1.5.9.7: all9 public assets, frozen
+  source/receipts/installers and stable/latest feed verified. See HANDOFF hashes.
+- Exact7/future8 patch replay passed;75paths/343190B/SHA312bb9f7c59d016d82019eda19818b92567c5415c9c80b0569c80fbd0eb83e17.
+  Final whole-delivery review PASS0Critical/0Important/0Minor.
+- Real reboot/logon, settings toggle GUI, liveARM64 GUI, elevated XAML drag/native
+  notification actions and installer execution remain unverified. No universal
+  administrator compatibility claim; private evidence stays inside this project.
+
+## Historical Todo UX checkpoint (2026-10-29):1.5.9.6
 
 - Approved Todo natural height, max-two-line note previews and single-click note
   editing are implemented. Empty-list Footer avoids Add overlap; retained
