@@ -31,15 +31,15 @@
 
 Files: DragDropPermissionService.cs, App.xaml.cs/App.Startup.cs and a focused App elevation partial if appropriate; StartupElevationGateTests and focused lifecycle/policy tests.
 
-- [ ] Run a focused baseline; add regressions proving Unknown does not mean AppAboveShell or CanRelaunch.
-- [ ] Observe RED for Unknown -> High/Medium and persistent Unknown; add a testable bounded reassessment policy without real sleeps.
-- [ ] Use the real shell window/process in this session, preserve unknown state, and refresh decisions on the UI lifetime before showing notices.
-- [ ] Preserve startup/parent-wait arguments and avoid claiming a ShellExecute fallback really de-elevated.
-- [ ] Run focused tests/build, independently review, fix and re-review, then commit.
+- [x] Run a focused baseline; add regressions proving Unknown does not mean AppAboveShell or CanRelaunch.
+- [x] Observe RED for Unknown -> High/Medium and persistent Unknown; add a testable bounded reassessment policy without real sleeps.
+- [x] Use the real shell window/process in this session, preserve unknown state, and refresh decisions on the UI lifetime before showing notices.
+- [x] Preserve startup/parent-wait arguments and avoid claiming a ShellExecute fallback really de-elevated.
+- [x] Run focused tests/build, independently review, fix and re-review, then commit.
 
 ### Task 2: Owned legacy startup normalization
 
-Files: DirectStartupTaskBackend/Reader/Service and focused startup tests, or a narrowly scoped repair entry if runtime migration is unsafe.
+Files: tools/Repair-DeskCueStartup.ps1, pure emit/validate modes in tests/DeskCue.StartupUnicodeProbe and deskcue/tests/test_startup_repair.py. Production backend/service/reader remain unchanged; repair is explicit and strictly installation-owned.
 
 - [ ] Establish exact legacy ownership predicates from current task Source/name/SID/action/executable and compare-before-write state.
 - [ ] Add failing tests for correct adoption/arguments and refusal of foreign user/install/source/action/runlevel variants.
@@ -56,3 +56,5 @@ Files: fork patch/config/provenance/version/release notes, shared build records 
 - [ ] Preserve production profile, normally exit current application, stage the exact verified complete runtime and launch it.
 - [ ] Publish through authorized own-repository delivery and verify exact source, receipts, packages and update feed.
 - [ ] Fresh final independent review, final main-session checks and honest handoff. Real reboot acceptance remains pending until actually performed with the user.
+
+Task1 gate: commits fea05ab5/06a75ddf; initial full5938/5938, final focused218/218. Independent review0Critical/0Important/0Minor after M1 ordering fix. Native/GUI/reboot pending.
