@@ -55,11 +55,11 @@ Files: fork patch/config/provenance/version/release notes, shared build records 
 - [x] Main-session fresh full tests and shared Native AOT build; isolated startup/GUI acceptance and normal fixture teardown.
 - [x] Preserve production profile, attempt normal exit and honor a separately authorized force-close only if needed, stage the exact verified complete runtime and launch it.
 - [x] Publish through authorized own-repository delivery and verify exact source, receipts, packages and update feed.
-- [x] Fresh final independent review, final main-session checks and honest handoff. Real reboot acceptance remains pending until actually performed with the user.
-- [ ] User-performed real reboot/logon acceptance: verify a new boot, the owned task launch and absence of the false Exit-only notice.
+- [x] Fresh final independent review, final main-session checks and honest handoff. The separate user-performed reboot acceptance below has now been verified.
+- [x] User-performed real reboot/logon acceptance: new Windows boot, canonical task launch of installed7,2.950s before Explorer, bounded assessment2328ms/HighHigh/None,42steps0failed and no erroneous notice/relaunch verified2026-10-31.
 
-Historical Task1 source gate: fea05ab5/06a75ddf; initial full5938/5938, focused218/218. Independent review0Critical/0Important/0Minor after M1 ordering fix. Native/GUI were pending at that checkpoint; current integrated evidence follows. Real reboot remains pending.
+Historical Task1 source gate: fea05ab5/06a75ddf; initial full5938/5938, focused218/218. Independent review0Critical/0Important/0Minor after M1 ordering fix. Native/GUI were pending at that checkpoint; current integrated evidence follows. Actual reboot evidence is recorded in the integrated acceptance below.
 
 Task2 final source gate: ea4cd788/6322bd81,30/30 focused incl fresh pure helper; encoding-aware recovery XML verified. Independent review0Critical/0Important/0Minor. Actual Apply/Repaired and post-launch Preview/AlreadyRepaired verified. Final main shared management162 and C#5939 all passed.
 
-Integrated acceptance: exact0cdb78b9/main shared6101PASS, Native synthetic GUI and production replacement/startup normalized. Production ordinary shutdown351 was followed by user-specific force-close permission, recorded honestly. Cloud41190303508/all4jobs/all9assets verified. Real reboot/logon remains a manual pending boundary.
+Integrated acceptance: exact0cdb78b9/main shared6101PASS, Native synthetic GUI and production replacement/startup normalized. Production ordinary shutdown351 was followed by user-specific force-close permission, recorded honestly. Cloud41190303508/all4jobs/all9assets verified. User-performed real reboot/logon passed2026-10-31; one observed boot is not exhaustive future-timing coverage.

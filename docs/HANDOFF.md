@@ -71,10 +71,31 @@ Mechanical7 replay matches all five product trees; future8 changes only seven
 version anchors. History7/6/5/4/3 retained, upstream/recipe/inventory/identity pins
 unchanged. Final whole-delivery review PASS0Critical/0Important/0Minor.
 
-Limits: **physical reboot/logon acceptance remains pending**. Starting the real
-canonical task once does not prove the early-logon timing scenario. No live ARM64
-GUI, elevated XAML StartDragAsync recovery, native drag-in, notification actions,
-post-relaunch deletion visibility or installer execution was established. Existing
+### Actual reboot/logon acceptance (2026-10-31)
+
+After the user manually rebooted, Controller verified a new Windows boot at
+18:35:59 China time. The repaired enabled task launched the installed1.5.9.7 at
+18:36:20 with `--startup --startup-source=scheduled-task`; the EXE hash matches
+the accepted local payload. The real current-session Explorer started at18:36:23,
+**2.950 seconds after DeskCue**, reproducing the original app-before-shell case.
+The initial elevation-assessment step took2328ms and then correctly logged both
+processes elevated, mismatch=None, canRelaunch=False. All42 startup steps completed
+with0degraded/0failed. The current-boot segment contains no erroneous notice or
+unattended-relaunch log, and read-only owned-window inspection found no elevation
+window. Read-only startup Preview again returned AlreadyRepaired; the task last-run
+time matches the process creation time. Its267009/0x41301 result means it is still
+Running, not an application exit code. UAC matches the accepted pre-reboot state.
+
+This verifies **one actual reboot/logon**; it does not exhaust every possible
+future shell-start timing. Private evidence: `reboot-acceptance-v7.json`,
+`reboot7-filtered-startup.log`, `reboot-startup-preview.json` and the before-boot
+baseline under `.artifacts/elevation-controller/`. No keyboard/mouse input or
+system configuration change was needed for this acceptance.
+Fresh independent reboot/document review: PASS0Critical/0Important/0Minor.
+
+Limits: no live ARM64 GUI, elevated XAML StartDragAsync recovery, native drag-in,
+notification actions, post-relaunch deletion visibility or installer execution
+was established. Existing
 Todo editing/modern pickers/tray-balloon fallback are retained; platform-limited
 drag and native notification actions are not advertised as universally repaired.
 All13 notice locales accurately state these limits.

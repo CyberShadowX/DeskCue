@@ -20,9 +20,15 @@ Todo plan: docs/superpowers/plans/2026-10-29-todo-ux.md
   source/receipts/installers and stable/latest feed verified. See HANDOFF hashes.
 - Exact7/future8 patch replay passed;75paths/343190B/SHA312bb9f7c59d016d82019eda19818b92567c5415c9c80b0569c80fbd0eb83e17.
   Final whole-delivery review PASS0Critical/0Important/0Minor.
-- Real reboot/logon, settings toggle GUI, liveARM64 GUI, elevated XAML drag/native
-  notification actions and installer execution remain unverified. No universal
-  administrator compatibility claim; private evidence stays inside this project.
+- Actual user-performed reboot/logon passed2026-10-31: installed7 started from
+  the repaired task2.950s before the real Explorer; assessment2328ms then High/High,
+  mismatchNone,42steps/0degraded/0failed, no erroneous notice/relaunch. Preview
+  AlreadyRepaired and UAC unchanged. This is one observed boot, not exhaustive
+  future-timing coverage; private evidence remains inside this project.
+  Fresh independent reboot/document reviewPASS0Critical/0Important/0Minor.
+- Settings toggle GUI, liveARM64 GUI, elevated XAML drag/native notification
+  actions and installer execution remain unverified. No universal administrator
+  compatibility claim.
 
 ## Historical Todo UX checkpoint (2026-10-29):1.5.9.6
 
