@@ -199,7 +199,8 @@ class StartupRepairTests(unittest.TestCase):
         self.assertIn("conditional", evidence["limitation"])
         self.assertEqual((journal.parent / "legacy.xml").read_text(encoding="utf-8-sig"), xml())
         self.assertEqual(len(evidence["legacySha256"]), 64)
-        self.assertEqual(evidence["legacySha256"].lower(), hashlib.sha256((journal.parent / "legacy.xml").read_bytes()).hexdigest())
+        self.assertEqual(evidence["legacySha256"].lower(), hashlib.sha256(xml().encode("utf-8")).hexdigest())
+        self.assertEqual(evidence["legacyFileSha256"].lower(), hashlib.sha256((journal.parent / "legacy.xml").read_bytes()).hexdigest())
 
     def test_defaults_username_unicode_and_zero_delay_are_owned(self):
         for extra in [dict(runlevel=None, enabled=None, trigger_enabled=None),
@@ -207,6 +208,40 @@ class StartupRepairTests(unittest.TestCase):
             with self.subTest(extra=extra):
                 value = self.run_case(old=xml(**extra))
                 self.assertEqual(value["Result"]["Status"], "Repaired", value)
+
+    def test_utf16_declared_recovery_files_are_readable_as_xml_and_preserve_text(self):
+        declaration = '<?xml version="1.0" encoding="UTF-16"?>\r\n'
+        old = declaration + xml()
+        canonical = declaration + xml(canonical=True)
+        value = self.run_case(old=old, contract=canonical)
+        self.assertEqual(value["Result"]["Status"], "Repaired", value)
+        journal = Path(value["Result"]["JournalPath"])
+        evidence = json.loads(journal.read_text(encoding="utf-8-sig"))
+        for name, original, prefix in [("legacy.xml", old, "legacy"), ("intended-canonical.xml", canonical, "intended"),
+                                       ("canonical-readback.xml", canonical, "created")]:
+            with self.subTest(name=name):
+                path = journal.parent / name
+                self.assertEqual(ET.parse(path).getroot().tag, f"{{{NS}}}Task")
+                self.assertTrue(path.read_bytes().startswith(b"\xff\xfe"))
+                self.assertEqual(path.read_bytes().decode("utf-16"), original)
+                self.assertEqual(evidence[prefix + "Sha256"].lower(), hashlib.sha256(original.encode("utf-8")).hexdigest())
+                self.assertEqual(evidence[prefix + "FileSha256"].lower(), hashlib.sha256(path.read_bytes()).hexdigest())
+
+    def test_utf8_declared_recovery_file_preserves_text_and_encoding(self):
+        old = "<?xml version='1.0' encoding='UTF-8'?>\n" + xml()
+        value = self.run_case(old=old)
+        self.assertEqual(value["Result"]["Status"], "Repaired", value)
+        path = Path(value["Result"]["JournalPath"]).parent / "legacy.xml"
+        self.assertEqual(ET.parse(path).getroot().tag, f"{{{NS}}}Task")
+        self.assertEqual(path.read_bytes(), old.encode("utf-8"))
+
+    def test_unsupported_recovery_encoding_fails_before_any_task_mutation(self):
+        for encoding in ["UTF-32", "UTF-16BE", "Windows-1252"]:
+            with self.subTest(encoding=encoding):
+                old = f'<?xml version="1.0" encoding="{encoding}"?>' + xml()
+                value = self.run_case(old=old)
+                self.assertEqual(value["Result"]["Status"], "Failed", value)
+                self.assert_untouched(value, old)
 
     def test_foreign_or_disabled_legacy_is_never_adopted(self):
         for field, bad in [("source", "foreign"), ("principal", "S-1-5-18"),
@@ -441,6 +476,9 @@ def pure_child(run):
         file.write_text(ET.tostring(doc, encoding="unicode"), encoding="utf-8")
         return invoke("--validate-startup-contract", path, task_name, str(file))
     assert validate(document).returncode == 0
+    # The repair writer preserves production's UTF-16 declaration with BOM.
+    file.write_bytes(b"\xff\xfe" + contract["Xml"].encode("utf-16-le"))
+    assert invoke("--validate-startup-contract", path, contract["TaskName"], str(file)).returncode == 0
     # Scheduler may omit default values; production parser normalizes them.
     principal = document.find(q("Principals") + "/" + q("Principal"))
     principal.remove(principal.find(q("RunLevel")))

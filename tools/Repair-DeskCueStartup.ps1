@@ -61,6 +61,20 @@ function Read-Xml([string]$Text) {
 }
 function Snapshot([string]$Text) { (Read-Xml $Text).DocumentElement.OuterXml }
 function Hash([string]$Text) { [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($utf8.GetBytes($Text))) }
+function Write-TaskXmlFile([string]$Path, [string]$Text) {
+    # Preserve the exported text verbatim. File bytes must honor its declaration
+    # so the backup also works with encoding-aware XML/file recovery tools.
+    $first = (Read-Xml $Text).FirstChild
+    $declared = if ($first -is [Xml.XmlDeclaration]) { $first.Encoding } else { '' }
+    $encoding = switch ($declared.ToLowerInvariant()) {
+        '' { $utf8 }
+        'utf-8' { $utf8 }
+        'utf-16' { [Text.Encoding]::Unicode } # Windows little-endian UTF-16 + BOM.
+        default { throw "Unsupported recovery XML encoding: $declared" }
+    }
+    [IO.File]::WriteAllText($Path, $Text, $encoding)
+    return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([IO.File]::ReadAllBytes($Path)))
+}
 function Save-Journal {
     if ($journalPath) { [IO.File]::WriteAllText($journalPath, ($journal | ConvertTo-Json -Depth 15), $utf8) }
 }
@@ -232,7 +246,7 @@ try {
             }
             Validator = { param($name, $xml, $exe)
                 $path = Join-Path $helper.Run 'validate.xml'
-                [IO.File]::WriteAllText($path, $xml, $utf8)
+                $null = Write-TaskXmlFile $path $xml
                 Invoke-WithDeskCueEnvironment -Values $helper.Environment.ProcessValues -Operation {
                     $null = & $helper.Dotnet $helper.Dll '--validate-startup-contract' $exe $name $path
                     return $LASTEXITCODE -eq 0
@@ -288,11 +302,13 @@ try {
     $transaction = Join-Path $EvidenceRoot ([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '-' + [Guid]::NewGuid().ToString('N'))
     Assert-DeskCueLocalPath -Root $local.CanonicalRoot -Path $transaction
     $null = New-Item -ItemType Directory -Path $transaction
-    [IO.File]::WriteAllText((Join-Path $transaction 'legacy.xml'), $old.Xml, $utf8)
-    [IO.File]::WriteAllText((Join-Path $transaction 'intended-canonical.xml'), $contract.Xml, $utf8)
+    $legacyFileHash = Write-TaskXmlFile (Join-Path $transaction 'legacy.xml') $old.Xml
+    $intendedFileHash = Write-TaskXmlFile (Join-Path $transaction 'intended-canonical.xml') $contract.Xml
     $journalPath = Join-Path $transaction 'journal.json'
     $journal = [ordered]@{ schemaVersion = 1; status = 'Started'; legacyName = $legacyName; canonicalName = $canonicalName;
         executable = $executable; legacySha256 = Hash $old.Xml; intendedSha256 = Hash $contract.Xml;
+        xmlStringHashEncoding = 'UTF-8 without BOM of the original XML string; distinct from recovery file bytes';
+        legacyFileSha256 = $legacyFileHash; intendedFileSha256 = $intendedFileHash;
         limitation = 'Task Scheduler has no atomic conditional delete; compare-before-delete cannot eliminate external editor races.';
         events = [Collections.Generic.List[object]]::new() }
     Record 'Original backup and intended contract saved before task mutations.'
@@ -308,10 +324,11 @@ try {
     Record 'Canonical task created without overwrite.'
     $readback = Query $canonicalName
     if ($readback.Status -ne 'Found') { throw 'Created canonical task is not readable.' }
-    [IO.File]::WriteAllText((Join-Path $transaction 'canonical-readback.xml'), $readback.Xml, $utf8)
+    $readbackFileHash = Write-TaskXmlFile (Join-Path $transaction 'canonical-readback.xml') $readback.Xml
     Assert-Canonical $readback.Xml
     $createdSnapshot = Snapshot $readback.Xml
     $journal['createdSha256'] = Hash $readback.Xml
+    $journal['createdFileSha256'] = $readbackFileHash
     Save-Journal
     $checkOld = Query $legacyName
     $checkNew = Query $canonicalName
