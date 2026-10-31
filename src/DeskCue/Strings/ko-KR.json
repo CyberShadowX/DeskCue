@@ -1285,7 +1285,7 @@
   "Startup.FullyElevatedNotice.Title": "데스크톱이 관리자 권한으로 실행되고 있습니다",
   "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Windows 기본 제공 Administrator 계정으로 로그인되어 있습니다. Windows는 기본적으로 이 계정의 모든 프로그램을 전체 관리자 권한으로 실행하며 DeskCue도 그중 하나입니다. 관리자 모드에서는 Windows가 일부 WinUI 끌기 작업과 네이티브 앱 알림을 제한합니다. 작업 편집, 최신 첨부 파일 선택기, 기존 트레이 알림을 통한 대체 미리 알림은 계속 사용할 수 있습니다.",
   "Startup.FullyElevatedNotice.BodyUacDisabled": "이 PC에서 사용자 계정 컨트롤(UAC)이 꺼져 있어 Windows가 데스크톱의 모든 프로그램을 전체 관리자 권한으로 실행합니다. DeskCue도 그중 하나입니다. 관리자 모드에서는 Windows가 일부 WinUI 끌기 작업과 네이티브 앱 알림을 제한합니다. 작업 편집, 최신 첨부 파일 선택기, 기존 트레이 알림을 통한 대체 미리 알림은 계속 사용할 수 있습니다.",
-  "Startup.FullyElevatedNotice.BodyGeneric": "이 데스크톱의 모든 프로그램이 전체 관리자 권한으로 실행되고 있으며 DeskCue도 그중 하나입니다. 관리자 모드에서는 Windows가 일부 WinUI 끌기 작업과 네이티브 앱 알림을 제한합니다. 작업 편집, 최신 첨부 파일 선택기, 기존 트레이 알림을 통한 대체 미리 알림은 계속 사용할 수 있습니다.",
+  "Startup.FullyElevatedNotice.BodyGeneric": "DeskCue와 현재 데스크톱 셸은 동일한 관리자 권한 수준으로 실행 중입니다. 관리자 모드에서는 Windows가 일부 WinUI 끌기 작업과 네이티브 앱 알림을 제한합니다. 작업 편집, 최신 첨부 파일 선택기, 기존 트레이 알림을 통한 대체 미리 알림은 계속 사용할 수 있습니다.",
   "Startup.FullyElevatedNotice.DetailsHeader": "표준 권한 모드로 복원하는 방법",
   "Startup.FullyElevatedNotice.DetailsHeaderUac": "UAC를 다시 켜는 방법",
   "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro 이상: Win+R을 눌러 secpol.msc를 입력해 \"로컬 보안 정책\"을 엽니다. 로컬 정책→보안 옵션에서 \"사용자 계정 컨트롤: 기본 제공 관리자 계정에 대한 관리자 승인 모드\"를 두 번 클릭해 \"사용\"으로 설정한 뒤 PC를 재시작합니다.",

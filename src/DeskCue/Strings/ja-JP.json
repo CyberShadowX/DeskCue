@@ -1282,7 +1282,7 @@
   "Startup.FullyElevatedNotice.Title": "デスクトップが管理者権限で実行されています",
   "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Windows 組み込み Administrator アカウントでサインインしています。Windows は既定で、このアカウントのすべてのプログラムを完全な管理者権限で実行します。DeskCue もその一つです。管理者モードでは、Windows により一部の WinUI ドラッグ操作とネイティブ アプリ通知が制限されます。タスクの編集、モダンな添付ファイル選択、および既存のトレイ通知による代替リマインダーは引き続き利用できます。",
   "Startup.FullyElevatedNotice.BodyUacDisabled": "この PC ではユーザーアカウント制御(UAC)が無効のため、Windows はデスクトップ上のすべてのプログラムを完全な管理者権限で実行します。DeskCue もその一つです。管理者モードでは、Windows により一部の WinUI ドラッグ操作とネイティブ アプリ通知が制限されます。タスクの編集、モダンな添付ファイル選択、および既存のトレイ通知による代替リマインダーは引き続き利用できます。",
-  "Startup.FullyElevatedNotice.BodyGeneric": "このデスクトップのすべてのプログラムが完全な管理者権限で実行されています。DeskCue もその一つです。管理者モードでは、Windows により一部の WinUI ドラッグ操作とネイティブ アプリ通知が制限されます。タスクの編集、モダンな添付ファイル選択、および既存のトレイ通知による代替リマインダーは引き続き利用できます。",
+  "Startup.FullyElevatedNotice.BodyGeneric": "DeskCue と現在のデスクトップ シェルは、同じ管理者権限レベルで実行されています。管理者モードでは、Windows により一部の WinUI ドラッグ操作とネイティブ アプリ通知が制限されます。タスクの編集、モダンな添付ファイル選択、および既存のトレイ通知による代替リマインダーは引き続き利用できます。",
   "Startup.FullyElevatedNotice.DetailsHeader": "標準の権限モードに戻す方法",
   "Startup.FullyElevatedNotice.DetailsHeaderUac": "UAC を再度有効にする方法",
   "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro 以上: Win+R を押して secpol.msc と入力し「ローカル セキュリティ ポリシー」を開きます。ローカル ポリシー→セキュリティ オプションの「ユーザーアカウント制御: 組み込み管理者アカウントのための管理者承認モード」をダブルクリックし、「有効」に設定して PC を再起動します。",

@@ -569,7 +569,7 @@
   "Startup.FullyElevatedNotice.Title": "桌面以系統管理員權限執行",
   "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "目前登入的是 Windows 內建 Administrator 帳戶。Windows 預設讓這個帳戶下的所有程式以完整系統管理員權限執行，DeskCue 也在其中。系統管理員模式下，Windows 會限制部分 WinUI 拖曳操作與原生應用程式通知。工作編輯、現代附件選擇器及現有的系統匣提醒備援方式仍可使用。",
   "Startup.FullyElevatedNotice.BodyUacDisabled": "這台電腦關閉了使用者帳戶控制(UAC)，Windows 會以完整系統管理員權限執行桌面上的所有程式，DeskCue 也在其中。系統管理員模式下，Windows 會限制部分 WinUI 拖曳操作與原生應用程式通知。工作編輯、現代附件選擇器及現有的系統匣提醒備援方式仍可使用。",
-  "Startup.FullyElevatedNotice.BodyGeneric": "目前桌面上的所有程式都以完整系統管理員權限執行，DeskCue 也在其中。系統管理員模式下，Windows 會限制部分 WinUI 拖曳操作與原生應用程式通知。工作編輯、現代附件選擇器及現有的系統匣提醒備援方式仍可使用。",
+  "Startup.FullyElevatedNotice.BodyGeneric": "DeskCue 與目前的桌面 Shell 正以相同的系統管理員權限等級執行。系統管理員模式下，Windows 會限制部分 WinUI 拖曳操作與原生應用程式通知。工作編輯、現代附件選擇器及現有的系統匣提醒備援方式仍可使用。",
   "Startup.FullyElevatedNotice.DetailsHeader": "如何回到標準權限模式",
   "Startup.FullyElevatedNotice.DetailsHeaderUac": "如何重新開啟 UAC",
   "Startup.FullyElevatedNotice.StepSecpol": "Windows 專業版及以上：按 Win+R 輸入 secpol.msc 開啟「本機安全性原則」，進入 本機原則→安全性選項，雙擊「使用者帳戶控制: 內建的 Administrator 帳戶的管理員核准模式」，設為「已啟用」，重新啟動電腦。",
