@@ -1,3 +1,120 @@
+diff --git a/src/DeskCue/App.Elevation.cs b/src/DeskCue/App.Elevation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..756e7be279eafa9921374cae1ba660b55eb123bb
+--- /dev/null
++++ b/src/DeskCue/App.Elevation.cs
+@@ -0,0 +1,89 @@
++using DeskCue.Platform;
++using DeskCue.Services;
++
++namespace DeskCue;
++
++public partial class App
++{
++    private async Task RefreshStartupElevationAsync()
++    {
++        if (IsShuttingDown || UiDispatch.Phase != UiDispatch.PhaseKind.Ready)
++        {
++            return;
++        }
++
++        MarkStartupProgress();
++        try
++        {
++            StartupElevationAssessment assessment = await StartupElevationPolicy.AssessWhenShellReadyAsync(
++                DragDropPermissionService.AssessStartupElevation, Task.Delay, _startupElevationCancellation.Token);
++            await UiDispatch.RunAsync(() =>
++            {
++                if (!IsShuttingDown)
++                {
++                    _startupElevationAssessment = assessment;
++                    LogStartupElevationAssessment();
++                    MarkStartupProgress();
++                }
++                return Task.CompletedTask;
++            });
++        }
++        catch (OperationCanceledException) when (IsShuttingDown || UiDispatch.Phase != UiDispatch.PhaseKind.Ready)
++        {
++            // Normal shutdown also cancels the bounded shell-readiness wait.
++        }
++    }
++
++    private async Task HandleStartupElevationAsync()
++    {
++        if (IsShuttingDown || UiDispatch.Phase != UiDispatch.PhaseKind.Ready)
++        {
++            return;
++        }
++
++        try
++        {
++            await UiDispatch.RunAsync(async () =>
++            {
++                if (IsShuttingDown)
++                {
++                    return;
++                }
++
++                // The tray/lifeline await may have outlived Explorer. Unknown
++                // after a restart suppresses action rather than reusing a stale
++                // known token or starting another unbounded reassessment.
++                _startupElevationAssessment = DragDropPermissionService.AssessStartupElevation();
++                LogStartupElevationAssessment();
++                bool alreadyRelaunched = TryGetAwaitParentExitProcessId(Environment.GetCommandLineArgs()) is not null;
++                if (IsStartupMode && StartupElevationPolicy.ShouldRelaunch(
++                        _startupElevationAssessment, alreadyRelaunched,
++                        DeskCueDataPathService.Current.IsDevelopmentRoot))
++                {
++                    _ = DragDropPermissionService.ClearElevationCompatibilityFlags();
++                    string arguments = $"{AwaitParentExitArgument} {Environment.ProcessId} --startup";
++                    if (DragDropPermissionService.TryRelaunchAsExplorerUser(arguments))
++                    {
++                        Log("[Elevation] Verified unattended relaunch started; shutting down current instance");
++                        await ShutdownForRestartAsync();
++                        return;
++                    }
++                    Log("[Elevation] Verified unattended relaunch failed; continuing current instance");
++                }
++
++                ShowElevationNoticeIfNeeded();
++            });
++        }
++        catch (OperationCanceledException) when (IsShuttingDown || UiDispatch.Phase != UiDispatch.PhaseKind.Ready)
++        {
++            // A rejected or shutting-down dispatcher must never create UI.
++        }
++    }
++
++    private void LogStartupElevationAssessment() => Log(
++        $"[Elevation] Startup assessment appElevated={_startupElevationAssessment.IsCurrentProcessElevated} " +
++        $"explorerElevated={_startupElevationAssessment.IsExplorerElevated?.ToString() ?? "Unknown"} " +
++        $"uacDisabled={_startupElevationAssessment.IsUacDisabled} " +
++        $"canRelaunch={_startupElevationAssessment.CanRelaunchUnelevated} " +
++        $"mismatch={_startupElevationAssessment.Mismatch}");
++}
+diff --git a/src/DeskCue/App.Startup.cs b/src/DeskCue/App.Startup.cs
+index 6c5fba5984577f68fcf4cdf5fb4cad4fe2502d33..9d1e563f1cce7adb7a06a2764961194802961362 100644
+--- a/src/DeskCue/App.Startup.cs
++++ b/src/DeskCue/App.Startup.cs
+@@ -275,13 +275,14 @@ public partial class App
+     /// </summary>
+     private void WatchShellAboveAppTrayFailure(Task<bool>? trayCreation)
+     {
+-        if (trayCreation is null ||
+-            _startupElevationAssessment.Mismatch != ShellIntegrityMismatch.ShellAboveApp)
++        if (trayCreation is null)
+         {
+             return;
+         }
+ 
+-        _ = ShowShellElevationNoticeWhenTrayFailsAsync(trayCreation);
++        SafeFireAndForget(
++            () => ShowShellElevationNoticeWhenTrayFailsAsync(trayCreation),
++            "shell-elevation-notice");
+     }
+ 
+     /// <summary>
 diff --git a/src/DeskCue/App.Tray.cs b/src/DeskCue/App.Tray.cs
 index 0308a4115c9b6b0f2634fa3a8dd1846f7a69b7d5..a8907e43f92786c398617b97a414a5decfe4d774 100644
 --- a/src/DeskCue/App.Tray.cs
@@ -213,7 +330,7 @@ index 0308a4115c9b6b0f2634fa3a8dd1846f7a69b7d5..a8907e43f92786c398617b97a414a5de
      /// itself is terminal for the session.</summary>
      internal void RecordSuccess()
 diff --git a/src/DeskCue/App.xaml.cs b/src/DeskCue/App.xaml.cs
-index 3eafcd2e638bbcbec11daa54ea8077e596f8d764..6463388ca70c60f9d3a975d65fa5c680e47a03bf 100644
+index 3eafcd2e638bbcbec11daa54ea8077e596f8d764..cea8628b2872a430ae75cf307c35b62bfe62454c 100644
 --- a/src/DeskCue/App.xaml.cs
 +++ b/src/DeskCue/App.xaml.cs
 @@ -40,6 +40,10 @@ namespace DeskCue;
@@ -227,6 +344,204 @@ index 3eafcd2e638bbcbec11daa54ea8077e596f8d764..6463388ca70c60f9d3a975d65fa5c680
      private const double TrayMenuItemWidth = 176;
      private const int TrayContextMenuFallbackOffsetPixels = 24;
      private const int TrayContextMenuEstimatedWidth = (int)TrayMenuItemWidth + 16;
+@@ -208,10 +212,12 @@ public partial class App : Application
+     private bool _externalActivationHandling;
+     private DateTimeOffset? _lastBareExternalActivationAtUtc;
+     private readonly bool _processStartupLaunchDetected;
+-    private readonly StartupElevationAssessment _startupElevationAssessment = new(false, false, false, false);
++    private StartupElevationAssessment _startupElevationAssessment = new(false, null, false, false);
++    private readonly CancellationTokenSource _startupElevationCancellation = new();
+ 
+     /// <summary>
+-    /// Cached launch-time elevation snapshot. Same-level fully-elevated
++    /// Latest startup elevation assessment. Unknown shell state is retained
++    /// until a bounded asynchronous reassessment completes. Fully-elevated
+     /// sessions read <see cref="ShellIntegrityMismatch.None"/> here; surface
+     /// code uses the mismatch leg to tell "drag-in is blocked" (app above
+     /// shell) apart from same-level sessions where drag-in works.
+@@ -408,61 +414,9 @@ public partial class App : Application
+             Environment.Exit(0);
+         }
+ 
+-        // Elevation gate: an elevated DeskCue cannot receive OLE drops from
+-        // Explorer (UIPI) and cannot start XAML drags either, so an elevated
+-        // launch either relaunches itself unelevated or surfaces a notice.
+-        // The mutex stays owned by the kernel on these exits: the replacement
+-        // instance waits for this process via --await-parent-exit.
+-        _startupElevationAssessment = DragDropPermissionService.AssessStartupElevation();
+-        if (_startupElevationAssessment.IsCurrentProcessElevated)
+-        {
+-            Log(
+-                $"[Elevation] Elevated launch detected " +
+-                $"uacDisabled={_startupElevationAssessment.IsUacDisabled} " +
+-                $"explorerElevated={_startupElevationAssessment.IsExplorerElevated} " +
+-                $"canRelaunch={_startupElevationAssessment.CanRelaunchUnelevated} " +
+-                $"mismatch={_startupElevationAssessment.Mismatch}");
+-            if (_processStartupLaunchDetected)
+-            {
+-                // Nobody is watching an unattended launch: fix the cause and
+-                // relaunch unelevated instead of parking a dialog. A failed
+-                // relaunch keeps this instance running (drag-drop degraded).
+-                _ = DragDropPermissionService.ClearElevationCompatibilityFlags();
+-
+-                // Two loop breakers: only relaunch when Explorer really offers
+-                // a standard-user context, and never twice in a row — a
+-                // relaunch that lands elevated again (elevated Explorer, or
+-                // the ShellExecute fallback spawning an elevated child) must
+-                // not restart forever on an unattended desktop.
+-                bool alreadyRelaunchedForElevation =
+-                    TryGetAwaitParentExitProcessId(Environment.GetCommandLineArgs()) is not null;
+-                if (_startupElevationAssessment.CanRelaunchUnelevated &&
+-                    !alreadyRelaunchedForElevation)
+-                {
+-                    string relaunchArguments =
+-                        $"{AwaitParentExitArgument} {Environment.ProcessId} --startup";
+-                    if (DragDropPermissionService.TryRelaunchAsExplorerUser(relaunchArguments))
+-                    {
+-                        Log("[Elevation] Unattended launch relaunched unelevated; exiting elevated instance");
+-                        _startupSessionLedger?.MarkCleanExit();
+-                        _nativeNotificationService?.Dispose();
+-                        DrainLogQueue();
+-                        Environment.Exit(0);
+-                    }
+-
+-                    Log("[Elevation] Unattended relaunch failed; continuing elevated");
+-                }
+-                else
+-                {
+-                    Log(
+-                        "[Elevation] Unattended relaunch skipped " +
+-                        $"(canRelaunch={_startupElevationAssessment.CanRelaunchUnelevated}, " +
+-                        $"alreadyRelaunched={alreadyRelaunchedForElevation}); continuing elevated");
+-                }
+-            }
+-            // Interactive launches defer the notice to OnLaunched, once the
+-            // tray exists and the startup pipeline is no longer watching.
+-        }
++        // Explorer may not exist yet during logon. Defer elevation assessment
++        // and all repair/relaunch decisions until asynchronous startup has a
++        // dispatcher and can distinguish Unknown from a standard-user shell.
+ 
+         InitializeComponent();
+ 
+@@ -1132,6 +1086,16 @@ public partial class App : Application
+                 WidgetSegmentedLayoutHelper.Initialize(UiDispatcherQueue);
+             });
+ 
++            // Empty FileSurfaceContent views capture elevation in their
++            // constructor. Publish the bounded initial assessment before any
++            // restored/default widget can be constructed, not just before the
++            // final notice. Later decision/tray paths still probe afresh.
++            await RunOptionalStartupStepAsync("elevation-assessment", RefreshStartupElevationAsync);
++            if (IsShuttingDown)
++            {
++                return;
++            }
++
+             // The diagnostic report walks a snapshot of every process on the
+             // machine plus several registry hives; none of it gates startup,
+             // so keep it off the UI thread's first-render path. The queued
+@@ -1750,7 +1714,11 @@ public partial class App : Application
+             // every later launch.
+             await EnsureStartupProducedUsableSurfaceAsync();
+ 
+-            RunOptionalStartupStep("elevation-notice", ShowElevationNoticeIfNeeded);
++            await RunOptionalStartupStepAsync("elevation-notice", HandleStartupElevationAsync);
++            if (IsShuttingDown)
++            {
++                return;
++            }
+ 
+             EnsureStartupPipeline().WriteSummary();
+             Log("OnLaunched completed successfully");
+@@ -4739,8 +4707,8 @@ public partial class App : Application
+ 
+     /// <summary>
+     /// Shows the elevation notice once startup has produced a usable
+-    /// surface. Skipped for unattended launches (the constructor already
+-    /// attempted a silent unelevated relaunch; nobody is watching a dialog)
++    /// surface. Skipped for unattended mismatches (the async startup handler
++    /// attempted a verified unelevated relaunch; nobody is watching a dialog)
+     /// and on shutdown. The asymmetric mismatch keeps its every-time notice
+     /// (self-healable, the user should act each elevated launch); since
+     /// 2026-10-22 the same-level elevated desktop — silent for years — gets
+@@ -4752,7 +4720,8 @@ public partial class App : Application
+     /// </summary>
+     private void ShowElevationNoticeIfNeeded()
+     {
+-        if (!_startupElevationAssessment.IsCurrentProcessElevated ||
++        if (UiDispatch.Phase != UiDispatch.PhaseKind.Ready || !UiDispatch.HasAccess ||
++            !_startupElevationAssessment.IsCurrentProcessElevated ||
+             IsShuttingDown ||
+             _elevationNoticeWindow is not null)
+         {
+@@ -4770,7 +4739,11 @@ public partial class App : Application
+             // DeskCue elevated, so scrub them while the notice is up — whether
+             // the user exits via the button or the window X, their next normal
+             // launch must be able to land unelevated. Failures log only.
+-            _ = DragDropPermissionService.ClearElevationCompatibilityFlags();
++            if (StartupElevationPolicy.ShouldRepairCompatibilityFlags(
++                    _startupElevationAssessment, DeskCueDataPathService.Current.IsDevelopmentRoot))
++            {
++                _ = DragDropPermissionService.ClearElevationCompatibilityFlags();
++            }
+ 
+             _elevationNoticeWindow = new ElevationNoticeWindow(LocalizationService, _startupElevationAssessment);
+             _elevationNoticeWindow.Closed += (_, _) => _elevationNoticeWindow = null;
+@@ -4861,19 +4834,36 @@ public partial class App : Application
+             trayCreated = false;
+         }
+ 
+-        if (trayCreated ||
+-            IsStartupMode ||
+-            IsShuttingDown ||
+-            _elevationNoticeWindow is not null)
++        if (trayCreated || IsShuttingDown || UiDispatch.Phase != UiDispatch.PhaseKind.Ready)
+         {
+             return;
+         }
+ 
+-        _elevationNoticeWindow = new ElevationNoticeWindow(LocalizationService, _startupElevationAssessment);
+-        _elevationNoticeWindow.Closed += (_, _) => _elevationNoticeWindow = null;
+-        ThemeService.TrackWindow(_elevationNoticeWindow);
+-        _elevationNoticeWindow.Activate();
+-        Log("[Elevation] Notice shown for shell-above-app tray failure");
++        try
++        {
++            await UiDispatch.RunAsync(() =>
++            {
++                if (!IsShuttingDown && !IsStartupMode && _elevationNoticeWindow is null)
++                {
++                    // A tray retry can outlive the original assessment or a
++                    // shell restart. Revalidate before showing any explanation.
++                    _startupElevationAssessment = DragDropPermissionService.AssessStartupElevation();
++                    if (_startupElevationAssessment.Mismatch == ShellIntegrityMismatch.ShellAboveApp)
++                    {
++                        _elevationNoticeWindow = new ElevationNoticeWindow(LocalizationService, _startupElevationAssessment);
++                        _elevationNoticeWindow.Closed += (_, _) => _elevationNoticeWindow = null;
++                        ThemeService.TrackWindow(_elevationNoticeWindow);
++                        _elevationNoticeWindow.Activate();
++                        Log("[Elevation] Notice shown for shell-above-app tray failure");
++                    }
++                }
++                return Task.CompletedTask;
++            });
++        }
++        catch (OperationCanceledException) when (IsShuttingDown || UiDispatch.Phase != UiDispatch.PhaseKind.Ready)
++        {
++            // Dispatcher teardown cancels delayed UI work.
++        }
+     }
+ 
+     public void ShowOnboarding(bool resumeProgress = false)
+@@ -6399,6 +6389,7 @@ public partial class App : Application
+     private async Task<bool> ShutdownCoreAsync()
+     {
+         Interlocked.Exchange(ref s_shutdownRequested, 1);
++        _startupElevationCancellation.Cancel();
+         // The canonical shutdown moment for UI dispatch: drop pending
+         // deferrals and refuse further dispatch so nothing replays post-exit.
+         DeskCue.Platform.UiDispatch.MarkShutdown();
 diff --git a/src/DeskCue/Contracts/IWidgetPreferredHeightContent.cs b/src/DeskCue/Contracts/IWidgetPreferredHeightContent.cs
 new file mode 100644
 index 0000000000000000000000000000000000000000..99cb4cf9062b63c360efa6cf8fd85f3df2d54a7b
@@ -836,7 +1151,7 @@ index 704bf2680f37313c2458a92ebbc8771d9e1b5f80..35e0b1434b751b3ad25f57f47319effd
  
          if (ViewModel is IDisposable disposable)
 diff --git a/src/DeskCue/DeskCue.csproj b/src/DeskCue/DeskCue.csproj
-index feaced9b12056e2e49f6832d7a982574a9164455..ff938d427b62199e0b9b0738e07c898fa05b2339 100644
+index 5ff35a82c0d04741f733c880b4d88c87f2a97031..422a2c060cd076dbb51fec32d03f6d629fc95c12 100644
 --- a/src/DeskCue/DeskCue.csproj
 +++ b/src/DeskCue/DeskCue.csproj
 @@ -39,6 +39,11 @@
@@ -880,6 +1195,119 @@ index 0000000000000000000000000000000000000000..84837843cbeaed56f633761e5ed74136
 +            current.Width, height);
 +    }
 +}
+diff --git a/src/DeskCue/Platform/ShellUnelevatedLaunch.cs b/src/DeskCue/Platform/ShellUnelevatedLaunch.cs
+index f309d5dc181168f02acf7d5bd4e9db164dceae35..0794393c860c2a2bc38a88d735b840f7c8d304a1 100644
+--- a/src/DeskCue/Platform/ShellUnelevatedLaunch.cs
++++ b/src/DeskCue/Platform/ShellUnelevatedLaunch.cs
+@@ -208,47 +208,48 @@ internal static class ShellUnelevatedLaunch
+ 
+         try
+         {
+-            if (!OpenProcessToken(processHandle, TokenQuery, out IntPtr tokenHandle))
++            return ReadProcessElevation(processHandle);
++        }
++        finally
++        {
++            CloseHandle(processHandle);
++        }
++    }
++
++    private static bool? ReadProcessElevation(IntPtr processHandle)
++    {
++        if (!OpenProcessToken(processHandle, TokenQuery, out IntPtr tokenHandle))
++        {
++            return null;
++        }
++
++        try
++        {
++            if (!GetTokenInformation(tokenHandle, 20 /* TokenElevation */,
++                    IntPtr.Zero, 0, out int length) &&
++                Marshal.GetLastWin32Error() != 122 /* ERROR_INSUFFICIENT_BUFFER */)
+             {
+                 return null;
+             }
+ 
++            IntPtr buffer = Marshal.AllocHGlobal(Math.Max(length, sizeof(int)));
+             try
+             {
+-                if (!GetTokenInformation(
+-                        tokenHandle,
+-                        20 /* TokenElevation */,
+-                        IntPtr.Zero,
+-                        0,
+-                        out int length) &&
+-                    Marshal.GetLastWin32Error() != 122 /* ERROR_INSUFFICIENT_BUFFER */)
++                if (!GetTokenInformation(tokenHandle, 20, buffer, length, out _))
+                 {
+                     return null;
+                 }
+ 
+-                IntPtr buffer = Marshal.AllocHGlobal(Math.Max(length, sizeof(int)));
+-                try
+-                {
+-                    if (!GetTokenInformation(tokenHandle, 20, buffer, length, out _))
+-                    {
+-                        return null;
+-                    }
+-
+-                    return Marshal.PtrToStructure<TokenElevation>(buffer).TokenIsElevated != 0;
+-                }
+-                finally
+-                {
+-                    Marshal.FreeHGlobal(buffer);
+-                }
++                return Marshal.PtrToStructure<TokenElevation>(buffer).TokenIsElevated != 0;
+             }
+             finally
+             {
+-                CloseHandle(tokenHandle);
++                Marshal.FreeHGlobal(buffer);
+             }
+         }
+         finally
+         {
+-            CloseHandle(processHandle);
++            CloseHandle(tokenHandle);
+         }
+     }
+ 
+@@ -274,6 +275,9 @@ internal static class ShellUnelevatedLaunch
+     internal static bool DecideRestartAtShellIntegrity(bool callerElevated, bool? shellElevated) =>
+         callerElevated && shellElevated == false;
+ 
++    internal static bool CanUseShellParent(bool requireUnelevatedShell, bool? openedParentElevated) =>
++        !requireUnelevatedShell || openedParentElevated == false;
++
+     /// <summary>
+     /// Creates the process parented to Explorer, so it runs with Explorer's
+     /// (standard-user) token even though this caller is elevated. Returns
+@@ -283,7 +287,8 @@ internal static class ShellUnelevatedLaunch
+     public static bool TryStartAtShellIntegrity(
+         string exePath,
+         string? arguments,
+-        Action<string>? log)
++        Action<string>? log,
++        bool requireUnelevatedShell = false)
+     {
+         if (!File.Exists(exePath))
+         {
+@@ -316,6 +321,15 @@ internal static class ShellUnelevatedLaunch
+ 
+         try
+         {
++            // Validate the exact opened parent handle, not a previous shell
++            // snapshot: Explorer may restart between assessment and launch.
++            if (!CanUseShellParent(requireUnelevatedShell,
++                    requireUnelevatedShell ? ReadProcessElevation(explorerHandle) : null))
++            {
++                log?.Invoke("[ShellUnelevatedLaunch] Parent token is not known unelevated; keeping current instance");
++                return false;
++            }
++
+             int attributeListSize = 0;
+             _ = InitializeProcThreadAttributeList(IntPtr.Zero, 1, 0, ref attributeListSize);
+             IntPtr attributeList = Marshal.AllocHGlobal(attributeListSize);
 diff --git a/src/DeskCue/Platform/Win32Helper.TrayMenu.cs b/src/DeskCue/Platform/Win32Helper.TrayMenu.cs
 new file mode 100644
 index 0000000000000000000000000000000000000000..0450c033d0241de9b560b70910002dcd667a6d15
@@ -1071,6 +1499,233 @@ index 2174d7cf066ee8dcd1c0c80e358eaf189f40c7ff..7129e4073542087818618d6f91cf1f88
  
      public DeskCueDataPathService(string? rootPath = null)
      {
+diff --git a/src/DeskCue/Services/DragDropPermissionService.cs b/src/DeskCue/Services/DragDropPermissionService.cs
+index 8d92c4fb3431e0ee8a4eba551d07b39d8a319284..34291f24a1bfca2d789ec102aa98189bc01da34b 100644
+--- a/src/DeskCue/Services/DragDropPermissionService.cs
++++ b/src/DeskCue/Services/DragDropPermissionService.cs
+@@ -85,7 +85,11 @@ public enum ShellIntegrityMismatch
+     /// <summary>Explorer is elevated while DeskCue is not: UIPI blocks tray
+     /// creation and cross-level drag. Not self-healable (the app cannot
+     /// change the shell's token); degrade and explain instead.</summary>
+-    ShellAboveApp
++    ShellAboveApp,
++
++    /// <summary>The shell is absent, changing, or its token cannot be read.
++    /// This is not evidence of an integrity mismatch.</summary>
++    Unknown
+ }
+ 
+ public sealed record DragDropPermissionDiagnostic(
+@@ -100,7 +104,7 @@ public sealed record DragDropPermissionDiagnostic(
+     string StartupStatus,
+     string ShortcutStatus,
+     bool IsCurrentProcessElevated,
+-    bool IsExplorerElevated,
++    bool? IsExplorerElevated,
+     bool IsUacDisabled,
+     bool HasAppCompatIssue,
+     bool HasStartupIssue,
+@@ -122,7 +126,7 @@ public sealed record DragDropPermissionRepairResult(
+ /// </summary>
+ public sealed record StartupElevationAssessment(
+     bool IsCurrentProcessElevated,
+-    bool IsExplorerElevated,
++    bool? IsExplorerElevated,
+     bool IsUacDisabled,
+     bool CanRelaunchUnelevated,
+     bool IsBuiltInAdminAccount = false)
+@@ -134,7 +138,9 @@ public sealed record StartupElevationAssessment(
+     /// way.
+     /// </summary>
+     public ShellIntegrityMismatch Mismatch =>
+-        IsCurrentProcessElevated == IsExplorerElevated
++        IsExplorerElevated is null
++            ? ShellIntegrityMismatch.Unknown
++            : IsCurrentProcessElevated == IsExplorerElevated
+             ? ShellIntegrityMismatch.None
+             : IsCurrentProcessElevated
+                 ? ShellIntegrityMismatch.AppAboveShell
+@@ -150,7 +156,7 @@ public sealed record StartupElevationAssessment(
+     public FullyElevatedSessionAttribution FullyElevatedAttribution =>
+         DragDropPermissionService.DecideFullyElevatedSessionAttribution(
+             IsCurrentProcessElevated,
+-            IsExplorerElevated,
++            IsExplorerElevated == true,
+             IsUacDisabled,
+             IsBuiltInAdminAccount);
+ }
+@@ -210,16 +216,16 @@ public static class DragDropPermissionService
+         // literal (`IsElevated == false`) at one call site — named locals
+         // keep every consumer on the same polarity.
+         bool isCurrentElevated = currentToken.IsElevated == true;
+-        bool isExplorerElevated = explorerToken.IsElevated == true;
+-        bool permissionMismatch = isCurrentElevated && !isExplorerElevated;
++        bool? isExplorerElevated = explorerToken.IsElevated;
++        bool permissionMismatch = isCurrentElevated && isExplorerElevated == false;
+         // Reverse asymmetry (Medium app under an elevated desktop): UIPI
+         // blocks tray creation and cross-level drag here too, but the fix
+         // is on the shell side, not a DeskCue relaunch.
+-        bool shellAboveApp = !isCurrentElevated && isExplorerElevated;
++        bool shellAboveApp = !isCurrentElevated && isExplorerElevated == true;
+         FullyElevatedSessionAttribution fullyElevatedAttribution =
+             DecideFullyElevatedSessionAttribution(
+                 isCurrentElevated,
+-                isExplorerElevated,
++                isExplorerElevated == true,
+                 isUacDisabled,
+                 DetectBuiltInAdminAccount());
+         // Diagnostic-facing form of ComputeCanRelaunchUnelevated: "needs
+@@ -322,7 +328,7 @@ public static class DragDropPermissionService
+                 localizationService),
+             FormatShortcutStatus(shortcutProbes, localizationService),
+             currentToken.IsElevated == true,
+-            explorerToken.IsElevated == true,
++            explorerToken.IsElevated,
+             isUacDisabled,
+             hasAppCompatIssue,
+             hasStartupIssue,
+@@ -389,17 +395,13 @@ public static class DragDropPermissionService
+     public static StartupElevationAssessment AssessStartupElevation()
+     {
+         ProcessTokenSnapshot currentToken = GetCurrentProcessTokenSnapshot();
+-        // The Explorer probe now runs for every launch, not just elevated
+-        // ones: the ShellAboveApp direction (Medium app under an elevated
+-        // desktop) decides the tray-degraded notice and the lifeline
+-        // exemption. A failed probe reads as unelevated, so the worst case
+-        // is offering the one-click relaunch whose own fallback re-routes
+-        // through ShellExecute when Explorer is genuinely unavailable.
++        // A failed probe stays unknown: absence during logon is not a
++        // standard-user token and must never offer an unelevated restart.
+         ProcessTokenSnapshot explorerToken = GetExplorerTokenSnapshot();
+         UacPolicySnapshot uacPolicy = GetUacPolicySnapshot();
+         bool isUacDisabled = uacPolicy.EnableLua == 0;
+         bool isCurrentElevated = currentToken.IsElevated == true;
+-        bool isExplorerElevated = explorerToken.IsElevated == true;
++        bool? isExplorerElevated = explorerToken.IsElevated;
+         return new StartupElevationAssessment(
+             isCurrentElevated,
+             isExplorerElevated,
+@@ -415,9 +417,9 @@ public static class DragDropPermissionService
+     /// the parent-process handover would spawn another elevated instance,
+     /// so the notice must explain instead of offering a restart.
+     /// </summary>
+-    public static bool ComputeCanRelaunchUnelevated(bool isUacDisabled, bool isExplorerElevated)
++    public static bool ComputeCanRelaunchUnelevated(bool isUacDisabled, bool? isExplorerElevated)
+     {
+-        return !isUacDisabled && !isExplorerElevated;
++        return !isUacDisabled && isExplorerElevated == false;
+     }
+ 
+     /// <summary>
+@@ -430,9 +432,9 @@ public static class DragDropPermissionService
+     internal static bool ComputeNeedsRelaunchDiagnostic(
+         bool isCurrentProcessElevated,
+         bool isUacDisabled,
+-        bool isExplorerElevated)
++        bool? isExplorerElevated)
+     {
+-        return isCurrentProcessElevated && !isUacDisabled && !isExplorerElevated;
++        return isCurrentProcessElevated && !isUacDisabled && isExplorerElevated == false;
+     }
+ 
+     /// <summary>
+@@ -676,8 +678,9 @@ public static class DragDropPermissionService
+     /// new instance's command line — the launch gate passes
+     /// "--await-parent-exit &lt;pid&gt;" (plus "--startup" for unattended
+     /// launches) so the new instance waits out the elevated holder of the
+-    /// single-instance mutex instead of racing it. Falls back to a plain
+-    /// ShellExecute relaunch when the shell-parented creation is impossible.
++    /// single-instance mutex instead of racing it. A failed verified launch
++    /// keeps the current instance alive: plain ShellExecute cannot prove
++    /// de-elevation and must not be reported as a successful replacement.
+     /// </summary>
+     public static bool TryRelaunchAsExplorerUser(string additionalArguments = "")
+     {
+@@ -687,27 +690,26 @@ public static class DragDropPermissionService
+             return false;
+         }
+ 
+-        return ShellUnelevatedLaunch.TryStartAtShellIntegrity(exePath, additionalArguments, App.Log) ||
+-            TryShellExecute(exePath);
++        return TryRelaunchAsExplorerUser(
++            AssessStartupElevation(), exePath, additionalArguments,
++            (path, arguments) => ShellUnelevatedLaunch.TryStartAtShellIntegrity(
++                path, arguments, App.Log, requireUnelevatedShell: true));
+     }
+ 
+-    private static bool TryShellExecute(string exePath)
++    internal static bool TryRelaunchAsExplorerUser(
++        StartupElevationAssessment assessment,
++        string exePath,
++        string additionalArguments,
++        Func<string, string, bool> startAtShellIntegrity)
+     {
+-        try
+-        {
+-            Process.Start(new ProcessStartInfo
+-            {
+-                FileName = exePath,
+-                UseShellExecute = true,
+-                WorkingDirectory = Path.GetDirectoryName(exePath) ?? AppContext.BaseDirectory
+-            });
+-            return true;
+-        }
+-        catch (Exception ex)
++        if (!assessment.CanRelaunchUnelevated ||
++            assessment.IsUacDisabled ||
++            assessment.Mismatch != ShellIntegrityMismatch.AppAboveShell)
+         {
+-            App.Log($"[DragDropPermission] Relaunch failed: {ex}");
+             return false;
+         }
++
++        return startAtShellIntegrity(exePath, additionalArguments);
+     }
+ 
+     private static string GetCurrentExePath()
+@@ -1283,10 +1285,23 @@ public static class DragDropPermissionService
+     {
+         try
+         {
+-            Process? explorer = Process.GetProcessesByName("explorer").FirstOrDefault();
+-            if (explorer is null)
++            IntPtr shellWindow = DragDropPermissionNativeMethods.GetShellWindow();
++            if (shellWindow == IntPtr.Zero)
++            {
++                return ProcessTokenSnapshot.Unknown(0, "explorer", "no-shell-window");
++            }
++
++            _ = DragDropPermissionNativeMethods.GetWindowThreadProcessId(shellWindow, out uint shellProcessId);
++            if (shellProcessId == 0)
++            {
++                return ProcessTokenSnapshot.Unknown(0, "explorer", "no-shell-process");
++            }
++
++            using Process explorer = Process.GetProcessById(checked((int)shellProcessId));
++            using Process currentProcess = Process.GetCurrentProcess();
++            if (explorer.SessionId != currentProcess.SessionId)
+             {
+-                return ProcessTokenSnapshot.Unknown(0, "explorer", "not-running");
++                return ProcessTokenSnapshot.Unknown(explorer.Id, explorer.ProcessName, "different-session");
+             }
+ 
+             IntPtr processHandle = DragDropPermissionNativeMethods.OpenProcess(ProcessQueryLimitedInformation, false, (uint)explorer.Id);
+@@ -1297,7 +1312,14 @@ public static class DragDropPermissionService
+ 
+             try
+             {
+-                return CreateProcessTokenSnapshot(explorer.Id, explorer.ProcessName, null, processHandle);
++                ProcessTokenSnapshot snapshot = CreateProcessTokenSnapshot(explorer.Id, explorer.ProcessName, null, processHandle);
++                // Do not cache a token belonging to a shell that restarted
++                // during the probe, even if another Explorer is still alive.
++                IntPtr currentShellWindow = DragDropPermissionNativeMethods.GetShellWindow();
++                _ = DragDropPermissionNativeMethods.GetWindowThreadProcessId(currentShellWindow, out uint currentShellProcessId);
++                return currentShellWindow == shellWindow && currentShellProcessId == shellProcessId && !explorer.HasExited
++                    ? snapshot
++                    : ProcessTokenSnapshot.Unknown(explorer.Id, explorer.ProcessName, "shell-changed");
+             }
+             finally
+             {
 diff --git a/src/DeskCue/Services/EverythingSearchService.cs b/src/DeskCue/Services/EverythingSearchService.cs
 index d145225fccfb2595d890df746757bcc35ce21f13..a1127508091eb573fcea9b70aff2ec8b8696b530 100644
 --- a/src/DeskCue/Services/EverythingSearchService.cs
@@ -1172,7 +1827,7 @@ index d5bef92cad91d2294ccf999a1b32b9ca9ddd13e9..2b78307825afe2f5769cdd09eee6a35a
              new DeskCueFeedbackMinePayload(ClientId),
              FeedbackJsonContext.Default.FeedbackMinePayload);
 diff --git a/src/DeskCue/Services/ReleaseNotesService.cs b/src/DeskCue/Services/ReleaseNotesService.cs
-index 70c382d26dc3a61f4d18b28cc1ad7a306e796f6b..dcc27bbe66997c0f358961376158a0aa30eb5218 100644
+index 849ea928ab13e93feeb4c36554e9b599940a2520..fcf1861643f6c0f08c6a2071e89f78e0c27e43b4 100644
 --- a/src/DeskCue/Services/ReleaseNotesService.cs
 +++ b/src/DeskCue/Services/ReleaseNotesService.cs
 @@ -24,6 +24,20 @@ public sealed class ReleaseNotesService
@@ -1188,7 +1843,7 @@ index 70c382d26dc3a61f4d18b28cc1ad7a306e796f6b..dcc27bbe66997c0f358961376158a0aa
 +    internal static IReadOnlyList<string> MergeKnownReleaseVersions(
 +        IEnumerable<string> currentAndUpstreamVersions) =>
 +        currentAndUpstreamVersions
-+            .Concat(["1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3"])
++            .Concat(["1.5.9.7", "1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3"])
 +            .Distinct(StringComparer.Ordinal)
 +            .OrderByDescending(version => version, CachedVersionComparer.Instance)
 +            .ToArray();
@@ -1196,6 +1851,44 @@ index 70c382d26dc3a61f4d18b28cc1ad7a306e796f6b..dcc27bbe66997c0f358961376158a0aa
      public ReleaseNotesService(string? cacheRootPath = null, HttpClient? httpClient = null)
      {
          _cacheRootPath = string.IsNullOrWhiteSpace(cacheRootPath)
+diff --git a/src/DeskCue/Services/StartupElevationPolicy.cs b/src/DeskCue/Services/StartupElevationPolicy.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..0f839afad47c5d9dce5add2bce607c3b0e1fff2d
+--- /dev/null
++++ b/src/DeskCue/Services/StartupElevationPolicy.cs
+@@ -0,0 +1,32 @@
++namespace DeskCue.Services;
++
++/// <summary>Startup shell availability policy, independent of windows and real waits.</summary>
++internal static class StartupElevationPolicy
++{
++    internal static bool ShouldRepairCompatibilityFlags(StartupElevationAssessment assessment, bool isIsolatedProfile) =>
++        !isIsolatedProfile && !assessment.IsUacDisabled && assessment.CanRelaunchUnelevated &&
++        assessment.Mismatch == ShellIntegrityMismatch.AppAboveShell;
++
++    internal static bool ShouldRelaunch(StartupElevationAssessment assessment, bool alreadyRelaunched, bool isIsolatedProfile = false) =>
++        !alreadyRelaunched && ShouldRepairCompatibilityFlags(assessment, isIsolatedProfile);
++
++    internal static async Task<StartupElevationAssessment> AssessWhenShellReadyAsync(
++        Func<StartupElevationAssessment> assess,
++        Func<TimeSpan, CancellationToken, Task> delay,
++        CancellationToken cancellationToken)
++    {
++        // Twenty asynchronous waits give Explorer a bounded five seconds at
++        // logon. No UI thread sleep, guessed token, or indefinite retry loop.
++        for (int attempt = 0; ; attempt++)
++        {
++            cancellationToken.ThrowIfCancellationRequested();
++            StartupElevationAssessment assessment = assess();
++            if (assessment.Mismatch != ShellIntegrityMismatch.Unknown || attempt >= 20)
++            {
++                return assessment;
++            }
++
++            await delay(TimeSpan.FromMilliseconds(250), cancellationToken).ConfigureAwait(false);
++        }
++    }
++}
 diff --git a/src/DeskCue/Services/TodoReminderService.cs b/src/DeskCue/Services/TodoReminderService.cs
 index 3f3ffb4e33c68393d1b0bb8980b8ac363a71eb01..5d3598bef8ae97849e5b06c343461a59fd831c44 100644
 --- a/src/DeskCue/Services/TodoReminderService.cs
@@ -1287,9 +1980,22 @@ index 04ae99e5363c1c2bfa01cfef55c02ee8ee81f77f..c02e6d42b117866cdfe41107d4842c1f
  
      private static readonly WidgetTitleIconAssetStore s_default = new(
 diff --git a/src/DeskCue/Strings/ar-SA.json b/src/DeskCue/Strings/ar-SA.json
-index 438d8ec8fc460071cc37a0ef2412b820cbbaaa71..e7fdb538f5475dbab23c855589125d250472636f 100644
+index 438d8ec8fc460071cc37a0ef2412b820cbbaaa71..948046b9d7426fea6f861060bd373702effb44fc 100644
 --- a/src/DeskCue/Strings/ar-SA.json
 +++ b/src/DeskCue/Strings/ar-SA.json
+@@ -1283,9 +1283,9 @@
+   "Startup.ElevationNotice.OkButton": "إغلاق",
+   "Startup.ElevationNotice.BodyShellAboveApp": "يعمل مستكشف Windows كمسؤول بينما يعمل DeskCue بصلاحيات عادية. يمنع Windows إنشاء أيقونة شريط المهام لهذا الاقتران، وقد يكون سحب الملفات محدودًا أيضًا. تظل الأدوات ومفتاح F7 والإعدادات متاحة. تسجيل الخروج من Windows ثم تسجيل الدخول مجددًا (دون تشغيل المستكشف من سياق مرتفع) يستعيد أيقونة شريط المهام.",
+   "Startup.FullyElevatedNotice.Title": "سطح المكتب يعمل بامتيازات المسؤول",
+-  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "أنت مسجّل الدخول بحساب Administrator المدمج في Windows. يشغّل Windows افتراضيًا جميع برامج هذا الحساب بامتيازات مسؤول كاملة، بما في ذلك DeskCue. نظرًا لقيود في Windows، لا يتوفر سحب الملفات من الأدوات إلى الخارج (السحب إلى الداخل لا يتأثر)؛ وكل شيء آخر يعمل بشكل طبيعي. لاستعادة السحب الكامل، راجع الخطوات أدناه.",
+-  "Startup.FullyElevatedNotice.BodyUacDisabled": "عنصر التحكم في حساب المستخدم (UAC) متوقف على هذا الكمبيوتر، لذا يشغّل Windows جميع برامج سطح المكتب بامتيازات مسؤول كاملة، بما في ذلك DeskCue. نظرًا لقيود في Windows، لا يتوفر سحب الملفات من الأدوات إلى الخارج (السحب إلى الداخل لا يتأثر)؛ وكل شيء آخر يعمل بشكل طبيعي. لإعادة تمكين UAC، راجع الخطوات أدناه.",
+-  "Startup.FullyElevatedNotice.BodyGeneric": "تعمل جميع البرامج على سطح المكتب هذا بامتيازات مسؤول كاملة، بما في ذلك DeskCue. نظرًا لقيود في Windows، لا يتوفر سحب الملفات من الأدوات إلى الخارج (السحب إلى الداخل لا يتأثر)؛ وكل شيء آخر يعمل بشكل طبيعي. للعودة إلى الامتيازات القياسية، راجع الخطوات أدناه.",
++  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "أنت مسجّل الدخول بحساب Administrator المدمج في Windows. يشغّل Windows افتراضيًا جميع برامج هذا الحساب بامتيازات مسؤول كاملة، بما في ذلك DeskCue. في وضع المسؤول، يقيّد Windows بعض عمليات السحب في WinUI وإشعارات التطبيق الأصلية. يظل تحرير المهام ومنتقي المرفقات الحديث والطريقة الاحتياطية الحالية للتذكيرات عبر علبة النظام متاحة.",
++  "Startup.FullyElevatedNotice.BodyUacDisabled": "عنصر التحكم في حساب المستخدم (UAC) متوقف على هذا الكمبيوتر، لذا يشغّل Windows جميع برامج سطح المكتب بامتيازات مسؤول كاملة، بما في ذلك DeskCue. في وضع المسؤول، يقيّد Windows بعض عمليات السحب في WinUI وإشعارات التطبيق الأصلية. يظل تحرير المهام ومنتقي المرفقات الحديث والطريقة الاحتياطية الحالية للتذكيرات عبر علبة النظام متاحة.",
++  "Startup.FullyElevatedNotice.BodyGeneric": "تعمل جميع البرامج على سطح المكتب هذا بامتيازات مسؤول كاملة، بما في ذلك DeskCue. في وضع المسؤول، يقيّد Windows بعض عمليات السحب في WinUI وإشعارات التطبيق الأصلية. يظل تحرير المهام ومنتقي المرفقات الحديث والطريقة الاحتياطية الحالية للتذكيرات عبر علبة النظام متاحة.",
+   "Startup.FullyElevatedNotice.DetailsHeader": "كيفية العودة إلى الامتيازات القياسية",
+   "Startup.FullyElevatedNotice.DetailsHeaderUac": "كيفية إعادة تمكين UAC",
+   "Startup.FullyElevatedNotice.StepSecpol": "إصدارات Pro وما فوق: اضغط Win+R واكتب secpol.msc لفتح \"السياسة الأمنية المحلية\". ضمن السياسات المحلية←خيارات الأمان، انقر نقرًا مزدوجًا على \"التحكم في حساب المستخدم: وضع موافقة المسؤول لحساب Administrator المدمج\"، وعيّنه على \"ممكّن\"، ثم أعد تشغيل الكمبيوتر.",
 @@ -1299,18 +1299,18 @@
    "Startup.Fatal.EnvironmentIssuesHeader": "مشكلات البيئة المكتشفة (أسباب محتملة):",
    "Settings.Section.About": "حول",
@@ -1341,9 +2047,22 @@ index 438d8ec8fc460071cc37a0ef2412b820cbbaaa71..e7fdb538f5475dbab23c855589125d25
    "Onboarding.WindowTitle": "التعريف بـ DeskCue",
    "Onboarding.Back": "العودة",
 diff --git a/src/DeskCue/Strings/bn-BD.json b/src/DeskCue/Strings/bn-BD.json
-index 243810aa2573d8cf3ad7c2ef49e3a4d9b9cbc60f..494a8ea7ffd58ae35ac7c94d4dd06df1f1d020a4 100644
+index 243810aa2573d8cf3ad7c2ef49e3a4d9b9cbc60f..d8120cf05b38e8758da283996f32952c51de0894 100644
 --- a/src/DeskCue/Strings/bn-BD.json
 +++ b/src/DeskCue/Strings/bn-BD.json
+@@ -1283,9 +1283,9 @@
+   "Startup.ElevationNotice.OkButton": "বন্ধ করুন",
+   "Startup.ElevationNotice.BodyShellAboveApp": "Windows Explorer অ্যাডমিনিস্ট্রেটর হিসেবে চলছে অথচ DeskCue স্বাভাবিক অনুমতিতে চলছে। এই সমন্বয়ে Windows টাস্কবার আইকন তৈরি আটকে দেয় এবং ফাইল ড্র্যাগও সীমিত হতে পারে। উইজেট, F7 হটকি এবং সেটিংস ব্যবহারযোগ্য থাকে। Windows-এ আবার সাইন ইন করলে (এলিভেটেড প্রসঙ্গ থেকে Explorer চালু না করে) টাস্কবার আইকন ফিরে আসে।",
+   "Startup.FullyElevatedNotice.Title": "ডেস্কটপ প্রশাসক সুবিধাসহ চলছে",
+-  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "আপনি Windows-এর অন্তর্নির্মিত Administrator অ্যাকাউন্টে সাইন ইন করেছেন। Windows ডিফল্টভাবে এই অ্যাকাউন্টের সব প্রোগ্রাম সম্পূর্ণ প্রশাসক সুবিধাসহ চালায়, DeskCue-ও তার মধ্যে। Windows-এর একটি সীমার কারণে উইজেট থেকে ফাইল বাইরে ড্র্যাগ করা যায় না (ভেতরে ড্র্যাগ প্রভাবিত হয় না); বাকি সব স্বাভাবিক কাজ করে। সম্পূর্ণ ড্র্যাগিং ফিরিয়ে আনতে নিচের পদ্ধতিগুলো দেখুন।",
+-  "Startup.FullyElevatedNotice.BodyUacDisabled": "এই PC-তে ইউজার অ্যাকাউন্ট কন্ট্রোল (UAC) বন্ধ, তাই Windows ডেস্কটপের সব প্রোগ্রাম সম্পূর্ণ প্রশাসক সুবিধাসহ চালায়, DeskCue-ও তার মধ্যে। Windows-এর একটি সীমার কারণে উইজেট থেকে ফাইল বাইরে ড্র্যাগ করা যায় না (ভেতরে ড্র্যাগ প্রভাবিত হয় না); বাকি সব স্বাভাবিক কাজ করে। UAC আবার চালু করতে নিচের পদ্ধতিগুলো দেখুন।",
+-  "Startup.FullyElevatedNotice.BodyGeneric": "এই ডেস্কটপের সব প্রোগ্রাম সম্পূর্ণ প্রশাসক সুবিধাসহ চলছে, DeskCue-ও তার মধ্যে। Windows-এর একটি সীমার কারণে উইজেট থেকে ফাইল বাইরে ড্র্যাগ করা যায় না (ভেতরে ড্র্যাগ প্রভাবিত হয় না); বাকি সব স্বাভাবিক কাজ করে। স্ট্যান্ডার্ড সুবিধায় ফিরতে নিচের পদ্ধতিগুলো দেখুন।",
++  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "আপনি Windows-এর অন্তর্নির্মিত Administrator অ্যাকাউন্টে সাইন ইন করেছেন। Windows ডিফল্টভাবে এই অ্যাকাউন্টের সব প্রোগ্রাম সম্পূর্ণ প্রশাসক সুবিধাসহ চালায়, DeskCue-ও তার মধ্যে। প্রশাসক মোডে Windows কিছু WinUI ড্র্যাগ অপারেশন এবং নেটিভ অ্যাপ বিজ্ঞপ্তি সীমিত করে। টাস্ক সম্পাদনা, আধুনিক সংযুক্তি পিকার এবং বিদ্যমান ট্রে রিমাইন্ডারের বিকল্প ব্যবস্থা ব্যবহার করা যায়।",
++  "Startup.FullyElevatedNotice.BodyUacDisabled": "এই PC-তে ইউজার অ্যাকাউন্ট কন্ট্রোল (UAC) বন্ধ, তাই Windows ডেস্কটপের সব প্রোগ্রাম সম্পূর্ণ প্রশাসক সুবিধাসহ চালায়, DeskCue-ও তার মধ্যে। প্রশাসক মোডে Windows কিছু WinUI ড্র্যাগ অপারেশন এবং নেটিভ অ্যাপ বিজ্ঞপ্তি সীমিত করে। টাস্ক সম্পাদনা, আধুনিক সংযুক্তি পিকার এবং বিদ্যমান ট্রে রিমাইন্ডারের বিকল্প ব্যবস্থা ব্যবহার করা যায়।",
++  "Startup.FullyElevatedNotice.BodyGeneric": "এই ডেস্কটপের সব প্রোগ্রাম সম্পূর্ণ প্রশাসক সুবিধাসহ চলছে, DeskCue-ও তার মধ্যে। প্রশাসক মোডে Windows কিছু WinUI ড্র্যাগ অপারেশন এবং নেটিভ অ্যাপ বিজ্ঞপ্তি সীমিত করে। টাস্ক সম্পাদনা, আধুনিক সংযুক্তি পিকার এবং বিদ্যমান ট্রে রিমাইন্ডারের বিকল্প ব্যবস্থা ব্যবহার করা যায়।",
+   "Startup.FullyElevatedNotice.DetailsHeader": "স্ট্যান্ডার্ড সুবিধায় ফেরার উপায়",
+   "Startup.FullyElevatedNotice.DetailsHeaderUac": "UAC আবার চালু করার উপায়",
+   "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro ও উর্ধ্বতন: Win+R চেপে secpol.msc লিখে \"লোকাল সিকিউরিটি পলিসি\" খুলুন। লোকাল পলিসি→সিকিউরিটি অপশনে \"ইউজার অ্যাকাউন্ট কন্ট্রোল: অন্তর্নির্মিত অ্যাডমিনিস্ট্রেটর অ্যাকাউন্টের জন্য অ্যাডমিন অ্যাপ্রুভাল মোড\"-এ ডাবল-ক্লিক করে \"সক্রিয়\" করুন, তারপর PC রিস্টার্ট করুন।",
 @@ -1299,18 +1299,18 @@
    "Startup.Fatal.EnvironmentIssuesHeader": "সনাক্ত করা পরিবেশগত সমস্যা (সম্ভাব্য কারণ):",
    "Settings.Section.About": "সম্পর্কে",
@@ -1395,9 +2114,22 @@ index 243810aa2573d8cf3ad7c2ef49e3a4d9b9cbc60f..494a8ea7ffd58ae35ac7c94d4dd06df1
    "Onboarding.WindowTitle": "DeskCue পরিচিতি",
    "Onboarding.Back": "পিছনে",
 diff --git a/src/DeskCue/Strings/de-DE.json b/src/DeskCue/Strings/de-DE.json
-index c121ea06258fb85207db9ac81a9fbfac3e7631ff..31688a5f90f3ba01c62d01628ed544793aac7ca3 100644
+index c121ea06258fb85207db9ac81a9fbfac3e7631ff..572f6a276241f920d1c2841bf67c8d71cbaf3596 100644
 --- a/src/DeskCue/Strings/de-DE.json
 +++ b/src/DeskCue/Strings/de-DE.json
+@@ -1280,9 +1280,9 @@
+   "Startup.ElevationNotice.OkButton": "Schließen",
+   "Startup.ElevationNotice.BodyShellAboveApp": "Der Windows-Explorer läuft als Administrator, während DeskCue mit normalen Rechten läuft. Windows blockiert dadurch die Erstellung des Taskleistensymbols; auch das Ziehen von Dateien kann eingeschränkt sein. Widgets, die F7-Taste und die Einstellungen bleiben verfügbar. Nach einer Ab- und erneuten Anmeldung (ohne den Explorer aus einem Administratorkontext zu starten) wird das Taskleistensymbol wiederhergestellt.",
+   "Startup.FullyElevatedNotice.Title": "Der Desktop läuft mit Administratorrechten",
+-  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Sie sind beim integrierten Windows-Administrator-Konto (Administrator) angemeldet. Windows führt standardmäßig alle Programme dieses Kontos mit vollständigen Administratorrechten aus, auch DeskCue. Aufgrund einer Windows-Einschränkung ist das Ziehen von Dateien aus Widgets nicht möglich (Hineinziehen ist nicht betroffen); alles andere funktioniert normal. Um das vollständige Ziehen wiederherzustellen, siehe die Schritte unten.",
+-  "Startup.FullyElevatedNotice.BodyUacDisabled": "Die Benutzerkontensteuerung (UAC) ist auf diesem PC deaktiviert, daher führt Windows alle Programme auf dem Desktop mit vollständigen Administratorrechten aus, auch DeskCue. Aufgrund einer Windows-Einschränkung ist das Ziehen von Dateien aus Widgets nicht möglich (Hineinziehen ist nicht betroffen); alles andere funktioniert normal. Um UAC wieder zu aktivieren, siehe die Schritte unten.",
+-  "Startup.FullyElevatedNotice.BodyGeneric": "Alle Programme auf diesem Desktop werden mit vollständigen Administratorrechten ausgeführt, auch DeskCue. Aufgrund einer Windows-Einschränkung ist das Ziehen von Dateien aus Widgets nicht möglich (Hineinziehen ist nicht betroffen); alles andere funktioniert normal. Um zu Standardrechten zurückzukehren, siehe die Schritte unten.",
++  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Sie sind beim integrierten Windows-Administrator-Konto (Administrator) angemeldet. Windows führt standardmäßig alle Programme dieses Kontos mit vollständigen Administratorrechten aus, auch DeskCue. Im Administratormodus schränkt Windows einige WinUI-Ziehvorgänge und native App-Benachrichtigungen ein. Aufgabenbearbeitung, moderne Anlagenauswahl und die vorhandene Erinnerungsalternative über den Infobereich bleiben verfügbar.",
++  "Startup.FullyElevatedNotice.BodyUacDisabled": "Die Benutzerkontensteuerung (UAC) ist auf diesem PC deaktiviert, daher führt Windows alle Programme auf dem Desktop mit vollständigen Administratorrechten aus, auch DeskCue. Im Administratormodus schränkt Windows einige WinUI-Ziehvorgänge und native App-Benachrichtigungen ein. Aufgabenbearbeitung, moderne Anlagenauswahl und die vorhandene Erinnerungsalternative über den Infobereich bleiben verfügbar.",
++  "Startup.FullyElevatedNotice.BodyGeneric": "Alle Programme auf diesem Desktop werden mit vollständigen Administratorrechten ausgeführt, auch DeskCue. Im Administratormodus schränkt Windows einige WinUI-Ziehvorgänge und native App-Benachrichtigungen ein. Aufgabenbearbeitung, moderne Anlagenauswahl und die vorhandene Erinnerungsalternative über den Infobereich bleiben verfügbar.",
+   "Startup.FullyElevatedNotice.DetailsHeader": "So kehren Sie zu Standardrechten zurück",
+   "Startup.FullyElevatedNotice.DetailsHeaderUac": "So aktivieren Sie UAC wieder",
+   "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro und höher: Win+R drücken, secpol.msc eingeben und „Lokale Sicherheitsrichtlinie“ öffnen. Unter Lokale Richtlinien→Sicherheitsoptionen „Benutzerkontensteuerung: Administrator-Genehmigungsmodus für das integrierte Administratorkonto“ doppelklicken, auf „Aktiviert“ setzen und den PC neu starten.",
 @@ -1296,18 +1296,18 @@
    "Startup.Fatal.EnvironmentIssuesHeader": "Erkannte Umgebungsprobleme (mögliche Ursachen):",
    "Settings.Section.About": "Über",
@@ -1449,9 +2181,22 @@ index c121ea06258fb85207db9ac81a9fbfac3e7631ff..31688a5f90f3ba01c62d01628ed54479
    "Onboarding.WindowTitle": "DeskCue-Onboarding",
    "Onboarding.Back": "Zurück",
 diff --git a/src/DeskCue/Strings/en-US.json b/src/DeskCue/Strings/en-US.json
-index 5ef4780b3991d2444dd05c990bc7959fa36499e5..c6a7146ec6bab1bfc1093e4afab321a1a1f0008f 100644
+index 5ef4780b3991d2444dd05c990bc7959fa36499e5..b5dd9a6c871ccaabe6bf20e0a5ddbaa5d8e29f7a 100644
 --- a/src/DeskCue/Strings/en-US.json
 +++ b/src/DeskCue/Strings/en-US.json
+@@ -1283,9 +1283,9 @@
+   "Startup.ElevationNotice.OkButton": "Close",
+   "Startup.ElevationNotice.BodyShellAboveApp": "Windows Explorer is running as administrator while DeskCue runs at normal privilege. Windows blocks taskbar icon creation for this combination, and file drag may be limited. Widgets, the F7 hotkey, and settings remain available. Signing out and back in (without launching Explorer from an elevated context) restores the taskbar icon.",
+   "Startup.FullyElevatedNotice.Title": "The desktop is running with administrator privileges",
+-  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "You are signed in with the built-in Windows Administrator account. Windows runs every program under this account with full administrator privileges by default, including DeskCue. Due to a Windows limitation, dragging files out of widgets is unavailable while dragging in is unaffected; everything else works normally. To restore full dragging, see the steps below.",
+-  "Startup.FullyElevatedNotice.BodyUacDisabled": "User Account Control (UAC) is turned off on this PC, so Windows runs every program on the desktop with full administrator privileges, including DeskCue. Due to a Windows limitation, dragging files out of widgets is unavailable while dragging in is unaffected; everything else works normally. To turn UAC back on, see the steps below.",
+-  "Startup.FullyElevatedNotice.BodyGeneric": "Every program on this desktop is running with full administrator privileges, including DeskCue. Due to a Windows limitation, dragging files out of widgets is unavailable while dragging in is unaffected; everything else works normally. To return to standard privileges, see the steps below.",
++  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "You are signed in with the built-in Windows Administrator account. Windows runs every program under this account with full administrator privileges by default, including DeskCue. In elevated mode, Windows limits some WinUI drag actions and native app notifications. Task editing, the modern attachment picker, and the existing tray reminder fallback remain available.",
++  "Startup.FullyElevatedNotice.BodyUacDisabled": "User Account Control (UAC) is turned off on this PC, so Windows runs every program on the desktop with full administrator privileges, including DeskCue. In elevated mode, Windows limits some WinUI drag actions and native app notifications. Task editing, the modern attachment picker, and the existing tray reminder fallback remain available.",
++  "Startup.FullyElevatedNotice.BodyGeneric": "Every program on this desktop is running with full administrator privileges, including DeskCue. In elevated mode, Windows limits some WinUI drag actions and native app notifications. Task editing, the modern attachment picker, and the existing tray reminder fallback remain available.",
+   "Startup.FullyElevatedNotice.DetailsHeader": "How to return to standard privileges",
+   "Startup.FullyElevatedNotice.DetailsHeaderUac": "How to turn UAC back on",
+   "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro and above: press Win+R, type secpol.msc, and open \"Local Security Policy\". Under Local Policies → Security Options, double-click \"User Account Control: Admin Approval Mode for the Built-in Administrator account\", set it to Enabled, then restart the PC.",
 @@ -1299,18 +1299,18 @@
    "Startup.Fatal.EnvironmentIssuesHeader": "Detected environment issues (possible causes):",
    "Settings.Section.About": "About",
@@ -1503,9 +2248,22 @@ index 5ef4780b3991d2444dd05c990bc7959fa36499e5..c6a7146ec6bab1bfc1093e4afab321a1
    "Onboarding.WindowTitle": "DeskCue Onboarding",
    "Onboarding.Back": "Back",
 diff --git a/src/DeskCue/Strings/es-ES.json b/src/DeskCue/Strings/es-ES.json
-index 49c31df5656eca67e73eb2ea31446a866e39496d..1603f7b5a2b6856a5395d483ff897706828cc759 100644
+index 49c31df5656eca67e73eb2ea31446a866e39496d..c7219dbf61cab618ccb00e1506e0594770ff8278 100644
 --- a/src/DeskCue/Strings/es-ES.json
 +++ b/src/DeskCue/Strings/es-ES.json
+@@ -1283,9 +1283,9 @@
+   "Startup.ElevationNotice.OkButton": "Cerrar",
+   "Startup.ElevationNotice.BodyShellAboveApp": "El Explorador de Windows se está ejecutando como administrador mientras DeskCue se ejecuta con permisos normales. Windows bloquea la creación del icono de la barra de tareas y arrastrar archivos puede estar limitado. Los widgets, la tecla F7 y la configuración siguen disponibles. Al cerrar y volver a iniciar sesión (sin iniciar el Explorador desde un contexto elevado) se restaura el icono.",
+   "Startup.FullyElevatedNotice.Title": "El escritorio se está ejecutando con privilegios de administrador",
+-  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Has iniciado sesión con la cuenta Administrator integrada de Windows. Windows ejecuta de forma predeterminada todos los programas de esta cuenta con privilegios completos de administrador, DeskCue también está incluido. Debido a una limitación de Windows, arrastrar archivos fuera de los widgets no está disponible (arrastrar hacia adentro no se ve afectado); todo lo demás funciona con normalidad. Para restaurar la función de arrastre completa, consulta los pasos a continuación.",
+-  "Startup.FullyElevatedNotice.BodyUacDisabled": "El Control de cuentas de usuario (UAC) está desactivado en este equipo, por lo que Windows ejecuta todos los programas del escritorio con privilegios completos de administrador, DeskCue también está incluido. Debido a una limitación de Windows, arrastrar archivos fuera de los widgets no está disponible (arrastrar hacia adentro no se ve afectado); todo lo demás funciona con normalidad. Para reactivar el UAC, consulta los pasos a continuación.",
+-  "Startup.FullyElevatedNotice.BodyGeneric": "Todos los programas de este escritorio se están ejecutando con privilegios completos de administrador, DeskCue también está incluido. Debido a una limitación de Windows, arrastrar archivos fuera de los widgets no está disponible (arrastrar hacia adentro no se ve afectado); todo lo demás funciona con normalidad. Para volver a los privilegios estándar, consulta los pasos a continuación.",
++  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Has iniciado sesión con la cuenta Administrator integrada de Windows. Windows ejecuta de forma predeterminada todos los programas de esta cuenta con privilegios completos de administrador, DeskCue también está incluido. En modo de administrador, Windows limita algunas acciones de arrastre de WinUI y las notificaciones nativas de la aplicación. La edición de tareas, el selector moderno de archivos adjuntos y la alternativa existente de recordatorios en la bandeja siguen disponibles.",
++  "Startup.FullyElevatedNotice.BodyUacDisabled": "El Control de cuentas de usuario (UAC) está desactivado en este equipo, por lo que Windows ejecuta todos los programas del escritorio con privilegios completos de administrador, DeskCue también está incluido. En modo de administrador, Windows limita algunas acciones de arrastre de WinUI y las notificaciones nativas de la aplicación. La edición de tareas, el selector moderno de archivos adjuntos y la alternativa existente de recordatorios en la bandeja siguen disponibles.",
++  "Startup.FullyElevatedNotice.BodyGeneric": "Todos los programas de este escritorio se están ejecutando con privilegios completos de administrador, DeskCue también está incluido. En modo de administrador, Windows limita algunas acciones de arrastre de WinUI y las notificaciones nativas de la aplicación. La edición de tareas, el selector moderno de archivos adjuntos y la alternativa existente de recordatorios en la bandeja siguen disponibles.",
+   "Startup.FullyElevatedNotice.DetailsHeader": "Cómo volver a los privilegios estándar",
+   "Startup.FullyElevatedNotice.DetailsHeaderUac": "Cómo reactivar el UAC",
+   "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro y superiores: pulsa Win+R, escribe secpol.msc y abre \"Directiva de seguridad local\". En Directivas locales→Opciones de seguridad, haz doble clic en \"Control de cuentas de usuario: modo de aprobación de administrador para la cuenta de administrador integrada\", establécelo en Habilitado y reinicia el equipo.",
 @@ -1299,18 +1299,18 @@
    "Startup.Fatal.EnvironmentIssuesHeader": "Problemas del entorno detectados (posibles causas):",
    "Settings.Section.About": "Acerca de",
@@ -1557,9 +2315,22 @@ index 49c31df5656eca67e73eb2ea31446a866e39496d..1603f7b5a2b6856a5395d483ff897706
    "Onboarding.WindowTitle": "Introducción a DeskCue",
    "Onboarding.Back": "Atrás",
 diff --git a/src/DeskCue/Strings/fr-FR.json b/src/DeskCue/Strings/fr-FR.json
-index 9b1c24dfd1b1cdad390f1371ce0e6819616a7606..3a93d75a8ba6acbe9b29be95635ebd4c99bdb824 100644
+index 9b1c24dfd1b1cdad390f1371ce0e6819616a7606..51c14bbf3cdaedcf3823db6568e76594acad7675 100644
 --- a/src/DeskCue/Strings/fr-FR.json
 +++ b/src/DeskCue/Strings/fr-FR.json
+@@ -1283,9 +1283,9 @@
+   "Startup.ElevationNotice.OkButton": "Fermer",
+   "Startup.ElevationNotice.BodyShellAboveApp": "L'Explorateur Windows s'exécute en tant qu'administrateur alors que DeskCue s'exécute avec des droits normaux. Windows bloque alors la création de l'icône de la barre des tâches, et le glisser-déposer de fichiers peut être limité. Les widgets, la touche F7 et les paramètres restent disponibles. Une nouvelle session Windows (sans lancer l'Explorateur depuis un contexte élevé) restaure l'icône.",
+   "Startup.FullyElevatedNotice.Title": "Le bureau s’exécute avec des privilèges d’administrateur",
+-  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Vous êtes connecté avec le compte Administrator intégré de Windows. Par défaut, Windows exécute tous les programmes de ce compte avec des droits d’administrateur complets, y compris DeskCue. En raison d’une limitation de Windows, le glissement de fichiers hors des widgets est indisponible (le glisser vers l’intérieur n’est pas concerné) ; tout le reste fonctionne normalement. Pour rétablir le glissement complet, voir les étapes ci-dessous.",
+-  "Startup.FullyElevatedNotice.BodyUacDisabled": "Le contrôle de compte d’utilisateur (UAC) est désactivé sur ce PC : Windows exécute donc tous les programmes du bureau avec des droits d’administrateur complets, y compris DeskCue. En raison d’une limitation de Windows, le glissement de fichiers hors des widgets est indisponible (le glisser vers l’intérieur n’est pas concerné) ; tout le reste fonctionne normalement. Pour réactiver l’UAC, voir les étapes ci-dessous.",
+-  "Startup.FullyElevatedNotice.BodyGeneric": "Tous les programmes de ce bureau s’exécutent avec des droits d’administrateur complets, y compris DeskCue. En raison d’une limitation de Windows, le glissement de fichiers hors des widgets est indisponible (le glisser vers l’intérieur n’est pas concerné) ; tout le reste fonctionne normalement. Pour revenir aux privilèges standard, voir les étapes ci-dessous.",
++  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Vous êtes connecté avec le compte Administrator intégré de Windows. Par défaut, Windows exécute tous les programmes de ce compte avec des droits d’administrateur complets, y compris DeskCue. En mode administrateur, Windows limite certaines actions de glissement WinUI et les notifications natives de l’application. La modification des tâches, le sélecteur moderne de pièces jointes et la solution de rappel existante via la zone de notification restent disponibles.",
++  "Startup.FullyElevatedNotice.BodyUacDisabled": "Le contrôle de compte d’utilisateur (UAC) est désactivé sur ce PC : Windows exécute donc tous les programmes du bureau avec des droits d’administrateur complets, y compris DeskCue. En mode administrateur, Windows limite certaines actions de glissement WinUI et les notifications natives de l’application. La modification des tâches, le sélecteur moderne de pièces jointes et la solution de rappel existante via la zone de notification restent disponibles.",
++  "Startup.FullyElevatedNotice.BodyGeneric": "Tous les programmes de ce bureau s’exécutent avec des droits d’administrateur complets, y compris DeskCue. En mode administrateur, Windows limite certaines actions de glissement WinUI et les notifications natives de l’application. La modification des tâches, le sélecteur moderne de pièces jointes et la solution de rappel existante via la zone de notification restent disponibles.",
+   "Startup.FullyElevatedNotice.DetailsHeader": "Revenir aux privilèges standard",
+   "Startup.FullyElevatedNotice.DetailsHeaderUac": "Réactiver l’UAC",
+   "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro et supérieures : appuyez sur Win+R, tapez secpol.msc et ouvrez « Stratégie de sécurité locale ». Sous Stratégies locales→Options de sécurité, double-cliquez sur « Contrôle de compte d’utilisateur : mode d’approbation Administrateur du compte Administrateur intégré », définissez-le sur Activé, puis redémarrez le PC.",
 @@ -1299,18 +1299,18 @@
    "Startup.Fatal.EnvironmentIssuesHeader": "Problèmes d'environnement détectés (causes possibles) :",
    "Settings.Section.About": "À propos",
@@ -1611,9 +2382,22 @@ index 9b1c24dfd1b1cdad390f1371ce0e6819616a7606..3a93d75a8ba6acbe9b29be95635ebd4c
    "Onboarding.WindowTitle": "Découverte de DeskCue",
    "Onboarding.Back": "Retour",
 diff --git a/src/DeskCue/Strings/hi-IN.json b/src/DeskCue/Strings/hi-IN.json
-index 18630e7240787a0664224b743add62e0c9dc9d22..8c4d38d134511cc28bfce9be2f99770c93218282 100644
+index 18630e7240787a0664224b743add62e0c9dc9d22..73762d0aec064b34b182d3970271697718e985f1 100644
 --- a/src/DeskCue/Strings/hi-IN.json
 +++ b/src/DeskCue/Strings/hi-IN.json
+@@ -1283,9 +1283,9 @@
+   "Startup.ElevationNotice.OkButton": "बंद करें",
+   "Startup.ElevationNotice.BodyShellAboveApp": "विंडोज़ एक्सप्लोरर व्यवस्थापक के रूप में चल रहा है जबकि DeskCue सामान्य अधिकारों के साथ चल रहा है। इस संयोजन में Windows टास्कबार आइकन बनने से रोकता है और फ़ाइल ड्रैग भी सीमित हो सकता है। विजेट, F7 हॉटकी और सेटिंग्स उपलब्ध रहती हैं। Windows से पुनः साइन इन करने पर (एक्सप्लोरर को व्यवस्थापक संदर्भ से शुरू किए बिना) टास्कबार आइकन बहाल हो जाता है।",
+   "Startup.FullyElevatedNotice.Title": "डेस्कटॉप व्यवस्थापक विशेषाधिकारों के साथ चल रहा है",
+-  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "आप Windows के अंतर्निहित Administrator खाते से साइन इन हैं। Windows डिफ़ॉल्ट रूप से इस खाते के सभी प्रोग्राम को पूर्ण व्यवस्थापक विशेषाधिकारों के साथ चलाता है, DeskCue भी उन्हीं में है। Windows की सीमा के कारण विजेट से फ़ाइलें बाहर खींचना उपलब्ध नहीं है (अंदर खींचना प्रभावित नहीं होता); बाकी सब सामान्य रूप से काम करता है। पूर्ण ड्रैगिंग बहाल करने के लिए नीचे दिए तरीके देखें।",
+-  "Startup.FullyElevatedNotice.BodyUacDisabled": "इस PC पर यूज़र अकाउंट कंट्रोल (UAC) बंद है, इसलिए Windows डेस्कटॉप के सभी प्रोग्राम को पूर्ण व्यवस्थापक विशेषाधिकारों के साथ चलाता है, DeskCue भी उन्हीं में है। Windows की सीमा के कारण विजेट से फ़ाइलें बाहर खींचना उपलब्ध नहीं है (अंदर खींचना प्रभावित नहीं होता); बाकी सब सामान्य रूप से काम करता है। UAC दोबारा चालू करने के लिए नीचे दिए तरीके देखें।",
+-  "Startup.FullyElevatedNotice.BodyGeneric": "इस डेस्कटॉप के सभी प्रोग्राम पूर्ण व्यवस्थापक विशेषाधिकारों के साथ चल रहे हैं, DeskCue भी उन्हीं में है। Windows की सीमा के कारण विजेट से फ़ाइलें बाहर खींचना उपलब्ध नहीं है (अंदर खींचना प्रभावित नहीं होता); बाकी सब सामान्य रूप से काम करता है। मानक विशेषाधिकारों पर लौटने के लिए नीचे दिए तरीके देखें।",
++  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "आप Windows के अंतर्निहित Administrator खाते से साइन इन हैं। Windows डिफ़ॉल्ट रूप से इस खाते के सभी प्रोग्राम को पूर्ण व्यवस्थापक विशेषाधिकारों के साथ चलाता है, DeskCue भी उन्हीं में है। व्यवस्थापक मोड में Windows कुछ WinUI ड्रैग क्रियाओं और मूल ऐप सूचनाओं को सीमित करता है। कार्य संपादन, आधुनिक अटैचमेंट पिकर और मौजूदा ट्रे रिमाइंडर का वैकल्पिक तरीका उपलब्ध रहते हैं।",
++  "Startup.FullyElevatedNotice.BodyUacDisabled": "इस PC पर यूज़र अकाउंट कंट्रोल (UAC) बंद है, इसलिए Windows डेस्कटॉप के सभी प्रोग्राम को पूर्ण व्यवस्थापक विशेषाधिकारों के साथ चलाता है, DeskCue भी उन्हीं में है। व्यवस्थापक मोड में Windows कुछ WinUI ड्रैग क्रियाओं और मूल ऐप सूचनाओं को सीमित करता है। कार्य संपादन, आधुनिक अटैचमेंट पिकर और मौजूदा ट्रे रिमाइंडर का वैकल्पिक तरीका उपलब्ध रहते हैं।",
++  "Startup.FullyElevatedNotice.BodyGeneric": "इस डेस्कटॉप के सभी प्रोग्राम पूर्ण व्यवस्थापक विशेषाधिकारों के साथ चल रहे हैं, DeskCue भी उन्हीं में है। व्यवस्थापक मोड में Windows कुछ WinUI ड्रैग क्रियाओं और मूल ऐप सूचनाओं को सीमित करता है। कार्य संपादन, आधुनिक अटैचमेंट पिकर और मौजूदा ट्रे रिमाइंडर का वैकल्पिक तरीका उपलब्ध रहते हैं।",
+   "Startup.FullyElevatedNotice.DetailsHeader": "मानक विशेषाधिकारों पर कैसे लौटें",
+   "Startup.FullyElevatedNotice.DetailsHeaderUac": "UAC दोबारा कैसे चालू करें",
+   "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro और ऊपर: Win+R दबाकर secpol.msc टाइप करें और \"लोकल सिक्योरिटी पॉलिसी\" खोलें। लोकल पॉलिसी→सिक्योरिटी ऑप्शन में \"यूज़र अकाउंट कंट्रोल: अंतर्निहित व्यवस्थापक खाते के लिए व्यवस्थापक स्वीकृति मोड\" पर डबल-क्लिक करें, इसे \"सक्षम\" पर सेट करें, फिर PC पुनरारंभ करें।",
 @@ -1299,18 +1299,18 @@
    "Startup.Fatal.EnvironmentIssuesHeader": "पाए गए पर्यावरण संबंधी समस्याएँ (संभावित कारण):",
    "Settings.Section.About": "के बारे में",
@@ -1665,9 +2449,22 @@ index 18630e7240787a0664224b743add62e0c9dc9d22..8c4d38d134511cc28bfce9be2f99770c
    "Onboarding.WindowTitle": "DeskCue परिचय",
    "Onboarding.Back": "वापस",
 diff --git a/src/DeskCue/Strings/ja-JP.json b/src/DeskCue/Strings/ja-JP.json
-index f8f863554d5a03d4b6e1a374494603c5b7328b38..c8daa0fa6d065789573c9a7972646a159f88d51f 100644
+index f8f863554d5a03d4b6e1a374494603c5b7328b38..a21498caceaa1492e84db7bad102cb2212fccc87 100644
 --- a/src/DeskCue/Strings/ja-JP.json
 +++ b/src/DeskCue/Strings/ja-JP.json
+@@ -1280,9 +1280,9 @@
+   "Startup.ElevationNotice.OkButton": "閉じる",
+   "Startup.ElevationNotice.BodyShellAboveApp": "エクスプローラーが管理者として実行されている一方、DeskCue は通常権限で実行されています。この組み合わせでは Windows によってタスクバーアイコンの作成がブロックされ、ファイルのドラッグも制限される場合があります。ウィジェット、F7 ホットキー、設定は引き続き利用できます。Windows にサインインし直すと（管理者コンテキストからエクスプローラーを起動しない）、タスクバーアイコンが復元されます。",
+   "Startup.FullyElevatedNotice.Title": "デスクトップが管理者権限で実行されています",
+-  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Windows 組み込み Administrator アカウントでサインインしています。Windows は既定で、このアカウントのすべてのプログラムを完全な管理者権限で実行します。DeskCue もその一つです。Windows の制限により、格子から外へのファイル ドラッグは使用できません（ドラッグで取り込む機能には影響しません）。他の機能はすべて正常に動作します。ドラッグ機能を復元するには、下記の方法を参照してください。",
+-  "Startup.FullyElevatedNotice.BodyUacDisabled": "この PC ではユーザーアカウント制御(UAC)が無効のため、Windows はデスクトップ上のすべてのプログラムを完全な管理者権限で実行します。DeskCue もその一つです。Windows の制限により、格子から外へのファイル ドラッグは使用できません（ドラッグで取り込む機能には影響しません）。UAC を再度有効にするには、下記の方法を参照してください。",
+-  "Startup.FullyElevatedNotice.BodyGeneric": "このデスクトップのすべてのプログラムが完全な管理者権限で実行されています。DeskCue もその一つです。Windows の制限により、格子から外へのファイル ドラッグは使用できません（ドラッグで取り込む機能には影響しません）。標準の権限モードに戻るには、下記の方法を参照してください。",
++  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Windows 組み込み Administrator アカウントでサインインしています。Windows は既定で、このアカウントのすべてのプログラムを完全な管理者権限で実行します。DeskCue もその一つです。管理者モードでは、Windows により一部の WinUI ドラッグ操作とネイティブ アプリ通知が制限されます。タスクの編集、モダンな添付ファイル選択、および既存のトレイ通知による代替リマインダーは引き続き利用できます。",
++  "Startup.FullyElevatedNotice.BodyUacDisabled": "この PC ではユーザーアカウント制御(UAC)が無効のため、Windows はデスクトップ上のすべてのプログラムを完全な管理者権限で実行します。DeskCue もその一つです。管理者モードでは、Windows により一部の WinUI ドラッグ操作とネイティブ アプリ通知が制限されます。タスクの編集、モダンな添付ファイル選択、および既存のトレイ通知による代替リマインダーは引き続き利用できます。",
++  "Startup.FullyElevatedNotice.BodyGeneric": "このデスクトップのすべてのプログラムが完全な管理者権限で実行されています。DeskCue もその一つです。管理者モードでは、Windows により一部の WinUI ドラッグ操作とネイティブ アプリ通知が制限されます。タスクの編集、モダンな添付ファイル選択、および既存のトレイ通知による代替リマインダーは引き続き利用できます。",
+   "Startup.FullyElevatedNotice.DetailsHeader": "標準の権限モードに戻す方法",
+   "Startup.FullyElevatedNotice.DetailsHeaderUac": "UAC を再度有効にする方法",
+   "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro 以上: Win+R を押して secpol.msc と入力し「ローカル セキュリティ ポリシー」を開きます。ローカル ポリシー→セキュリティ オプションの「ユーザーアカウント制御: 組み込み管理者アカウントのための管理者承認モード」をダブルクリックし、「有効」に設定して PC を再起動します。",
 @@ -1296,18 +1296,18 @@
    "Startup.Fatal.EnvironmentIssuesHeader": "検出された環境の問題（考えられる原因）:",
    "Settings.Section.About": "情報",
@@ -1719,9 +2516,22 @@ index f8f863554d5a03d4b6e1a374494603c5b7328b38..c8daa0fa6d065789573c9a7972646a15
    "Onboarding.WindowTitle": "DeskCue オンボーディング",
    "Onboarding.Back": "戻る",
 diff --git a/src/DeskCue/Strings/ko-KR.json b/src/DeskCue/Strings/ko-KR.json
-index 995c5a97881b83f8ad57c06e4710302fea51adf0..d9b4f17ec10511d0fa9b5b73452e619fcb69e56a 100644
+index 995c5a97881b83f8ad57c06e4710302fea51adf0..d0ccdffbba657ec256912ebaefadd058f966b703 100644
 --- a/src/DeskCue/Strings/ko-KR.json
 +++ b/src/DeskCue/Strings/ko-KR.json
+@@ -1283,9 +1283,9 @@
+   "Startup.ElevationNotice.OkButton": "닫기",
+   "Startup.ElevationNotice.BodyShellAboveApp": "파일 탐색기(Explorer)가 관리자 권한으로 실행 중이고 DeskCue는 일반 권한으로 실행 중입니다. 그래서 Windows가 작업 표시줄 아이콘 생성을 차단하며 파일 끌기도 제한될 수 있습니다. 위젯, F7 표시/숨기기, 설정은 계속 사용할 수 있습니다. Windows에서 로그아웃한 뒤 다시 로그인하면(관리자 환경에서 파일 탐색기를 시작하지 않고) 작업 표시줄 아이콘이 복원됩니다.",
+   "Startup.FullyElevatedNotice.Title": "데스크톱이 관리자 권한으로 실행되고 있습니다",
+-  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Windows 기본 제공 Administrator 계정으로 로그인되어 있습니다. Windows는 기본적으로 이 계정의 모든 프로그램을 전체 관리자 권한으로 실행하며 DeskCue도 그중 하나입니다. Windows의 제한으로 위젯에서 바깥으로 파일을 끌어낼 수 없습니다(끌어서 가져오기는 영향을 받지 않음). 다른 기능은 모두 정상 작동합니다. 끌기 기능을 복원하려면 아래 방법을 참고하세요.",
+-  "Startup.FullyElevatedNotice.BodyUacDisabled": "이 PC에서 사용자 계정 컨트롤(UAC)이 꺼져 있어 Windows가 데스크톱의 모든 프로그램을 전체 관리자 권한으로 실행합니다. DeskCue도 그중 하나입니다. Windows의 제한으로 위젯에서 바깥으로 파일을 끌어낼 수 없습니다(끌어서 가져오기는 영향을 받지 않음). UAC를 다시 켜려면 아래 방법을 참고하세요.",
+-  "Startup.FullyElevatedNotice.BodyGeneric": "이 데스크톱의 모든 프로그램이 전체 관리자 권한으로 실행되고 있으며 DeskCue도 그중 하나입니다. Windows의 제한으로 위젯에서 바깥으로 파일을 끌어낼 수 없습니다(끌어서 가져오기는 영향을 받지 않음). 표준 권한 모드로 돌아가려면 아래 방법을 참고하세요.",
++  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Windows 기본 제공 Administrator 계정으로 로그인되어 있습니다. Windows는 기본적으로 이 계정의 모든 프로그램을 전체 관리자 권한으로 실행하며 DeskCue도 그중 하나입니다. 관리자 모드에서는 Windows가 일부 WinUI 끌기 작업과 네이티브 앱 알림을 제한합니다. 작업 편집, 최신 첨부 파일 선택기, 기존 트레이 알림을 통한 대체 미리 알림은 계속 사용할 수 있습니다.",
++  "Startup.FullyElevatedNotice.BodyUacDisabled": "이 PC에서 사용자 계정 컨트롤(UAC)이 꺼져 있어 Windows가 데스크톱의 모든 프로그램을 전체 관리자 권한으로 실행합니다. DeskCue도 그중 하나입니다. 관리자 모드에서는 Windows가 일부 WinUI 끌기 작업과 네이티브 앱 알림을 제한합니다. 작업 편집, 최신 첨부 파일 선택기, 기존 트레이 알림을 통한 대체 미리 알림은 계속 사용할 수 있습니다.",
++  "Startup.FullyElevatedNotice.BodyGeneric": "이 데스크톱의 모든 프로그램이 전체 관리자 권한으로 실행되고 있으며 DeskCue도 그중 하나입니다. 관리자 모드에서는 Windows가 일부 WinUI 끌기 작업과 네이티브 앱 알림을 제한합니다. 작업 편집, 최신 첨부 파일 선택기, 기존 트레이 알림을 통한 대체 미리 알림은 계속 사용할 수 있습니다.",
+   "Startup.FullyElevatedNotice.DetailsHeader": "표준 권한 모드로 복원하는 방법",
+   "Startup.FullyElevatedNotice.DetailsHeaderUac": "UAC를 다시 켜는 방법",
+   "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro 이상: Win+R을 눌러 secpol.msc를 입력해 \"로컬 보안 정책\"을 엽니다. 로컬 정책→보안 옵션에서 \"사용자 계정 컨트롤: 기본 제공 관리자 계정에 대한 관리자 승인 모드\"를 두 번 클릭해 \"사용\"으로 설정한 뒤 PC를 재시작합니다.",
 @@ -1299,18 +1299,18 @@
    "Startup.Fatal.EnvironmentIssuesHeader": "다음 환경 문제가 감지되었습니다(시작 실패의 원인일 수 있음):",
    "Settings.Section.About": "정보",
@@ -1773,9 +2583,22 @@ index 995c5a97881b83f8ad57c06e4710302fea51adf0..d9b4f17ec10511d0fa9b5b73452e619f
    "Onboarding.WindowTitle": "DeskCue 시작 가이드",
    "Onboarding.Back": "이전",
 diff --git a/src/DeskCue/Strings/pt-BR.json b/src/DeskCue/Strings/pt-BR.json
-index 00c72c30e680379c2733371b222932afc68a0797..aa70f3e2fc99790ced57f660137b8cbcbcf48406 100644
+index 00c72c30e680379c2733371b222932afc68a0797..a3dfcc6579c5f7e1d183e94909a587964078edd9 100644
 --- a/src/DeskCue/Strings/pt-BR.json
 +++ b/src/DeskCue/Strings/pt-BR.json
+@@ -1280,9 +1280,9 @@
+   "Startup.ElevationNotice.OkButton": "Fechar",
+   "Startup.ElevationNotice.BodyShellAboveApp": "O Explorador do Windows está sendo executado como administrador enquanto o DeskCue é executado com privilégios normais. O Windows bloqueia a criação do ícone da barra de tarefas e arrastar arquivos pode ficar limitado. Os widgets, a tecla F7 e as configurações continuam disponíveis. Encerrar a sessão e entrar novamente (sem iniciar o Explorador de um contexto elevado) restaura o ícone.",
+   "Startup.FullyElevatedNotice.Title": "A área de trabalho está sendo executada com privilégios de administrador",
+-  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Você entrou com a conta Administrator interna do Windows. Por padrão, o Windows executa todos os programas dessa conta com privilégios totais de administrador, incluindo o DeskCue. Devido a uma limitação do Windows, arrastar arquivos para fora dos widgets está indisponível (arrastar para dentro não é afetado); todo o resto funciona normalmente. Para restaurar o arrastar completo, veja as etapas abaixo.",
+-  "Startup.FullyElevatedNotice.BodyUacDisabled": "O Controle de Conta de Usuário (UAC) está desativado neste PC, então o Windows executa todos os programas da área de trabalho com privilégios totais de administrador, incluindo o DeskCue. Devido a uma limitação do Windows, arrastar arquivos para fora dos widgets está indisponível (arrastar para dentro não é afetado); todo o resto funciona normalmente. Para reativar o UAC, veja as etapas abaixo.",
+-  "Startup.FullyElevatedNotice.BodyGeneric": "Todos os programas desta área de trabalho estão sendo executados com privilégios totais de administrador, incluindo o DeskCue. Devido a uma limitação do Windows, arrastar arquivos para fora dos widgets está indisponível (arrastar para dentro não é afetado); todo o resto funciona normalmente. Para voltar aos privilégios padrão, veja as etapas abaixo.",
++  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Você entrou com a conta Administrator interna do Windows. Por padrão, o Windows executa todos os programas dessa conta com privilégios totais de administrador, incluindo o DeskCue. No modo de administrador, o Windows limita algumas ações de arrastar do WinUI e as notificações nativas do aplicativo. A edição de tarefas, o seletor moderno de anexos e a alternativa existente de lembretes pela bandeja continuam disponíveis.",
++  "Startup.FullyElevatedNotice.BodyUacDisabled": "O Controle de Conta de Usuário (UAC) está desativado neste PC, então o Windows executa todos os programas da área de trabalho com privilégios totais de administrador, incluindo o DeskCue. No modo de administrador, o Windows limita algumas ações de arrastar do WinUI e as notificações nativas do aplicativo. A edição de tarefas, o seletor moderno de anexos e a alternativa existente de lembretes pela bandeja continuam disponíveis.",
++  "Startup.FullyElevatedNotice.BodyGeneric": "Todos os programas desta área de trabalho estão sendo executados com privilégios totais de administrador, incluindo o DeskCue. No modo de administrador, o Windows limita algumas ações de arrastar do WinUI e as notificações nativas do aplicativo. A edição de tarefas, o seletor moderno de anexos e a alternativa existente de lembretes pela bandeja continuam disponíveis.",
+   "Startup.FullyElevatedNotice.DetailsHeader": "Como voltar aos privilégios padrão",
+   "Startup.FullyElevatedNotice.DetailsHeaderUac": "Como reativar o UAC",
+   "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro e superiores: pressione Win+R, digite secpol.msc e abra \"Política de Segurança Local\". Em Políticas Locais→Opções de Segurança, dê um duplo clique em \"Controle de Conta de Usuário: modo de aprovação de administrador para a conta de Administrador interna\", defina como Habilitado e reinicie o PC.",
 @@ -1296,18 +1296,18 @@
    "Startup.Fatal.EnvironmentIssuesHeader": "Problemas de ambiente detectados (possíveis causas):",
    "Settings.Section.About": "Sobre",
@@ -1827,9 +2650,22 @@ index 00c72c30e680379c2733371b222932afc68a0797..aa70f3e2fc99790ced57f660137b8cbc
    "Onboarding.WindowTitle": "Introdução ao DeskCue",
    "Onboarding.Back": "Voltar",
 diff --git a/src/DeskCue/Strings/ru-RU.json b/src/DeskCue/Strings/ru-RU.json
-index 2c8efbee08427d9dd3f19165546c5a83ee514fc7..25c8d49c4584d67bb844a2cfda7ca8494d22dd93 100644
+index 2c8efbee08427d9dd3f19165546c5a83ee514fc7..f7e212f119719e564f8fe37305ed042baf86561c 100644
 --- a/src/DeskCue/Strings/ru-RU.json
 +++ b/src/DeskCue/Strings/ru-RU.json
+@@ -1283,9 +1283,9 @@
+   "Startup.ElevationNotice.OkButton": "Закрыть",
+   "Startup.ElevationNotice.BodyShellAboveApp": "Проводник Windows запущен от имени администратора, а DeskCue — с обычными правами. Из-за этого Windows блокирует создание значка на панели задач, и перетаскивание файлов может быть ограничено. Виджеты, горячая клавиша F7 и настройки продолжают работать. Повторный вход в Windows (без запуска Проводника из контекста администратора) восстановит значок.",
+   "Startup.FullyElevatedNotice.Title": "Рабочий стол работает с правами администратора",
+-  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Вы вошли под встроенной учётной записью Windows Administrator. По умолчанию Windows запускает все программы этой учётной записи с полными правами администратора, включая DeskCue. Из-за ограничения Windows перетаскивание файлов из виджетов наружу недоступно (перетаскивание внутрь не затронуто); всё остальное работает нормально. Чтобы восстановить полное перетаскивание, см. шаги ниже.",
+-  "Startup.FullyElevatedNotice.BodyUacDisabled": "Контроль учётных записей (UAC) на этом компьютере отключён, поэтому Windows запускает все программы на рабочем столе с полными правами администратора, включая DeskCue. Из-за ограничения Windows перетаскивание файлов из виджетов наружу недоступно (перетаскивание внутрь не затронуто); всё остальное работает нормально. Чтобы снова включить UAC, см. шаги ниже.",
+-  "Startup.FullyElevatedNotice.BodyGeneric": "Все программы на этом рабочем столе запущены с полными правами администратора, включая DeskCue. Из-за ограничения Windows перетаскивание файлов из виджетов наружу недоступно (перетаскивание внутрь не затронуто); всё остальное работает нормально. Чтобы вернуться к стандартным правам, см. шаги ниже.",
++  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Вы вошли под встроенной учётной записью Windows Administrator. По умолчанию Windows запускает все программы этой учётной записи с полными правами администратора, включая DeskCue. В режиме администратора Windows ограничивает некоторые действия перетаскивания WinUI и собственные уведомления приложения. Редактирование задач, современный выбор вложений и существующий резервный способ напоминаний через системный трей остаются доступны.",
++  "Startup.FullyElevatedNotice.BodyUacDisabled": "Контроль учётных записей (UAC) на этом компьютере отключён, поэтому Windows запускает все программы на рабочем столе с полными правами администратора, включая DeskCue. В режиме администратора Windows ограничивает некоторые действия перетаскивания WinUI и собственные уведомления приложения. Редактирование задач, современный выбор вложений и существующий резервный способ напоминаний через системный трей остаются доступны.",
++  "Startup.FullyElevatedNotice.BodyGeneric": "Все программы на этом рабочем столе запущены с полными правами администратора, включая DeskCue. В режиме администратора Windows ограничивает некоторые действия перетаскивания WinUI и собственные уведомления приложения. Редактирование задач, современный выбор вложений и существующий резервный способ напоминаний через системный трей остаются доступны.",
+   "Startup.FullyElevatedNotice.DetailsHeader": "Как вернуть стандартные права",
+   "Startup.FullyElevatedNotice.DetailsHeaderUac": "Как снова включить UAC",
+   "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro и выше: нажмите Win+R, введите secpol.msc и откройте «Локальная политика безопасности». В разделе Локальные политики→Параметры безопасности дважды щёлкните «Контроль учётных записей: режим утверждения администратором для встроенной учётной записи администратора», установите «Включено» и перезагрузите компьютер.",
 @@ -1299,18 +1299,18 @@
    "Startup.Fatal.EnvironmentIssuesHeader": "Обнаруженные проблемы среды (возможные причины):",
    "Settings.Section.About": "О программе",
@@ -1881,7 +2717,7 @@ index 2c8efbee08427d9dd3f19165546c5a83ee514fc7..25c8d49c4584d67bb844a2cfda7ca849
    "Onboarding.WindowTitle": "Знакомство с DeskCue",
    "Onboarding.Back": "Назад",
 diff --git a/src/DeskCue/Strings/zh-CN.json b/src/DeskCue/Strings/zh-CN.json
-index 8fb59936f3e429a633e8bdef003aa929c264288e..7c747e940fc89d33ae4ac96161cfec2abdc51465 100644
+index 8fb59936f3e429a633e8bdef003aa929c264288e..c97d57698d2ddeeacfa26922cc8626f05a4b679b 100644
 --- a/src/DeskCue/Strings/zh-CN.json
 +++ b/src/DeskCue/Strings/zh-CN.json
 @@ -190,7 +190,7 @@
@@ -1930,6 +2766,19 @@ index 8fb59936f3e429a633e8bdef003aa929c264288e..7c747e940fc89d33ae4ac96161cfec2a
    "Settings.AttachmentHealth.CheckTooltip": "检查待办和随记中的附件是否仍可用",
    "Widget.TitlePlaceholder": "输入格子名称",
    "Settings.Animation.Effect.SlideLeftFade": "左滑淡入",
+@@ -567,9 +567,9 @@
+   "Startup.ElevationNotice.OkButton": "关闭",
+   "Startup.ElevationNotice.BodyShellAboveApp": "资源管理器(Explorer)正在以管理员身份运行，而 DeskCue 以普通权限运行。Windows 会因此阻止任务栏图标创建，文件拖拽也可能受限。格子、F7 显隐和设置仍然可用。注销并重新登录 Windows（不要从管理员环境启动资源管理器）后即可恢复任务栏图标。",
+   "Startup.FullyElevatedNotice.Title": "桌面以管理员权限运行",
+-  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "当前登录的是 Windows 内置的 Administrator 账户。Windows 默认让这个账户下的所有程序都以完整管理员权限运行，DeskCue 也在其中。受 Windows 限制，从格子向外拖动文件暂不可用，拖入不受影响，其余功能一切正常。若想恢复完整拖拽功能，可参考下方方法。",
+-  "Startup.FullyElevatedNotice.BodyUacDisabled": "这台电脑关闭了用户账户控制(UAC)，Windows 会以完整管理员权限运行桌面上的所有程序，DeskCue 也在其中。受 Windows 限制，从格子向外拖动文件暂不可用，拖入不受影响，其余功能一切正常。若想重新开启 UAC，可参考下方方法。",
+-  "Startup.FullyElevatedNotice.BodyGeneric": "当前桌面上的所有程序都以完整管理员权限运行，DeskCue 也在其中。受 Windows 限制，从格子向外拖动文件暂不可用，拖入不受影响，其余功能一切正常。若想回到标准的权限模式，可参考下方方法。",
++  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "当前登录的是 Windows 内置的 Administrator 账户。Windows 默认让这个账户下的所有程序都以完整管理员权限运行，DeskCue 也在其中。管理员模式下，Windows 会限制部分 WinUI 拖拽操作和原生应用通知。任务编辑、现代附件选择器及现有的托盘提醒回退方式仍可使用。",
++  "Startup.FullyElevatedNotice.BodyUacDisabled": "这台电脑关闭了用户账户控制(UAC)，Windows 会以完整管理员权限运行桌面上的所有程序，DeskCue 也在其中。管理员模式下，Windows 会限制部分 WinUI 拖拽操作和原生应用通知。任务编辑、现代附件选择器及现有的托盘提醒回退方式仍可使用。",
++  "Startup.FullyElevatedNotice.BodyGeneric": "当前桌面上的所有程序都以完整管理员权限运行，DeskCue 也在其中。管理员模式下，Windows 会限制部分 WinUI 拖拽操作和原生应用通知。任务编辑、现代附件选择器及现有的托盘提醒回退方式仍可使用。",
+   "Startup.FullyElevatedNotice.DetailsHeader": "如何回到标准权限模式",
+   "Startup.FullyElevatedNotice.DetailsHeaderUac": "如何重新开启 UAC",
+   "Startup.FullyElevatedNotice.StepSecpol": "Windows 专业版及以上：按 Win+R 输入 secpol.msc 回车打开“本地安全策略”，进入 本地策略→安全选项，双击“用户帐户控制: 用于内置管理员帐户的管理员批准模式”，设为“已启用”，重启电脑。",
 @@ -710,7 +710,7 @@
    "WidgetTitleIcon.Label.QuickCapture": "随记",
    "Settings.ContentEditor.EnterBehavior.CtrlEnterSaves": "Enter 换行，Ctrl+Enter 保存",
@@ -1953,7 +2802,7 @@ index 8fb59936f3e429a633e8bdef003aa929c264288e..7c747e940fc89d33ae4ac96161cfec2a
    "QuickCapture.DropTab.Records": "松开以保存到随记",
    "Settings.QuickCapture.ClipboardReason.Enabled": "等待复制内容",
 diff --git a/src/DeskCue/Strings/zh-TW.json b/src/DeskCue/Strings/zh-TW.json
-index 5c30a4405c8056c1546e470300da682527e05fbe..5d89bc72e13ce8c1cbc4d1baf155546b11f676ca 100644
+index 5c30a4405c8056c1546e470300da682527e05fbe..6444372256797a508b59b702f2a6ba187d740ec0 100644
 --- a/src/DeskCue/Strings/zh-TW.json
 +++ b/src/DeskCue/Strings/zh-TW.json
 @@ -190,7 +190,7 @@
@@ -2002,6 +2851,19 @@ index 5c30a4405c8056c1546e470300da682527e05fbe..5d89bc72e13ce8c1cbc4d1baf155546b
    "Settings.AttachmentHealth.CheckTooltip": "檢查待辦和隨記中的附件是否仍可用",
    "Widget.TitlePlaceholder": "輸入格子名稱",
    "Settings.Animation.Effect.SlideLeftFade": "左滑淡入",
+@@ -567,9 +567,9 @@
+   "Startup.ElevationNotice.OkButton": "關閉",
+   "Startup.ElevationNotice.BodyShellAboveApp": "檔案總管正在以系統管理員身分執行，而 DeskCue 以一般權限執行。Windows 會因此阻止工作列圖示建立，檔案拖曳也可能受限。小工具、F7 顯示切換與設定仍可使用。登出 Windows 後重新登入（不要從系統管理員環境啟動檔案總管）即可還原工作列圖示。",
+   "Startup.FullyElevatedNotice.Title": "桌面以系統管理員權限執行",
+-  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "目前登入的是 Windows 內建 Administrator 帳戶。Windows 預設讓這個帳戶下的所有程式以完整系統管理員權限執行，DeskCue 也在其中。受 Windows 限制，從格子向外拖曳檔案暫不可用，拖入不受影響，其餘功能一切正常。若想恢復完整拖曳功能，可參考下方方法。",
+-  "Startup.FullyElevatedNotice.BodyUacDisabled": "這台電腦關閉了使用者帳戶控制(UAC)，Windows 會以完整系統管理員權限執行桌面上的所有程式，DeskCue 也在其中。受 Windows 限制，從格子向外拖曳檔案暫不可用，拖入不受影響，其餘功能一切正常。若想重新開啟 UAC，可參考下方方法。",
+-  "Startup.FullyElevatedNotice.BodyGeneric": "目前桌面上的所有程式都以完整系統管理員權限執行，DeskCue 也在其中。受 Windows 限制，從格子向外拖曳檔案暫不可用，拖入不受影響，其餘功能一切正常。若想回到標準的權限模式，可參考下方方法。",
++  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "目前登入的是 Windows 內建 Administrator 帳戶。Windows 預設讓這個帳戶下的所有程式以完整系統管理員權限執行，DeskCue 也在其中。系統管理員模式下，Windows 會限制部分 WinUI 拖曳操作與原生應用程式通知。工作編輯、現代附件選擇器及現有的系統匣提醒備援方式仍可使用。",
++  "Startup.FullyElevatedNotice.BodyUacDisabled": "這台電腦關閉了使用者帳戶控制(UAC)，Windows 會以完整系統管理員權限執行桌面上的所有程式，DeskCue 也在其中。系統管理員模式下，Windows 會限制部分 WinUI 拖曳操作與原生應用程式通知。工作編輯、現代附件選擇器及現有的系統匣提醒備援方式仍可使用。",
++  "Startup.FullyElevatedNotice.BodyGeneric": "目前桌面上的所有程式都以完整系統管理員權限執行，DeskCue 也在其中。系統管理員模式下，Windows 會限制部分 WinUI 拖曳操作與原生應用程式通知。工作編輯、現代附件選擇器及現有的系統匣提醒備援方式仍可使用。",
+   "Startup.FullyElevatedNotice.DetailsHeader": "如何回到標準權限模式",
+   "Startup.FullyElevatedNotice.DetailsHeaderUac": "如何重新開啟 UAC",
+   "Startup.FullyElevatedNotice.StepSecpol": "Windows 專業版及以上：按 Win+R 輸入 secpol.msc 開啟「本機安全性原則」，進入 本機原則→安全性選項，雙擊「使用者帳戶控制: 內建的 Administrator 帳戶的管理員核准模式」，設為「已啟用」，重新啟動電腦。",
 @@ -710,7 +710,7 @@
    "WidgetTitleIcon.Label.QuickCapture": "隨記",
    "Settings.ContentEditor.EnterBehavior.CtrlEnterSaves": "Enter 換行，Ctrl+Enter 儲存",
@@ -2458,6 +3320,163 @@ index d23a04bc36149f45e51b540c552c75a7154151d5..08123ad3ebd686996ba52c7e520e183a
                          Padding="14"
                          Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                          BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+diff --git a/tests/DeskCue.StartupUnicodeProbe/DeskCue.StartupUnicodeProbe.csproj b/tests/DeskCue.StartupUnicodeProbe/DeskCue.StartupUnicodeProbe.csproj
+index 44cecdc5867c13009daa5b23f7889cd6d3135397..557ef2139fb4e67181bf8fe5c7c01f79a6619589 100644
+--- a/tests/DeskCue.StartupUnicodeProbe/DeskCue.StartupUnicodeProbe.csproj
++++ b/tests/DeskCue.StartupUnicodeProbe/DeskCue.StartupUnicodeProbe.csproj
+@@ -10,5 +10,6 @@
+   <ItemGroup>
+     <Compile Include="../../src/DeskCue/Services/DirectStartupTaskBackend.cs" Link="DirectStartupTaskBackend.cs" />
+     <Compile Include="../../src/DeskCue/Services/DirectStartupTaskXmlReader.cs" Link="DirectStartupTaskXmlReader.cs" />
++    <Compile Include="../../src/DeskCue/Platform/Ole32NativeMethods.cs" Link="Ole32NativeMethods.cs" />
+   </ItemGroup>
+ </Project>
+diff --git a/tests/DeskCue.StartupUnicodeProbe/Program.cs b/tests/DeskCue.StartupUnicodeProbe/Program.cs
+index 32a04030cf0b2aaba1e7f3197819637ed46fd241..5a23422b80da3f777e7755efcdfd5a4003f548ce 100644
+--- a/tests/DeskCue.StartupUnicodeProbe/Program.cs
++++ b/tests/DeskCue.StartupUnicodeProbe/Program.cs
+@@ -2,6 +2,8 @@ using System.Diagnostics;
+ using System.Runtime.InteropServices;
+ using System.Security.Principal;
+ using System.Text;
++using System.Text.Json;
++using System.Xml;
+ using System.Xml.Linq;
+ using DeskCue.Services;
+ 
+@@ -10,8 +12,14 @@ using DeskCue.Services;
+ // Never calls Enable/TryRegister, which would change the user's real startup task.
+ internal static partial class Program
+ {
+-    private static int Main()
++    private static int Main(string[] args)
+     {
++        // Pure repair-tool modes MUST return before ACP/native/task integration.
++        // Any unknown argument also fails closed instead of running the probe.
++        if (args.Length != 0)
++        {
++            return RunPureMode(args);
++        }
+         string taskName = $"DeskCue Unicode Probe-小-{Guid.NewGuid():N}";
+         string xmlPath = Path.Combine(Path.GetTempPath(), taskName + ".xml");
+         bool registered = false;
+@@ -102,6 +110,116 @@ internal static partial class Program
+         }
+     }
+ 
++    private static int RunPureMode(string[] args)
++    {
++        Console.OutputEncoding = new UTF8Encoding(false);
++        try
++        {
++            bool emit = args[0] == "--emit-startup-contract" && args.Length == 2;
++            bool validate = args[0] == "--validate-startup-contract" && args.Length == 4;
++            Check(emit || validate, "Expected a recognized pure contract mode and its exact arguments.");
++            using WindowsIdentity identity = WindowsIdentity.GetCurrent();
++            string sid = identity.User?.Value ?? throw new InvalidOperationException("User SID unavailable.");
++            string executable = args[1];
++            CheckNormalPath(executable, executable);
++            if (emit)
++            {
++                using var writer = new Utf8JsonWriter(Console.OpenStandardOutput());
++                writer.WriteStartObject();
++                writer.WriteString("TaskName", DirectStartupTaskBackend.GetTaskName(sid));
++                writer.WriteString("Arguments", DirectStartupTaskBackend.StartupArguments);
++                writer.WriteString("Xml", DirectStartupTaskBackend.BuildTaskXml(executable, sid));
++                writer.WriteEndObject();
++                writer.Flush();
++                return 0;
++            }
++
++            string xml = File.ReadAllText(args[3], Encoding.UTF8);
++            ValidateStrictShape(xml, executable, sid, identity.Name, args[2]);
++            DirectStartupTaskRegistration registration = DirectStartupTaskBackend.ParseTaskXml(xml)
++                with { TaskName = args[2] }; // Query identity, not the optional XML URI.
++            Check(new DirectStartupTaskBackend().IsPreferred(registration, executable),
++                DirectStartupTaskBackend.DescribePreferenceCheckResults(registration, executable));
++            Console.WriteLine("{\"Valid\":true}");
++            return 0;
++        }
++        catch (Exception ex)
++        {
++            Console.Error.WriteLine(ex.Message);
++            return 1;
++        }
++    }
++
++    private static void CheckNormalPath(string candidate, string expected)
++    {
++        Check(Path.IsPathFullyQualified(candidate) && !candidate.StartsWith(@"\\", StringComparison.Ordinal) &&
++              candidate.IndexOfAny(['"', '%', '~', '/']) < 0 &&
++              string.Equals(Path.GetFullPath(candidate), candidate, StringComparison.OrdinalIgnoreCase) &&
++              string.Equals(candidate, expected, StringComparison.OrdinalIgnoreCase), "Unnormalized or aliased task path.");
++        for (string? part = candidate; part is not null; part = Path.GetDirectoryName(part))
++        {
++            if (File.Exists(part) || Directory.Exists(part))
++            {
++                Check((File.GetAttributes(part) & FileAttributes.ReparsePoint) == 0, "Task path contains a reparse point.");
++            }
++        }
++    }
++
++    private static void ValidateStrictShape(string xml, string executable, string sid, string user, string taskName)
++    {
++        using var reader = XmlReader.Create(new StringReader(xml), new XmlReaderSettings
++        {
++            DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null
++        });
++        XDocument document = XDocument.Load(reader);
++        XNamespace ns = "http://schemas.microsoft.com/windows/2004/02/mit/task";
++        XElement root = document.Root ?? throw new InvalidDataException("No task root.");
++        Check(root.Name == ns + "Task", "Unexpected task root/namespace.");
++        foreach (XElement node in root.DescendantsAndSelf())
++        {
++            Check(node.Name.Namespace == ns && node.Elements().GroupBy(e => e.Name).All(g => g.Count() == 1),
++                "Foreign namespace or duplicate task element.");
++        }
++        static XElement One(XElement parent, XName name) => parent.Elements(name).Single();
++        static string Value(XElement parent, XName name) => parent.Element(name)?.Value ?? "";
++        XElement registration = One(root, ns + "RegistrationInfo");
++        XElement settings = One(root, ns + "Settings");
++        XElement principals = One(root, ns + "Principals");
++        XElement principal = One(principals, ns + "Principal");
++        XElement triggers = One(root, ns + "Triggers");
++        XElement trigger = One(triggers, ns + "LogonTrigger");
++        XElement actions = One(root, ns + "Actions");
++        XElement action = One(actions, ns + "Exec");
++        Check(principals.Elements().Count() == 1 && triggers.Elements().Count() == 1 && actions.Elements().Count() == 1,
++            "Extra principal, trigger or action.");
++        foreach (string tag in new[] { "Principal", "LogonTrigger", "Exec" })
++        {
++            Check(root.Descendants(ns + tag).Count() == 1, "Nested or extra principal/trigger/action.");
++        }
++        Check(!root.Descendants(ns + "GroupId").Any(), "Group principal not allowed.");
++        bool CurrentUser(string value) => string.Equals(value, sid, StringComparison.OrdinalIgnoreCase) ||
++                                          string.Equals(value, user, StringComparison.OrdinalIgnoreCase);
++        Check(CurrentUser(Value(principal, ns + "UserId")) && CurrentUser(Value(trigger, ns + "UserId")), "Foreign user.");
++        Check(Value(principal, ns + "LogonType") == "InteractiveToken" &&
++              Value(principal, ns + "RunLevel") is "" or "LeastPrivilege", "Unexpected principal type/privilege.");
++        foreach (XElement parent in new[] { settings, trigger })
++        {
++            Check(parent.Element(ns + "Enabled") is not { } enabled || enabled.Value is "true" or "1", "Task disabled.");
++        }
++        Check(Value(trigger, ns + "Delay") is "" or "PT0S" &&
++              trigger.Elements().All(e => e.Name.LocalName is "UserId" or "Enabled" or "Delay"), "Unexpected logon trigger.");
++        Check(taskName == DirectStartupTaskBackend.GetTaskName(sid) && Value(registration, ns + "Source") == "DeskCue",
++            "Foreign task identity/source.");
++        string uri = Value(registration, ns + "URI");
++        Check(uri.Length == 0 || uri == "\\" + taskName, "Foreign task URI.");
++        Check(action.Elements().All(e => e.Name.LocalName is "Command" or "Arguments" or "WorkingDirectory"),
++            "Unexpected Exec element.");
++        CheckNormalPath(Value(action, ns + "Command"), executable);
++        Check(Value(action, ns + "Arguments") == DirectStartupTaskBackend.StartupArguments, "Unexpected arguments.");
++        string directory = Value(action, ns + "WorkingDirectory");
++        if (directory.Length != 0) { CheckNormalPath(directory, Path.GetDirectoryName(executable)!); }
++    }
++
+     private static void Check(bool condition, string message)
+     {
+         if (!condition)
 diff --git a/tests/DeskCue.Tests/AotPublishContractTests.cs b/tests/DeskCue.Tests/AotPublishContractTests.cs
 index 44698235bd444251cd3505d2def06d581471f8da..350afc74f3d7845cb3e2c2d478f8ec19863c8922 100644
 --- a/tests/DeskCue.Tests/AotPublishContractTests.cs
@@ -3377,7 +4396,7 @@ index 08b8709473f890f631f28f5d4f634ca0b146d8a3..690f0e0cdd0bd4e3ada22faf6f7f2df0
  
      [Fact]
 diff --git a/tests/DeskCue.Tests/ReleaseNotesKnownVersionsTests.cs b/tests/DeskCue.Tests/ReleaseNotesKnownVersionsTests.cs
-index 38cb9ecb430df30318f97eeb1b8402d51435fee8..d97f042a6fb2e59da2e1592bf9431ae66123e2df 100644
+index 38cb9ecb430df30318f97eeb1b8402d51435fee8..9ceded63b3bbde6b866ff884391f66fa3851de9f 100644
 --- a/tests/DeskCue.Tests/ReleaseNotesKnownVersionsTests.cs
 +++ b/tests/DeskCue.Tests/ReleaseNotesKnownVersionsTests.cs
 @@ -33,6 +33,51 @@ public sealed class ReleaseNotesKnownVersionsTests
@@ -3392,8 +4411,8 @@ index 38cb9ecb430df30318f97eeb1b8402d51435fee8..d97f042a6fb2e59da2e1592bf9431ae6
 +
 +        Assert.Equal(current, versions[0]);
 +        Assert.Equal(
-+            ["1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3"],
-+            versions.Where(version => version is "1.5.9.6" or "1.5.9.5" or "1.5.9.4" or "1.5.9.3"));
++            ["1.5.9.7", "1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3"],
++            versions.Where(version => version is "1.5.9.7" or "1.5.9.6" or "1.5.9.5" or "1.5.9.4" or "1.5.9.3"));
 +    }
 +
 +    [Fact]
@@ -3403,7 +4422,7 @@ index 38cb9ecb430df30318f97eeb1b8402d51435fee8..d97f042a6fb2e59da2e1592bf9431ae6
 +            ["1.5.10", "1.5.10.1", "1.4.0", "1.5.10.1"]);
 +
 +        Assert.Equal(
-+            ["1.5.10.1", "1.5.10", "1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3", "1.4.0"],
++            ["1.5.10.1", "1.5.10", "1.5.9.7", "1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3", "1.4.0"],
 +            versions);
 +    }
 +
@@ -3411,10 +4430,10 @@ index 38cb9ecb430df30318f97eeb1b8402d51435fee8..d97f042a6fb2e59da2e1592bf9431ae6
 +    public void MergeKnownReleaseVersions_FutureRevisionRetainsForkHistoryWithoutCache()
 +    {
 +        IReadOnlyList<string> versions = ReleaseNotesService.MergeKnownReleaseVersions(
-+            ["1.5.9.7", "1.5.9", "1.5.9.7"]);
++            ["1.5.9.8", "1.5.9", "1.5.9.8"]);
 +
 +        Assert.Equal(
-+            ["1.5.9.7", "1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3", "1.5.9"],
++            ["1.5.9.8", "1.5.9.7", "1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3", "1.5.9"],
 +            versions);
 +    }
 +
@@ -3422,10 +4441,10 @@ index 38cb9ecb430df30318f97eeb1b8402d51435fee8..d97f042a6fb2e59da2e1592bf9431ae6
 +    public void MergeKnownReleaseVersions_CurrentRevisionIsDeduplicatedAgainstForkHistory()
 +    {
 +        IReadOnlyList<string> versions = ReleaseNotesService.MergeKnownReleaseVersions(
-+            ["1.5.9.6", "1.5.9", "1.5.9.6"]);
++            ["1.5.9.7", "1.5.9", "1.5.9.7"]);
 +
 +        Assert.Equal(
-+            ["1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3", "1.5.9"],
++            ["1.5.9.7", "1.5.9.6", "1.5.9.5", "1.5.9.4", "1.5.9.3", "1.5.9"],
 +            versions);
 +    }
 +
@@ -3572,6 +4591,233 @@ index d8083932aa7ec83f2173636081ffe18b26a81121..6ca97991af0b8ffae3ec8b6f86a5f6e9
          Assert.Matches("^[0-9A-F]{64}$", diagnostic.ModuleSha256 ?? string.Empty);
          Assert.Equal(loadWasAlreadyCreated, diagnostic.LoadAttempted);
          if (!loadWasAlreadyCreated)
+diff --git a/tests/DeskCue.Tests/StartupElevationGateTests.cs b/tests/DeskCue.Tests/StartupElevationGateTests.cs
+index 558e508ac645241accdb6e12baec23dd56d6dbc7..6421e3a2911177b618bee6d3fa841616a8524fd3 100644
+--- a/tests/DeskCue.Tests/StartupElevationGateTests.cs
++++ b/tests/DeskCue.Tests/StartupElevationGateTests.cs
+@@ -4,6 +4,74 @@ namespace DeskCue.Tests;
+ 
+ public sealed class StartupElevationGateTests
+ {
++    [Fact]
++    public void InitialAssessment_IsAwaitedBeforeAnyStartupWidgetConstruction()
++    {
++        // FileSurfaceContent initializes its empty-state warning only once in
++        // its constructor. A late assessment can get the final notice right
++        // while every restored/default widget retains the initial Unknown.
++        // Inspect the real App integration: invoking that WinUI lifecycle in
++        // a headless unit host would create windows and use machine state.
++        string source = File.ReadAllText(TestPaths.FromRepository("src/DeskCue/App.xaml.cs"));
++        int launchStart = source.IndexOf("protected override async void OnLaunched", StringComparison.Ordinal);
++        int launchEnd = source.IndexOf("FailStartup(\"exception during startup\", ex);", launchStart, StringComparison.Ordinal);
++        string launch = source[launchStart..launchEnd];
++        var awaitedAssessment = System.Text.RegularExpressions.Regex.Match(launch,
++            @"await\s+RunOptionalStartupStepAsync\s*\(\s*""elevation-assessment""\s*,\s*RefreshStartupElevationAsync\s*\)");
++
++        Assert.True(awaitedAssessment.Success, "Initial elevation publication must complete before constructing widget consumers.");
++        foreach (string consumer in new[] { "WidgetManager = new WidgetManager", "widgetManager.RestoreWidgetsAsync", "EnsureInitialFileWidgetSetupAsync" })
++        {
++            int consumerPosition = launch.IndexOf(consumer, StringComparison.Ordinal);
++            Assert.True(consumerPosition > awaitedAssessment.Index + awaitedAssessment.Length,
++                $"{consumer} must not capture startup elevation before the initial assessment completes.");
++        }
++    }
++
++    [Fact]
++    public void UnknownShell_DoesNotBecomeAnAppAboveShellMismatch()
++    {
++        var assessment = new StartupElevationAssessment(true, null, false, false);
++
++        Assert.NotEqual(ShellIntegrityMismatch.AppAboveShell, assessment.Mismatch);
++        Assert.Equal(FullyElevatedSessionAttribution.None, assessment.FullyElevatedAttribution);
++    }
++
++    [Fact]
++    public void UnknownShell_CannotPromiseAnUnelevatedRelaunch()
++    {
++        Assert.False(DragDropPermissionService.ComputeCanRelaunchUnelevated(false, null));
++        Assert.False(DragDropPermissionService.ComputeNeedsRelaunchDiagnostic(true, false, null));
++    }
++
++    [Theory]
++    [InlineData(null)]
++    [InlineData(true)]
++    public void Relaunch_UnknownOrElevatedShellNeverStartsAReplacement(bool? shellElevated)
++    {
++        var assessment = new StartupElevationAssessment(true, shellElevated, false, true);
++        Assert.False(DragDropPermissionService.TryRelaunchAsExplorerUser(
++            assessment, @"F:\fixture\DeskCue.exe", "--startup --await-parent-exit 1234",
++            (_, _) => throw new InvalidOperationException("Must not start without a known standard-user shell.")));
++    }
++
++    [Theory]
++    [InlineData(true)]
++    [InlineData(false)]
++    public void Relaunch_PreservesStartupAndParentWaitArgumentsAndReturnsTheVerifiedLauncherResult(bool started)
++    {
++        string? observedExecutable = null;
++        string? observedArguments = null;
++        var assessment = new StartupElevationAssessment(true, false, false, true);
++        bool result = DragDropPermissionService.TryRelaunchAsExplorerUser(
++            assessment, @"F:\fixture\DeskCue.exe", "--await-parent-exit 1234 --startup",
++            (executable, arguments) => { observedExecutable = executable; observedArguments = arguments; return started; });
++
++        Assert.Equal(started, result);
++        Assert.Equal(@"F:\fixture\DeskCue.exe", observedExecutable);
++        Assert.Equal("--await-parent-exit 1234 --startup", observedArguments);
++    }
++
+     [Theory]
+     [InlineData(false, false, true)]   // UAC on, Explorer standard: relaunch works
+     [InlineData(false, true, false)]   // UAC on but Explorer elevated: parent handover would stay elevated
+diff --git a/tests/DeskCue.Tests/StartupElevationPolicyTests.cs b/tests/DeskCue.Tests/StartupElevationPolicyTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..8933975c960bee404a1be22a0fbad77d75a0c47c
+--- /dev/null
++++ b/tests/DeskCue.Tests/StartupElevationPolicyTests.cs
+@@ -0,0 +1,121 @@
++using DeskCue.Services;
++
++namespace DeskCue.Tests;
++
++public sealed class StartupElevationPolicyTests
++{
++    private static StartupElevationAssessment Snapshot(bool? shellElevated) =>
++        new(true, shellElevated, false,
++            DragDropPermissionService.ComputeCanRelaunchUnelevated(false, shellElevated), true);
++
++    [Theory]
++    [InlineData(null, false, false)]
++    [InlineData(true, false, false)]
++    [InlineData(false, false, true)]
++    [InlineData(false, true, false)]
++    public void UnattendedRelaunch_RequiresAKnownMismatchAndNeverRepeats(
++        bool? shellElevated, bool alreadyRelaunched, bool expected)
++    {
++        Assert.Equal(expected, StartupElevationPolicy.ShouldRelaunch(Snapshot(shellElevated), alreadyRelaunched));
++    }
++
++    [Fact]
++    public void IsolatedProfile_NeverAutomaticallyRepairsCompatibilityOrRelaunches()
++    {
++        Assert.False(StartupElevationPolicy.ShouldRepairCompatibilityFlags(Snapshot(false), isIsolatedProfile: true));
++        Assert.False(StartupElevationPolicy.ShouldRelaunch(Snapshot(false), alreadyRelaunched: false, isIsolatedProfile: true));
++    }
++
++    [Theory]
++    [InlineData(null, false)]
++    [InlineData(true, false)]
++    [InlineData(false, true)]
++    public void CompatibilityRepair_RequiresAKnownAppAboveShellMismatch(bool? shellElevated, bool repair)
++    {
++        Assert.Equal(repair, StartupElevationPolicy.ShouldRepairCompatibilityFlags(Snapshot(shellElevated), isIsolatedProfile: false));
++    }
++
++    [Theory]
++    [InlineData(false, null, true)]
++    [InlineData(false, true, true)]
++    [InlineData(true, null, false)]
++    [InlineData(true, true, false)]
++    [InlineData(true, false, true)]
++    public void VerifiedRelaunch_RequiresTheOpenedParentTokenToBeKnownUnelevated(
++        bool requireUnelevatedShell, bool? openedParentElevated, bool allowed)
++    {
++        Assert.Equal(allowed, ShellUnelevatedLaunch.CanUseShellParent(requireUnelevatedShell, openedParentElevated));
++    }
++
++    [Theory]
++    [InlineData(true, ShellIntegrityMismatch.None, false, FullyElevatedSessionAttribution.BuiltInAdminAccount)]
++    [InlineData(false, ShellIntegrityMismatch.AppAboveShell, true, FullyElevatedSessionAttribution.None)]
++    public async Task UnknownThenKnown_UsesTheAvailableShellInsteadOfTheInitialSnapshot(
++        bool shellElevated, ShellIntegrityMismatch mismatch, bool relaunch,
++        FullyElevatedSessionAttribution attribution)
++    {
++        var snapshots = new Queue<StartupElevationAssessment>([Snapshot(null), Snapshot(null), Snapshot(shellElevated)]);
++        int waits = 0;
++        var result = await StartupElevationPolicy.AssessWhenShellReadyAsync(
++            () => snapshots.Dequeue(), (_, _) => { waits++; return Task.CompletedTask; }, CancellationToken.None);
++
++        Assert.Equal(mismatch, result.Mismatch);
++        Assert.Equal(relaunch, result.CanRelaunchUnelevated);
++        Assert.Equal(attribution, result.FullyElevatedAttribution);
++        Assert.Equal(2, waits);
++    }
++
++    [Fact]
++    public async Task PersistentUnknown_StopsRetryingWithoutClaimingMismatchOrRelaunch()
++    {
++        int probes = 0;
++        var waits = new List<TimeSpan>();
++        var result = await StartupElevationPolicy.AssessWhenShellReadyAsync(
++            () => { probes++; return Snapshot(null); },
++            (interval, _) => { waits.Add(interval); return Task.CompletedTask; }, CancellationToken.None);
++
++        Assert.Equal(ShellIntegrityMismatch.Unknown, result.Mismatch);
++        Assert.False(result.CanRelaunchUnelevated);
++        Assert.Equal(FullyElevatedSessionAttribution.None, result.FullyElevatedAttribution);
++        Assert.InRange(probes, 2, 32);
++        Assert.Equal(probes - 1, waits.Count);
++        Assert.InRange(waits.Sum(interval => interval.TotalSeconds), 1, 10);
++    }
++
++    [Theory]
++    [InlineData(true)]
++    [InlineData(false)]
++    public async Task KnownShell_DoesNotWaitOrRelaunchInALoop(bool shellElevated)
++    {
++        int probes = 0;
++        var result = await StartupElevationPolicy.AssessWhenShellReadyAsync(
++            () => { probes++; return Snapshot(shellElevated); },
++            (_, _) => throw new InvalidOperationException("A known shell must not be retried."), CancellationToken.None);
++
++        Assert.Equal(shellElevated, result.IsExplorerElevated);
++        Assert.Equal(1, probes);
++    }
++
++    [Fact]
++    public async Task ShutdownDuringWait_CancelsWithoutAnotherProbeOrUiDecision()
++    {
++        using var shutdown = new CancellationTokenSource();
++        int probes = 0;
++        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
++            StartupElevationPolicy.AssessWhenShellReadyAsync(
++                () => { probes++; return Snapshot(null); },
++                (_, token) => { shutdown.Cancel(); return Task.FromCanceled(token); }, shutdown.Token));
++        Assert.Equal(1, probes);
++    }
++
++    [Fact]
++    public async Task ShutdownBeforeAssessment_DoesNotProbe()
++    {
++        using var shutdown = new CancellationTokenSource();
++        shutdown.Cancel();
++        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
++            StartupElevationPolicy.AssessWhenShellReadyAsync(
++                () => throw new InvalidOperationException("Must not probe after shutdown."),
++                (_, _) => Task.CompletedTask, shutdown.Token));
++    }
++}
+diff --git a/tests/DeskCue.Tests/StartupStormGuardContractTests.cs b/tests/DeskCue.Tests/StartupStormGuardContractTests.cs
+index 0c309d55b4b50b7e4ca24104c7bb14b5a04663fa..8472255c22821cb230ddc17ffbc28ff5c653fa9f 100644
+--- a/tests/DeskCue.Tests/StartupStormGuardContractTests.cs
++++ b/tests/DeskCue.Tests/StartupStormGuardContractTests.cs
+@@ -18,9 +18,13 @@ public sealed class StartupStormGuardContractTests
+     {
+         string app = File.ReadAllText(TestPaths.FromRepository(AppSource));
+ 
+-        // Shutdown sequence (tray exit / restart / update), end-session flush,
+-        // and the elevated-relaunch exit all carry the breadcrumb close.
+-        Assert.Equal(3, Count(app, "_startupSessionLedger?.MarkCleanExit();"));
++        // The shared shutdown sequence and end-session flush close the ledger.
++        // Elevation relaunch now uses normal shutdown rather than a separate
++        // constructor Environment.Exit path with a third literal call site.
++        Assert.Equal(2, Count(app, "_startupSessionLedger?.MarkCleanExit();"));
++        string elevation = File.ReadAllText(TestPaths.FromRepository("src/DeskCue/App.Elevation.cs"));
++        Assert.Contains("await ShutdownForRestartAsync();", elevation, StringComparison.Ordinal);
++        Assert.DoesNotContain("Environment.Exit(", elevation, StringComparison.Ordinal);
+     }
+ 
+     [Fact]
 diff --git a/tests/DeskCue.Tests/TestEnvironment.cs b/tests/DeskCue.Tests/TestEnvironment.cs
 index 6764d49e449ec729d694658b57047ab3859051a0..f32cf6f65796face9e354847f8509b357a552ffa 100644
 --- a/tests/DeskCue.Tests/TestEnvironment.cs
