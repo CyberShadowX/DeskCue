@@ -41,10 +41,10 @@ Files: DragDropPermissionService.cs, App.xaml.cs/App.Startup.cs and a focused Ap
 
 Files: tools/Repair-DeskCueStartup.ps1, pure emit/validate modes in tests/DeskCue.StartupUnicodeProbe and deskcue/tests/test_startup_repair.py. Production backend/service/reader remain unchanged; repair is explicit and strictly installation-owned.
 
-- [ ] Establish exact legacy ownership predicates from current task Source/name/SID/action/executable and compare-before-write state.
-- [ ] Add failing tests for correct adoption/arguments and refusal of foreign user/install/source/action/runlevel variants.
-- [ ] Normalize to supported startup registration without changing UAC, principal privilege or unrelated tasks; preserve explicit user-enabled startup intent.
-- [ ] Test/review/re-review before applying the approved repair to the actual owned task.
+- [x] Establish exact legacy ownership predicates from current task Source/name/SID/action/executable and compare-before-write state.
+- [x] Add failing tests for correct adoption/arguments and refusal of foreign user/install/source/action/runlevel variants.
+- [x] Normalize to supported startup registration without changing UAC, principal privilege or unrelated tasks; preserve explicit user-enabled startup intent.
+- [x] Test/review/re-review before applying the approved repair to the actual owned task.
 
 ### Task 3: Integrated compatibility, packaging and acceptance
 
@@ -58,3 +58,5 @@ Files: fork patch/config/provenance/version/release notes, shared build records 
 - [ ] Fresh final independent review, final main-session checks and honest handoff. Real reboot acceptance remains pending until actually performed with the user.
 
 Task1 gate: commits fea05ab5/06a75ddf; initial full5938/5938, final focused218/218. Independent review0Critical/0Important/0Minor after M1 ordering fix. Native/GUI/reboot pending.
+
+Task2 source gate: ea4cd788, latest26 synthetic+1 fresh purehelper passed, independent review0Critical/0Important/0Minor. Native read-only Preview validated the actual owned legacy task; no Apply/system task mutation yet. Historical management154 is not the final integrated count; shared build reruns the final suite.
