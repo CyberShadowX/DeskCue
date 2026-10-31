@@ -10,5 +10,6 @@
   <ItemGroup>
     <Compile Include="../../src/DeskCue/Services/DirectStartupTaskBackend.cs" Link="DirectStartupTaskBackend.cs" />
     <Compile Include="../../src/DeskCue/Services/DirectStartupTaskXmlReader.cs" Link="DirectStartupTaskXmlReader.cs" />
+    <Compile Include="../../src/DeskCue/Platform/Ole32NativeMethods.cs" Link="Ole32NativeMethods.cs" />
   </ItemGroup>
 </Project>
