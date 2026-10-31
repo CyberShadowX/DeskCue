@@ -4,6 +4,50 @@ namespace DeskCue.Tests;
 
 public sealed class StartupElevationGateTests
 {
+    [Fact]
+    public void UnknownShell_DoesNotBecomeAnAppAboveShellMismatch()
+    {
+        var assessment = new StartupElevationAssessment(true, null, false, false);
+
+        Assert.NotEqual(ShellIntegrityMismatch.AppAboveShell, assessment.Mismatch);
+        Assert.Equal(FullyElevatedSessionAttribution.None, assessment.FullyElevatedAttribution);
+    }
+
+    [Fact]
+    public void UnknownShell_CannotPromiseAnUnelevatedRelaunch()
+    {
+        Assert.False(DragDropPermissionService.ComputeCanRelaunchUnelevated(false, null));
+        Assert.False(DragDropPermissionService.ComputeNeedsRelaunchDiagnostic(true, false, null));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(true)]
+    public void Relaunch_UnknownOrElevatedShellNeverStartsAReplacement(bool? shellElevated)
+    {
+        var assessment = new StartupElevationAssessment(true, shellElevated, false, true);
+        Assert.False(DragDropPermissionService.TryRelaunchAsExplorerUser(
+            assessment, @"F:\fixture\DeskCue.exe", "--startup --await-parent-exit 1234",
+            (_, _) => throw new InvalidOperationException("Must not start without a known standard-user shell.")));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Relaunch_PreservesStartupAndParentWaitArgumentsAndReturnsTheVerifiedLauncherResult(bool started)
+    {
+        string? observedExecutable = null;
+        string? observedArguments = null;
+        var assessment = new StartupElevationAssessment(true, false, false, true);
+        bool result = DragDropPermissionService.TryRelaunchAsExplorerUser(
+            assessment, @"F:\fixture\DeskCue.exe", "--await-parent-exit 1234 --startup",
+            (executable, arguments) => { observedExecutable = executable; observedArguments = arguments; return started; });
+
+        Assert.Equal(started, result);
+        Assert.Equal(@"F:\fixture\DeskCue.exe", observedExecutable);
+        Assert.Equal("--await-parent-exit 1234 --startup", observedArguments);
+    }
+
     [Theory]
     [InlineData(false, false, true)]   // UAC on, Explorer standard: relaunch works
     [InlineData(false, true, false)]   // UAC on but Explorer elevated: parent handover would stay elevated

@@ -212,10 +212,12 @@ public partial class App : Application
     private bool _externalActivationHandling;
     private DateTimeOffset? _lastBareExternalActivationAtUtc;
     private readonly bool _processStartupLaunchDetected;
-    private readonly StartupElevationAssessment _startupElevationAssessment = new(false, false, false, false);
+    private StartupElevationAssessment _startupElevationAssessment = new(false, null, false, false);
+    private readonly CancellationTokenSource _startupElevationCancellation = new();
 
     /// <summary>
-    /// Cached launch-time elevation snapshot. Same-level fully-elevated
+    /// Latest startup elevation assessment. Unknown shell state is retained
+    /// until a bounded asynchronous reassessment completes. Fully-elevated
     /// sessions read <see cref="ShellIntegrityMismatch.None"/> here; surface
     /// code uses the mismatch leg to tell "drag-in is blocked" (app above
     /// shell) apart from same-level sessions where drag-in works.
@@ -412,61 +414,9 @@ public partial class App : Application
             Environment.Exit(0);
         }
 
-        // Elevation gate: an elevated DeskCue cannot receive OLE drops from
-        // Explorer (UIPI) and cannot start XAML drags either, so an elevated
-        // launch either relaunches itself unelevated or surfaces a notice.
-        // The mutex stays owned by the kernel on these exits: the replacement
-        // instance waits for this process via --await-parent-exit.
-        _startupElevationAssessment = DragDropPermissionService.AssessStartupElevation();
-        if (_startupElevationAssessment.IsCurrentProcessElevated)
-        {
-            Log(
-                $"[Elevation] Elevated launch detected " +
-                $"uacDisabled={_startupElevationAssessment.IsUacDisabled} " +
-                $"explorerElevated={_startupElevationAssessment.IsExplorerElevated} " +
-                $"canRelaunch={_startupElevationAssessment.CanRelaunchUnelevated} " +
-                $"mismatch={_startupElevationAssessment.Mismatch}");
-            if (_processStartupLaunchDetected)
-            {
-                // Nobody is watching an unattended launch: fix the cause and
-                // relaunch unelevated instead of parking a dialog. A failed
-                // relaunch keeps this instance running (drag-drop degraded).
-                _ = DragDropPermissionService.ClearElevationCompatibilityFlags();
-
-                // Two loop breakers: only relaunch when Explorer really offers
-                // a standard-user context, and never twice in a row — a
-                // relaunch that lands elevated again (elevated Explorer, or
-                // the ShellExecute fallback spawning an elevated child) must
-                // not restart forever on an unattended desktop.
-                bool alreadyRelaunchedForElevation =
-                    TryGetAwaitParentExitProcessId(Environment.GetCommandLineArgs()) is not null;
-                if (_startupElevationAssessment.CanRelaunchUnelevated &&
-                    !alreadyRelaunchedForElevation)
-                {
-                    string relaunchArguments =
-                        $"{AwaitParentExitArgument} {Environment.ProcessId} --startup";
-                    if (DragDropPermissionService.TryRelaunchAsExplorerUser(relaunchArguments))
-                    {
-                        Log("[Elevation] Unattended launch relaunched unelevated; exiting elevated instance");
-                        _startupSessionLedger?.MarkCleanExit();
-                        _nativeNotificationService?.Dispose();
-                        DrainLogQueue();
-                        Environment.Exit(0);
-                    }
-
-                    Log("[Elevation] Unattended relaunch failed; continuing elevated");
-                }
-                else
-                {
-                    Log(
-                        "[Elevation] Unattended relaunch skipped " +
-                        $"(canRelaunch={_startupElevationAssessment.CanRelaunchUnelevated}, " +
-                        $"alreadyRelaunched={alreadyRelaunchedForElevation}); continuing elevated");
-                }
-            }
-            // Interactive launches defer the notice to OnLaunched, once the
-            // tray exists and the startup pipeline is no longer watching.
-        }
+        // Explorer may not exist yet during logon. Defer elevation assessment
+        // and all repair/relaunch decisions until asynchronous startup has a
+        // dispatcher and can distinguish Unknown from a standard-user shell.
 
         InitializeComponent();
 
@@ -1749,12 +1699,22 @@ public partial class App : Application
                 });
             }
 
+            await RunOptionalStartupStepAsync("elevation-assessment", RefreshStartupElevationAsync);
+            if (IsShuttingDown)
+            {
+                return;
+            }
+
             // The process must not keep running startup with nothing the user
             // can act on: it would own the single-instance mutex and swallow
             // every later launch.
             await EnsureStartupProducedUsableSurfaceAsync();
 
-            RunOptionalStartupStep("elevation-notice", ShowElevationNoticeIfNeeded);
+            await RunOptionalStartupStepAsync("elevation-notice", HandleStartupElevationAsync);
+            if (IsShuttingDown)
+            {
+                return;
+            }
 
             EnsureStartupPipeline().WriteSummary();
             Log("OnLaunched completed successfully");
@@ -4743,8 +4703,8 @@ public partial class App : Application
 
     /// <summary>
     /// Shows the elevation notice once startup has produced a usable
-    /// surface. Skipped for unattended launches (the constructor already
-    /// attempted a silent unelevated relaunch; nobody is watching a dialog)
+    /// surface. Skipped for unattended mismatches (the async startup handler
+    /// attempted a verified unelevated relaunch; nobody is watching a dialog)
     /// and on shutdown. The asymmetric mismatch keeps its every-time notice
     /// (self-healable, the user should act each elevated launch); since
     /// 2026-10-22 the same-level elevated desktop — silent for years — gets
@@ -4756,7 +4716,8 @@ public partial class App : Application
     /// </summary>
     private void ShowElevationNoticeIfNeeded()
     {
-        if (!_startupElevationAssessment.IsCurrentProcessElevated ||
+        if (UiDispatch.Phase != UiDispatch.PhaseKind.Ready || !UiDispatch.HasAccess ||
+            !_startupElevationAssessment.IsCurrentProcessElevated ||
             IsShuttingDown ||
             _elevationNoticeWindow is not null)
         {
@@ -4774,7 +4735,11 @@ public partial class App : Application
             // DeskCue elevated, so scrub them while the notice is up — whether
             // the user exits via the button or the window X, their next normal
             // launch must be able to land unelevated. Failures log only.
-            _ = DragDropPermissionService.ClearElevationCompatibilityFlags();
+            if (StartupElevationPolicy.ShouldRepairCompatibilityFlags(
+                    _startupElevationAssessment, DeskCueDataPathService.Current.IsDevelopmentRoot))
+            {
+                _ = DragDropPermissionService.ClearElevationCompatibilityFlags();
+            }
 
             _elevationNoticeWindow = new ElevationNoticeWindow(LocalizationService, _startupElevationAssessment);
             _elevationNoticeWindow.Closed += (_, _) => _elevationNoticeWindow = null;
@@ -4865,19 +4830,36 @@ public partial class App : Application
             trayCreated = false;
         }
 
-        if (trayCreated ||
-            IsStartupMode ||
-            IsShuttingDown ||
-            _elevationNoticeWindow is not null)
+        if (trayCreated || IsShuttingDown || UiDispatch.Phase != UiDispatch.PhaseKind.Ready)
         {
             return;
         }
 
-        _elevationNoticeWindow = new ElevationNoticeWindow(LocalizationService, _startupElevationAssessment);
-        _elevationNoticeWindow.Closed += (_, _) => _elevationNoticeWindow = null;
-        ThemeService.TrackWindow(_elevationNoticeWindow);
-        _elevationNoticeWindow.Activate();
-        Log("[Elevation] Notice shown for shell-above-app tray failure");
+        try
+        {
+            await UiDispatch.RunAsync(() =>
+            {
+                if (!IsShuttingDown && !IsStartupMode && _elevationNoticeWindow is null)
+                {
+                    // A tray retry can outlive the original assessment or a
+                    // shell restart. Revalidate before showing any explanation.
+                    _startupElevationAssessment = DragDropPermissionService.AssessStartupElevation();
+                    if (_startupElevationAssessment.Mismatch == ShellIntegrityMismatch.ShellAboveApp)
+                    {
+                        _elevationNoticeWindow = new ElevationNoticeWindow(LocalizationService, _startupElevationAssessment);
+                        _elevationNoticeWindow.Closed += (_, _) => _elevationNoticeWindow = null;
+                        ThemeService.TrackWindow(_elevationNoticeWindow);
+                        _elevationNoticeWindow.Activate();
+                        Log("[Elevation] Notice shown for shell-above-app tray failure");
+                    }
+                }
+                return Task.CompletedTask;
+            });
+        }
+        catch (OperationCanceledException) when (IsShuttingDown || UiDispatch.Phase != UiDispatch.PhaseKind.Ready)
+        {
+            // Dispatcher teardown cancels delayed UI work.
+        }
     }
 
     public void ShowOnboarding(bool resumeProgress = false)
@@ -6403,6 +6385,7 @@ public partial class App : Application
     private async Task<bool> ShutdownCoreAsync()
     {
         Interlocked.Exchange(ref s_shutdownRequested, 1);
+        _startupElevationCancellation.Cancel();
         // The canonical shutdown moment for UI dispatch: drop pending
         // deferrals and refuse further dispatch so nothing replays post-exit.
         DeskCue.Platform.UiDispatch.MarkShutdown();

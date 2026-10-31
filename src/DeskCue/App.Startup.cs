@@ -275,13 +275,14 @@ public partial class App
     /// </summary>
     private void WatchShellAboveAppTrayFailure(Task<bool>? trayCreation)
     {
-        if (trayCreation is null ||
-            _startupElevationAssessment.Mismatch != ShellIntegrityMismatch.ShellAboveApp)
+        if (trayCreation is null)
         {
             return;
         }
 
-        _ = ShowShellElevationNoticeWhenTrayFailsAsync(trayCreation);
+        SafeFireAndForget(
+            () => ShowShellElevationNoticeWhenTrayFailsAsync(trayCreation),
+            "shell-elevation-notice");
     }
 
     /// <summary>

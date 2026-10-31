@@ -18,9 +18,13 @@ public sealed class StartupStormGuardContractTests
     {
         string app = File.ReadAllText(TestPaths.FromRepository(AppSource));
 
-        // Shutdown sequence (tray exit / restart / update), end-session flush,
-        // and the elevated-relaunch exit all carry the breadcrumb close.
-        Assert.Equal(3, Count(app, "_startupSessionLedger?.MarkCleanExit();"));
+        // The shared shutdown sequence and end-session flush close the ledger.
+        // Elevation relaunch now uses normal shutdown rather than a separate
+        // constructor Environment.Exit path with a third literal call site.
+        Assert.Equal(2, Count(app, "_startupSessionLedger?.MarkCleanExit();"));
+        string elevation = File.ReadAllText(TestPaths.FromRepository("src/DeskCue/App.Elevation.cs"));
+        Assert.Contains("await ShutdownForRestartAsync();", elevation, StringComparison.Ordinal);
+        Assert.DoesNotContain("Environment.Exit(", elevation, StringComparison.Ordinal);
     }
 
     [Fact]

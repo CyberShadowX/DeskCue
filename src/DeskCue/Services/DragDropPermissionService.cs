@@ -85,7 +85,11 @@ public enum ShellIntegrityMismatch
     /// <summary>Explorer is elevated while DeskCue is not: UIPI blocks tray
     /// creation and cross-level drag. Not self-healable (the app cannot
     /// change the shell's token); degrade and explain instead.</summary>
-    ShellAboveApp
+    ShellAboveApp,
+
+    /// <summary>The shell is absent, changing, or its token cannot be read.
+    /// This is not evidence of an integrity mismatch.</summary>
+    Unknown
 }
 
 public sealed record DragDropPermissionDiagnostic(
@@ -100,7 +104,7 @@ public sealed record DragDropPermissionDiagnostic(
     string StartupStatus,
     string ShortcutStatus,
     bool IsCurrentProcessElevated,
-    bool IsExplorerElevated,
+    bool? IsExplorerElevated,
     bool IsUacDisabled,
     bool HasAppCompatIssue,
     bool HasStartupIssue,
@@ -122,7 +126,7 @@ public sealed record DragDropPermissionRepairResult(
 /// </summary>
 public sealed record StartupElevationAssessment(
     bool IsCurrentProcessElevated,
-    bool IsExplorerElevated,
+    bool? IsExplorerElevated,
     bool IsUacDisabled,
     bool CanRelaunchUnelevated,
     bool IsBuiltInAdminAccount = false)
@@ -134,7 +138,9 @@ public sealed record StartupElevationAssessment(
     /// way.
     /// </summary>
     public ShellIntegrityMismatch Mismatch =>
-        IsCurrentProcessElevated == IsExplorerElevated
+        IsExplorerElevated is null
+            ? ShellIntegrityMismatch.Unknown
+            : IsCurrentProcessElevated == IsExplorerElevated
             ? ShellIntegrityMismatch.None
             : IsCurrentProcessElevated
                 ? ShellIntegrityMismatch.AppAboveShell
@@ -150,7 +156,7 @@ public sealed record StartupElevationAssessment(
     public FullyElevatedSessionAttribution FullyElevatedAttribution =>
         DragDropPermissionService.DecideFullyElevatedSessionAttribution(
             IsCurrentProcessElevated,
-            IsExplorerElevated,
+            IsExplorerElevated == true,
             IsUacDisabled,
             IsBuiltInAdminAccount);
 }
@@ -210,16 +216,16 @@ public static class DragDropPermissionService
         // literal (`IsElevated == false`) at one call site — named locals
         // keep every consumer on the same polarity.
         bool isCurrentElevated = currentToken.IsElevated == true;
-        bool isExplorerElevated = explorerToken.IsElevated == true;
-        bool permissionMismatch = isCurrentElevated && !isExplorerElevated;
+        bool? isExplorerElevated = explorerToken.IsElevated;
+        bool permissionMismatch = isCurrentElevated && isExplorerElevated == false;
         // Reverse asymmetry (Medium app under an elevated desktop): UIPI
         // blocks tray creation and cross-level drag here too, but the fix
         // is on the shell side, not a DeskCue relaunch.
-        bool shellAboveApp = !isCurrentElevated && isExplorerElevated;
+        bool shellAboveApp = !isCurrentElevated && isExplorerElevated == true;
         FullyElevatedSessionAttribution fullyElevatedAttribution =
             DecideFullyElevatedSessionAttribution(
                 isCurrentElevated,
-                isExplorerElevated,
+                isExplorerElevated == true,
                 isUacDisabled,
                 DetectBuiltInAdminAccount());
         // Diagnostic-facing form of ComputeCanRelaunchUnelevated: "needs
@@ -322,7 +328,7 @@ public static class DragDropPermissionService
                 localizationService),
             FormatShortcutStatus(shortcutProbes, localizationService),
             currentToken.IsElevated == true,
-            explorerToken.IsElevated == true,
+            explorerToken.IsElevated,
             isUacDisabled,
             hasAppCompatIssue,
             hasStartupIssue,
@@ -389,17 +395,13 @@ public static class DragDropPermissionService
     public static StartupElevationAssessment AssessStartupElevation()
     {
         ProcessTokenSnapshot currentToken = GetCurrentProcessTokenSnapshot();
-        // The Explorer probe now runs for every launch, not just elevated
-        // ones: the ShellAboveApp direction (Medium app under an elevated
-        // desktop) decides the tray-degraded notice and the lifeline
-        // exemption. A failed probe reads as unelevated, so the worst case
-        // is offering the one-click relaunch whose own fallback re-routes
-        // through ShellExecute when Explorer is genuinely unavailable.
+        // A failed probe stays unknown: absence during logon is not a
+        // standard-user token and must never offer an unelevated restart.
         ProcessTokenSnapshot explorerToken = GetExplorerTokenSnapshot();
         UacPolicySnapshot uacPolicy = GetUacPolicySnapshot();
         bool isUacDisabled = uacPolicy.EnableLua == 0;
         bool isCurrentElevated = currentToken.IsElevated == true;
-        bool isExplorerElevated = explorerToken.IsElevated == true;
+        bool? isExplorerElevated = explorerToken.IsElevated;
         return new StartupElevationAssessment(
             isCurrentElevated,
             isExplorerElevated,
@@ -415,9 +417,9 @@ public static class DragDropPermissionService
     /// the parent-process handover would spawn another elevated instance,
     /// so the notice must explain instead of offering a restart.
     /// </summary>
-    public static bool ComputeCanRelaunchUnelevated(bool isUacDisabled, bool isExplorerElevated)
+    public static bool ComputeCanRelaunchUnelevated(bool isUacDisabled, bool? isExplorerElevated)
     {
-        return !isUacDisabled && !isExplorerElevated;
+        return !isUacDisabled && isExplorerElevated == false;
     }
 
     /// <summary>
@@ -430,9 +432,9 @@ public static class DragDropPermissionService
     internal static bool ComputeNeedsRelaunchDiagnostic(
         bool isCurrentProcessElevated,
         bool isUacDisabled,
-        bool isExplorerElevated)
+        bool? isExplorerElevated)
     {
-        return isCurrentProcessElevated && !isUacDisabled && !isExplorerElevated;
+        return isCurrentProcessElevated && !isUacDisabled && isExplorerElevated == false;
     }
 
     /// <summary>
@@ -676,8 +678,9 @@ public static class DragDropPermissionService
     /// new instance's command line — the launch gate passes
     /// "--await-parent-exit &lt;pid&gt;" (plus "--startup" for unattended
     /// launches) so the new instance waits out the elevated holder of the
-    /// single-instance mutex instead of racing it. Falls back to a plain
-    /// ShellExecute relaunch when the shell-parented creation is impossible.
+    /// single-instance mutex instead of racing it. A failed verified launch
+    /// keeps the current instance alive: plain ShellExecute cannot prove
+    /// de-elevation and must not be reported as a successful replacement.
     /// </summary>
     public static bool TryRelaunchAsExplorerUser(string additionalArguments = "")
     {
@@ -687,27 +690,26 @@ public static class DragDropPermissionService
             return false;
         }
 
-        return ShellUnelevatedLaunch.TryStartAtShellIntegrity(exePath, additionalArguments, App.Log) ||
-            TryShellExecute(exePath);
+        return TryRelaunchAsExplorerUser(
+            AssessStartupElevation(), exePath, additionalArguments,
+            (path, arguments) => ShellUnelevatedLaunch.TryStartAtShellIntegrity(
+                path, arguments, App.Log, requireUnelevatedShell: true));
     }
 
-    private static bool TryShellExecute(string exePath)
+    internal static bool TryRelaunchAsExplorerUser(
+        StartupElevationAssessment assessment,
+        string exePath,
+        string additionalArguments,
+        Func<string, string, bool> startAtShellIntegrity)
     {
-        try
+        if (!assessment.CanRelaunchUnelevated ||
+            assessment.IsUacDisabled ||
+            assessment.Mismatch != ShellIntegrityMismatch.AppAboveShell)
         {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = exePath,
-                UseShellExecute = true,
-                WorkingDirectory = Path.GetDirectoryName(exePath) ?? AppContext.BaseDirectory
-            });
-            return true;
-        }
-        catch (Exception ex)
-        {
-            App.Log($"[DragDropPermission] Relaunch failed: {ex}");
             return false;
         }
+
+        return startAtShellIntegrity(exePath, additionalArguments);
     }
 
     private static string GetCurrentExePath()
@@ -1283,10 +1285,23 @@ public static class DragDropPermissionService
     {
         try
         {
-            Process? explorer = Process.GetProcessesByName("explorer").FirstOrDefault();
-            if (explorer is null)
+            IntPtr shellWindow = DragDropPermissionNativeMethods.GetShellWindow();
+            if (shellWindow == IntPtr.Zero)
             {
-                return ProcessTokenSnapshot.Unknown(0, "explorer", "not-running");
+                return ProcessTokenSnapshot.Unknown(0, "explorer", "no-shell-window");
+            }
+
+            _ = DragDropPermissionNativeMethods.GetWindowThreadProcessId(shellWindow, out uint shellProcessId);
+            if (shellProcessId == 0)
+            {
+                return ProcessTokenSnapshot.Unknown(0, "explorer", "no-shell-process");
+            }
+
+            using Process explorer = Process.GetProcessById(checked((int)shellProcessId));
+            using Process currentProcess = Process.GetCurrentProcess();
+            if (explorer.SessionId != currentProcess.SessionId)
+            {
+                return ProcessTokenSnapshot.Unknown(explorer.Id, explorer.ProcessName, "different-session");
             }
 
             IntPtr processHandle = DragDropPermissionNativeMethods.OpenProcess(ProcessQueryLimitedInformation, false, (uint)explorer.Id);
@@ -1297,7 +1312,14 @@ public static class DragDropPermissionService
 
             try
             {
-                return CreateProcessTokenSnapshot(explorer.Id, explorer.ProcessName, null, processHandle);
+                ProcessTokenSnapshot snapshot = CreateProcessTokenSnapshot(explorer.Id, explorer.ProcessName, null, processHandle);
+                // Do not cache a token belonging to a shell that restarted
+                // during the probe, even if another Explorer is still alive.
+                IntPtr currentShellWindow = DragDropPermissionNativeMethods.GetShellWindow();
+                _ = DragDropPermissionNativeMethods.GetWindowThreadProcessId(currentShellWindow, out uint currentShellProcessId);
+                return currentShellWindow == shellWindow && currentShellProcessId == shellProcessId && !explorer.HasExited
+                    ? snapshot
+                    : ProcessTokenSnapshot.Unknown(explorer.Id, explorer.ProcessName, "shell-changed");
             }
             finally
             {

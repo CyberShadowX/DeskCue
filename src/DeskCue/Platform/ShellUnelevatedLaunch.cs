@@ -208,47 +208,48 @@ internal static class ShellUnelevatedLaunch
 
         try
         {
-            if (!OpenProcessToken(processHandle, TokenQuery, out IntPtr tokenHandle))
-            {
-                return null;
-            }
-
-            try
-            {
-                if (!GetTokenInformation(
-                        tokenHandle,
-                        20 /* TokenElevation */,
-                        IntPtr.Zero,
-                        0,
-                        out int length) &&
-                    Marshal.GetLastWin32Error() != 122 /* ERROR_INSUFFICIENT_BUFFER */)
-                {
-                    return null;
-                }
-
-                IntPtr buffer = Marshal.AllocHGlobal(Math.Max(length, sizeof(int)));
-                try
-                {
-                    if (!GetTokenInformation(tokenHandle, 20, buffer, length, out _))
-                    {
-                        return null;
-                    }
-
-                    return Marshal.PtrToStructure<TokenElevation>(buffer).TokenIsElevated != 0;
-                }
-                finally
-                {
-                    Marshal.FreeHGlobal(buffer);
-                }
-            }
-            finally
-            {
-                CloseHandle(tokenHandle);
-            }
+            return ReadProcessElevation(processHandle);
         }
         finally
         {
             CloseHandle(processHandle);
+        }
+    }
+
+    private static bool? ReadProcessElevation(IntPtr processHandle)
+    {
+        if (!OpenProcessToken(processHandle, TokenQuery, out IntPtr tokenHandle))
+        {
+            return null;
+        }
+
+        try
+        {
+            if (!GetTokenInformation(tokenHandle, 20 /* TokenElevation */,
+                    IntPtr.Zero, 0, out int length) &&
+                Marshal.GetLastWin32Error() != 122 /* ERROR_INSUFFICIENT_BUFFER */)
+            {
+                return null;
+            }
+
+            IntPtr buffer = Marshal.AllocHGlobal(Math.Max(length, sizeof(int)));
+            try
+            {
+                if (!GetTokenInformation(tokenHandle, 20, buffer, length, out _))
+                {
+                    return null;
+                }
+
+                return Marshal.PtrToStructure<TokenElevation>(buffer).TokenIsElevated != 0;
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(buffer);
+            }
+        }
+        finally
+        {
+            CloseHandle(tokenHandle);
         }
     }
 
@@ -274,6 +275,9 @@ internal static class ShellUnelevatedLaunch
     internal static bool DecideRestartAtShellIntegrity(bool callerElevated, bool? shellElevated) =>
         callerElevated && shellElevated == false;
 
+    internal static bool CanUseShellParent(bool requireUnelevatedShell, bool? openedParentElevated) =>
+        !requireUnelevatedShell || openedParentElevated == false;
+
     /// <summary>
     /// Creates the process parented to Explorer, so it runs with Explorer's
     /// (standard-user) token even though this caller is elevated. Returns
@@ -283,7 +287,8 @@ internal static class ShellUnelevatedLaunch
     public static bool TryStartAtShellIntegrity(
         string exePath,
         string? arguments,
-        Action<string>? log)
+        Action<string>? log,
+        bool requireUnelevatedShell = false)
     {
         if (!File.Exists(exePath))
         {
@@ -316,6 +321,15 @@ internal static class ShellUnelevatedLaunch
 
         try
         {
+            // Validate the exact opened parent handle, not a previous shell
+            // snapshot: Explorer may restart between assessment and launch.
+            if (!CanUseShellParent(requireUnelevatedShell,
+                    requireUnelevatedShell ? ReadProcessElevation(explorerHandle) : null))
+            {
+                log?.Invoke("[ShellUnelevatedLaunch] Parent token is not known unelevated; keeping current instance");
+                return false;
+            }
+
             int attributeListSize = 0;
             _ = InitializeProcThreadAttributeList(IntPtr.Zero, 1, 0, ref attributeListSize);
             IntPtr attributeList = Marshal.AllocHGlobal(attributeListSize);
