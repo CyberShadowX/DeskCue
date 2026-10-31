@@ -1086,6 +1086,16 @@ public partial class App : Application
                 WidgetSegmentedLayoutHelper.Initialize(UiDispatcherQueue);
             });
 
+            // Empty FileSurfaceContent views capture elevation in their
+            // constructor. Publish the bounded initial assessment before any
+            // restored/default widget can be constructed, not just before the
+            // final notice. Later decision/tray paths still probe afresh.
+            await RunOptionalStartupStepAsync("elevation-assessment", RefreshStartupElevationAsync);
+            if (IsShuttingDown)
+            {
+                return;
+            }
+
             // The diagnostic report walks a snapshot of every process on the
             // machine plus several registry hives; none of it gates startup,
             // so keep it off the UI thread's first-render path. The queued
@@ -1697,12 +1707,6 @@ public partial class App : Application
                     ShowSettings("About");
                     _settingsWindow?.QueueUpdateInstallResultDialog(updateInstallOutcome!);
                 });
-            }
-
-            await RunOptionalStartupStepAsync("elevation-assessment", RefreshStartupElevationAsync);
-            if (IsShuttingDown)
-            {
-                return;
             }
 
             // The process must not keep running startup with nothing the user

@@ -5,6 +5,30 @@ namespace DeskCue.Tests;
 public sealed class StartupElevationGateTests
 {
     [Fact]
+    public void InitialAssessment_IsAwaitedBeforeAnyStartupWidgetConstruction()
+    {
+        // FileSurfaceContent initializes its empty-state warning only once in
+        // its constructor. A late assessment can get the final notice right
+        // while every restored/default widget retains the initial Unknown.
+        // Inspect the real App integration: invoking that WinUI lifecycle in
+        // a headless unit host would create windows and use machine state.
+        string source = File.ReadAllText(TestPaths.FromRepository("src/DeskCue/App.xaml.cs"));
+        int launchStart = source.IndexOf("protected override async void OnLaunched", StringComparison.Ordinal);
+        int launchEnd = source.IndexOf("FailStartup(\"exception during startup\", ex);", launchStart, StringComparison.Ordinal);
+        string launch = source[launchStart..launchEnd];
+        var awaitedAssessment = System.Text.RegularExpressions.Regex.Match(launch,
+            @"await\s+RunOptionalStartupStepAsync\s*\(\s*""elevation-assessment""\s*,\s*RefreshStartupElevationAsync\s*\)");
+
+        Assert.True(awaitedAssessment.Success, "Initial elevation publication must complete before constructing widget consumers.");
+        foreach (string consumer in new[] { "WidgetManager = new WidgetManager", "widgetManager.RestoreWidgetsAsync", "EnsureInitialFileWidgetSetupAsync" })
+        {
+            int consumerPosition = launch.IndexOf(consumer, StringComparison.Ordinal);
+            Assert.True(consumerPosition > awaitedAssessment.Index + awaitedAssessment.Length,
+                $"{consumer} must not capture startup elevation before the initial assessment completes.");
+        }
+    }
+
+    [Fact]
     public void UnknownShell_DoesNotBecomeAnAppAboveShellMismatch()
     {
         var assessment = new StartupElevationAssessment(true, null, false, false);
