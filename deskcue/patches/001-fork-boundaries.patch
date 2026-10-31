@@ -1980,7 +1980,7 @@ index 04ae99e5363c1c2bfa01cfef55c02ee8ee81f77f..c02e6d42b117866cdfe41107d4842c1f
  
      private static readonly WidgetTitleIconAssetStore s_default = new(
 diff --git a/src/DeskCue/Strings/ar-SA.json b/src/DeskCue/Strings/ar-SA.json
-index 438d8ec8fc460071cc37a0ef2412b820cbbaaa71..948046b9d7426fea6f861060bd373702effb44fc 100644
+index 438d8ec8fc460071cc37a0ef2412b820cbbaaa71..7915d327cf3899aa9bee163ab0811f0715ed22ad 100644
 --- a/src/DeskCue/Strings/ar-SA.json
 +++ b/src/DeskCue/Strings/ar-SA.json
 @@ -1283,9 +1283,9 @@
@@ -1992,7 +1992,7 @@ index 438d8ec8fc460071cc37a0ef2412b820cbbaaa71..948046b9d7426fea6f861060bd373702
 -  "Startup.FullyElevatedNotice.BodyGeneric": "تعمل جميع البرامج على سطح المكتب هذا بامتيازات مسؤول كاملة، بما في ذلك DeskCue. نظرًا لقيود في Windows، لا يتوفر سحب الملفات من الأدوات إلى الخارج (السحب إلى الداخل لا يتأثر)؛ وكل شيء آخر يعمل بشكل طبيعي. للعودة إلى الامتيازات القياسية، راجع الخطوات أدناه.",
 +  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "أنت مسجّل الدخول بحساب Administrator المدمج في Windows. يشغّل Windows افتراضيًا جميع برامج هذا الحساب بامتيازات مسؤول كاملة، بما في ذلك DeskCue. في وضع المسؤول، يقيّد Windows بعض عمليات السحب في WinUI وإشعارات التطبيق الأصلية. يظل تحرير المهام ومنتقي المرفقات الحديث والطريقة الاحتياطية الحالية للتذكيرات عبر علبة النظام متاحة.",
 +  "Startup.FullyElevatedNotice.BodyUacDisabled": "عنصر التحكم في حساب المستخدم (UAC) متوقف على هذا الكمبيوتر، لذا يشغّل Windows جميع برامج سطح المكتب بامتيازات مسؤول كاملة، بما في ذلك DeskCue. في وضع المسؤول، يقيّد Windows بعض عمليات السحب في WinUI وإشعارات التطبيق الأصلية. يظل تحرير المهام ومنتقي المرفقات الحديث والطريقة الاحتياطية الحالية للتذكيرات عبر علبة النظام متاحة.",
-+  "Startup.FullyElevatedNotice.BodyGeneric": "تعمل جميع البرامج على سطح المكتب هذا بامتيازات مسؤول كاملة، بما في ذلك DeskCue. في وضع المسؤول، يقيّد Windows بعض عمليات السحب في WinUI وإشعارات التطبيق الأصلية. يظل تحرير المهام ومنتقي المرفقات الحديث والطريقة الاحتياطية الحالية للتذكيرات عبر علبة النظام متاحة.",
++  "Startup.FullyElevatedNotice.BodyGeneric": "يعمل DeskCue وصدفة سطح المكتب الحالية بالمستوى نفسه من امتيازات المسؤول. في وضع المسؤول، يقيّد Windows بعض عمليات السحب في WinUI وإشعارات التطبيق الأصلية. يظل تحرير المهام ومنتقي المرفقات الحديث والطريقة الاحتياطية الحالية للتذكيرات عبر علبة النظام متاحة.",
    "Startup.FullyElevatedNotice.DetailsHeader": "كيفية العودة إلى الامتيازات القياسية",
    "Startup.FullyElevatedNotice.DetailsHeaderUac": "كيفية إعادة تمكين UAC",
    "Startup.FullyElevatedNotice.StepSecpol": "إصدارات Pro وما فوق: اضغط Win+R واكتب secpol.msc لفتح \"السياسة الأمنية المحلية\". ضمن السياسات المحلية←خيارات الأمان، انقر نقرًا مزدوجًا على \"التحكم في حساب المستخدم: وضع موافقة المسؤول لحساب Administrator المدمج\"، وعيّنه على \"ممكّن\"، ثم أعد تشغيل الكمبيوتر.",
@@ -2047,7 +2047,7 @@ index 438d8ec8fc460071cc37a0ef2412b820cbbaaa71..948046b9d7426fea6f861060bd373702
    "Onboarding.WindowTitle": "التعريف بـ DeskCue",
    "Onboarding.Back": "العودة",
 diff --git a/src/DeskCue/Strings/bn-BD.json b/src/DeskCue/Strings/bn-BD.json
-index 243810aa2573d8cf3ad7c2ef49e3a4d9b9cbc60f..d8120cf05b38e8758da283996f32952c51de0894 100644
+index 243810aa2573d8cf3ad7c2ef49e3a4d9b9cbc60f..b7f8d92c74bc95fbd63424c58a9ec6f9eaf431f1 100644
 --- a/src/DeskCue/Strings/bn-BD.json
 +++ b/src/DeskCue/Strings/bn-BD.json
 @@ -1283,9 +1283,9 @@
@@ -2059,7 +2059,7 @@ index 243810aa2573d8cf3ad7c2ef49e3a4d9b9cbc60f..d8120cf05b38e8758da283996f32952c
 -  "Startup.FullyElevatedNotice.BodyGeneric": "এই ডেস্কটপের সব প্রোগ্রাম সম্পূর্ণ প্রশাসক সুবিধাসহ চলছে, DeskCue-ও তার মধ্যে। Windows-এর একটি সীমার কারণে উইজেট থেকে ফাইল বাইরে ড্র্যাগ করা যায় না (ভেতরে ড্র্যাগ প্রভাবিত হয় না); বাকি সব স্বাভাবিক কাজ করে। স্ট্যান্ডার্ড সুবিধায় ফিরতে নিচের পদ্ধতিগুলো দেখুন।",
 +  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "আপনি Windows-এর অন্তর্নির্মিত Administrator অ্যাকাউন্টে সাইন ইন করেছেন। Windows ডিফল্টভাবে এই অ্যাকাউন্টের সব প্রোগ্রাম সম্পূর্ণ প্রশাসক সুবিধাসহ চালায়, DeskCue-ও তার মধ্যে। প্রশাসক মোডে Windows কিছু WinUI ড্র্যাগ অপারেশন এবং নেটিভ অ্যাপ বিজ্ঞপ্তি সীমিত করে। টাস্ক সম্পাদনা, আধুনিক সংযুক্তি পিকার এবং বিদ্যমান ট্রে রিমাইন্ডারের বিকল্প ব্যবস্থা ব্যবহার করা যায়।",
 +  "Startup.FullyElevatedNotice.BodyUacDisabled": "এই PC-তে ইউজার অ্যাকাউন্ট কন্ট্রোল (UAC) বন্ধ, তাই Windows ডেস্কটপের সব প্রোগ্রাম সম্পূর্ণ প্রশাসক সুবিধাসহ চালায়, DeskCue-ও তার মধ্যে। প্রশাসক মোডে Windows কিছু WinUI ড্র্যাগ অপারেশন এবং নেটিভ অ্যাপ বিজ্ঞপ্তি সীমিত করে। টাস্ক সম্পাদনা, আধুনিক সংযুক্তি পিকার এবং বিদ্যমান ট্রে রিমাইন্ডারের বিকল্প ব্যবস্থা ব্যবহার করা যায়।",
-+  "Startup.FullyElevatedNotice.BodyGeneric": "এই ডেস্কটপের সব প্রোগ্রাম সম্পূর্ণ প্রশাসক সুবিধাসহ চলছে, DeskCue-ও তার মধ্যে। প্রশাসক মোডে Windows কিছু WinUI ড্র্যাগ অপারেশন এবং নেটিভ অ্যাপ বিজ্ঞপ্তি সীমিত করে। টাস্ক সম্পাদনা, আধুনিক সংযুক্তি পিকার এবং বিদ্যমান ট্রে রিমাইন্ডারের বিকল্প ব্যবস্থা ব্যবহার করা যায়।",
++  "Startup.FullyElevatedNotice.BodyGeneric": "DeskCue এবং বর্তমান ডেস্কটপ শেল একই প্রশাসক বিশেষাধিকার স্তরে চলছে। প্রশাসক মোডে Windows কিছু WinUI ড্র্যাগ অপারেশন এবং নেটিভ অ্যাপ বিজ্ঞপ্তি সীমিত করে। টাস্ক সম্পাদনা, আধুনিক সংযুক্তি পিকার এবং বিদ্যমান ট্রে রিমাইন্ডারের বিকল্প ব্যবস্থা ব্যবহার করা যায়।",
    "Startup.FullyElevatedNotice.DetailsHeader": "স্ট্যান্ডার্ড সুবিধায় ফেরার উপায়",
    "Startup.FullyElevatedNotice.DetailsHeaderUac": "UAC আবার চালু করার উপায়",
    "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro ও উর্ধ্বতন: Win+R চেপে secpol.msc লিখে \"লোকাল সিকিউরিটি পলিসি\" খুলুন। লোকাল পলিসি→সিকিউরিটি অপশনে \"ইউজার অ্যাকাউন্ট কন্ট্রোল: অন্তর্নির্মিত অ্যাডমিনিস্ট্রেটর অ্যাকাউন্টের জন্য অ্যাডমিন অ্যাপ্রুভাল মোড\"-এ ডাবল-ক্লিক করে \"সক্রিয়\" করুন, তারপর PC রিস্টার্ট করুন।",
@@ -2114,7 +2114,7 @@ index 243810aa2573d8cf3ad7c2ef49e3a4d9b9cbc60f..d8120cf05b38e8758da283996f32952c
    "Onboarding.WindowTitle": "DeskCue পরিচিতি",
    "Onboarding.Back": "পিছনে",
 diff --git a/src/DeskCue/Strings/de-DE.json b/src/DeskCue/Strings/de-DE.json
-index c121ea06258fb85207db9ac81a9fbfac3e7631ff..572f6a276241f920d1c2841bf67c8d71cbaf3596 100644
+index c121ea06258fb85207db9ac81a9fbfac3e7631ff..561b734862575272f47978c43aa37da6ab905248 100644
 --- a/src/DeskCue/Strings/de-DE.json
 +++ b/src/DeskCue/Strings/de-DE.json
 @@ -1280,9 +1280,9 @@
@@ -2126,7 +2126,7 @@ index c121ea06258fb85207db9ac81a9fbfac3e7631ff..572f6a276241f920d1c2841bf67c8d71
 -  "Startup.FullyElevatedNotice.BodyGeneric": "Alle Programme auf diesem Desktop werden mit vollständigen Administratorrechten ausgeführt, auch DeskCue. Aufgrund einer Windows-Einschränkung ist das Ziehen von Dateien aus Widgets nicht möglich (Hineinziehen ist nicht betroffen); alles andere funktioniert normal. Um zu Standardrechten zurückzukehren, siehe die Schritte unten.",
 +  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Sie sind beim integrierten Windows-Administrator-Konto (Administrator) angemeldet. Windows führt standardmäßig alle Programme dieses Kontos mit vollständigen Administratorrechten aus, auch DeskCue. Im Administratormodus schränkt Windows einige WinUI-Ziehvorgänge und native App-Benachrichtigungen ein. Aufgabenbearbeitung, moderne Anlagenauswahl und die vorhandene Erinnerungsalternative über den Infobereich bleiben verfügbar.",
 +  "Startup.FullyElevatedNotice.BodyUacDisabled": "Die Benutzerkontensteuerung (UAC) ist auf diesem PC deaktiviert, daher führt Windows alle Programme auf dem Desktop mit vollständigen Administratorrechten aus, auch DeskCue. Im Administratormodus schränkt Windows einige WinUI-Ziehvorgänge und native App-Benachrichtigungen ein. Aufgabenbearbeitung, moderne Anlagenauswahl und die vorhandene Erinnerungsalternative über den Infobereich bleiben verfügbar.",
-+  "Startup.FullyElevatedNotice.BodyGeneric": "Alle Programme auf diesem Desktop werden mit vollständigen Administratorrechten ausgeführt, auch DeskCue. Im Administratormodus schränkt Windows einige WinUI-Ziehvorgänge und native App-Benachrichtigungen ein. Aufgabenbearbeitung, moderne Anlagenauswahl und die vorhandene Erinnerungsalternative über den Infobereich bleiben verfügbar.",
++  "Startup.FullyElevatedNotice.BodyGeneric": "DeskCue und die aktuelle Desktop-Shell laufen auf derselben Administrator-Berechtigungsstufe. Im Administratormodus schränkt Windows einige WinUI-Ziehvorgänge und native App-Benachrichtigungen ein. Aufgabenbearbeitung, moderne Anlagenauswahl und die vorhandene Erinnerungsalternative über den Infobereich bleiben verfügbar.",
    "Startup.FullyElevatedNotice.DetailsHeader": "So kehren Sie zu Standardrechten zurück",
    "Startup.FullyElevatedNotice.DetailsHeaderUac": "So aktivieren Sie UAC wieder",
    "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro und höher: Win+R drücken, secpol.msc eingeben und „Lokale Sicherheitsrichtlinie“ öffnen. Unter Lokale Richtlinien→Sicherheitsoptionen „Benutzerkontensteuerung: Administrator-Genehmigungsmodus für das integrierte Administratorkonto“ doppelklicken, auf „Aktiviert“ setzen und den PC neu starten.",
@@ -2181,7 +2181,7 @@ index c121ea06258fb85207db9ac81a9fbfac3e7631ff..572f6a276241f920d1c2841bf67c8d71
    "Onboarding.WindowTitle": "DeskCue-Onboarding",
    "Onboarding.Back": "Zurück",
 diff --git a/src/DeskCue/Strings/en-US.json b/src/DeskCue/Strings/en-US.json
-index 5ef4780b3991d2444dd05c990bc7959fa36499e5..b5dd9a6c871ccaabe6bf20e0a5ddbaa5d8e29f7a 100644
+index 5ef4780b3991d2444dd05c990bc7959fa36499e5..4cb32b00304ee8e7982943325c03513035f8c7bf 100644
 --- a/src/DeskCue/Strings/en-US.json
 +++ b/src/DeskCue/Strings/en-US.json
 @@ -1283,9 +1283,9 @@
@@ -2193,7 +2193,7 @@ index 5ef4780b3991d2444dd05c990bc7959fa36499e5..b5dd9a6c871ccaabe6bf20e0a5ddbaa5
 -  "Startup.FullyElevatedNotice.BodyGeneric": "Every program on this desktop is running with full administrator privileges, including DeskCue. Due to a Windows limitation, dragging files out of widgets is unavailable while dragging in is unaffected; everything else works normally. To return to standard privileges, see the steps below.",
 +  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "You are signed in with the built-in Windows Administrator account. Windows runs every program under this account with full administrator privileges by default, including DeskCue. In elevated mode, Windows limits some WinUI drag actions and native app notifications. Task editing, the modern attachment picker, and the existing tray reminder fallback remain available.",
 +  "Startup.FullyElevatedNotice.BodyUacDisabled": "User Account Control (UAC) is turned off on this PC, so Windows runs every program on the desktop with full administrator privileges, including DeskCue. In elevated mode, Windows limits some WinUI drag actions and native app notifications. Task editing, the modern attachment picker, and the existing tray reminder fallback remain available.",
-+  "Startup.FullyElevatedNotice.BodyGeneric": "Every program on this desktop is running with full administrator privileges, including DeskCue. In elevated mode, Windows limits some WinUI drag actions and native app notifications. Task editing, the modern attachment picker, and the existing tray reminder fallback remain available.",
++  "Startup.FullyElevatedNotice.BodyGeneric": "DeskCue and the current desktop shell are running at the same administrator privilege level. In elevated mode, Windows limits some WinUI drag actions and native app notifications. Task editing, the modern attachment picker, and the existing tray reminder fallback remain available.",
    "Startup.FullyElevatedNotice.DetailsHeader": "How to return to standard privileges",
    "Startup.FullyElevatedNotice.DetailsHeaderUac": "How to turn UAC back on",
    "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro and above: press Win+R, type secpol.msc, and open \"Local Security Policy\". Under Local Policies → Security Options, double-click \"User Account Control: Admin Approval Mode for the Built-in Administrator account\", set it to Enabled, then restart the PC.",
@@ -2248,7 +2248,7 @@ index 5ef4780b3991d2444dd05c990bc7959fa36499e5..b5dd9a6c871ccaabe6bf20e0a5ddbaa5
    "Onboarding.WindowTitle": "DeskCue Onboarding",
    "Onboarding.Back": "Back",
 diff --git a/src/DeskCue/Strings/es-ES.json b/src/DeskCue/Strings/es-ES.json
-index 49c31df5656eca67e73eb2ea31446a866e39496d..c7219dbf61cab618ccb00e1506e0594770ff8278 100644
+index 49c31df5656eca67e73eb2ea31446a866e39496d..f96f56528a6b9bfe98387c479bb56ea087e74466 100644
 --- a/src/DeskCue/Strings/es-ES.json
 +++ b/src/DeskCue/Strings/es-ES.json
 @@ -1283,9 +1283,9 @@
@@ -2260,7 +2260,7 @@ index 49c31df5656eca67e73eb2ea31446a866e39496d..c7219dbf61cab618ccb00e1506e05947
 -  "Startup.FullyElevatedNotice.BodyGeneric": "Todos los programas de este escritorio se están ejecutando con privilegios completos de administrador, DeskCue también está incluido. Debido a una limitación de Windows, arrastrar archivos fuera de los widgets no está disponible (arrastrar hacia adentro no se ve afectado); todo lo demás funciona con normalidad. Para volver a los privilegios estándar, consulta los pasos a continuación.",
 +  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Has iniciado sesión con la cuenta Administrator integrada de Windows. Windows ejecuta de forma predeterminada todos los programas de esta cuenta con privilegios completos de administrador, DeskCue también está incluido. En modo de administrador, Windows limita algunas acciones de arrastre de WinUI y las notificaciones nativas de la aplicación. La edición de tareas, el selector moderno de archivos adjuntos y la alternativa existente de recordatorios en la bandeja siguen disponibles.",
 +  "Startup.FullyElevatedNotice.BodyUacDisabled": "El Control de cuentas de usuario (UAC) está desactivado en este equipo, por lo que Windows ejecuta todos los programas del escritorio con privilegios completos de administrador, DeskCue también está incluido. En modo de administrador, Windows limita algunas acciones de arrastre de WinUI y las notificaciones nativas de la aplicación. La edición de tareas, el selector moderno de archivos adjuntos y la alternativa existente de recordatorios en la bandeja siguen disponibles.",
-+  "Startup.FullyElevatedNotice.BodyGeneric": "Todos los programas de este escritorio se están ejecutando con privilegios completos de administrador, DeskCue también está incluido. En modo de administrador, Windows limita algunas acciones de arrastre de WinUI y las notificaciones nativas de la aplicación. La edición de tareas, el selector moderno de archivos adjuntos y la alternativa existente de recordatorios en la bandeja siguen disponibles.",
++  "Startup.FullyElevatedNotice.BodyGeneric": "DeskCue y el shell de escritorio actual se ejecutan con el mismo nivel de privilegios de administrador. En modo de administrador, Windows limita algunas acciones de arrastre de WinUI y las notificaciones nativas de la aplicación. La edición de tareas, el selector moderno de archivos adjuntos y la alternativa existente de recordatorios en la bandeja siguen disponibles.",
    "Startup.FullyElevatedNotice.DetailsHeader": "Cómo volver a los privilegios estándar",
    "Startup.FullyElevatedNotice.DetailsHeaderUac": "Cómo reactivar el UAC",
    "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro y superiores: pulsa Win+R, escribe secpol.msc y abre \"Directiva de seguridad local\". En Directivas locales→Opciones de seguridad, haz doble clic en \"Control de cuentas de usuario: modo de aprobación de administrador para la cuenta de administrador integrada\", establécelo en Habilitado y reinicia el equipo.",
@@ -2315,7 +2315,7 @@ index 49c31df5656eca67e73eb2ea31446a866e39496d..c7219dbf61cab618ccb00e1506e05947
    "Onboarding.WindowTitle": "Introducción a DeskCue",
    "Onboarding.Back": "Atrás",
 diff --git a/src/DeskCue/Strings/fr-FR.json b/src/DeskCue/Strings/fr-FR.json
-index 9b1c24dfd1b1cdad390f1371ce0e6819616a7606..51c14bbf3cdaedcf3823db6568e76594acad7675 100644
+index 9b1c24dfd1b1cdad390f1371ce0e6819616a7606..55d0d006cebf4c96df78df7a9fb66a05e96da581 100644
 --- a/src/DeskCue/Strings/fr-FR.json
 +++ b/src/DeskCue/Strings/fr-FR.json
 @@ -1283,9 +1283,9 @@
@@ -2327,7 +2327,7 @@ index 9b1c24dfd1b1cdad390f1371ce0e6819616a7606..51c14bbf3cdaedcf3823db6568e76594
 -  "Startup.FullyElevatedNotice.BodyGeneric": "Tous les programmes de ce bureau s’exécutent avec des droits d’administrateur complets, y compris DeskCue. En raison d’une limitation de Windows, le glissement de fichiers hors des widgets est indisponible (le glisser vers l’intérieur n’est pas concerné) ; tout le reste fonctionne normalement. Pour revenir aux privilèges standard, voir les étapes ci-dessous.",
 +  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Vous êtes connecté avec le compte Administrator intégré de Windows. Par défaut, Windows exécute tous les programmes de ce compte avec des droits d’administrateur complets, y compris DeskCue. En mode administrateur, Windows limite certaines actions de glissement WinUI et les notifications natives de l’application. La modification des tâches, le sélecteur moderne de pièces jointes et la solution de rappel existante via la zone de notification restent disponibles.",
 +  "Startup.FullyElevatedNotice.BodyUacDisabled": "Le contrôle de compte d’utilisateur (UAC) est désactivé sur ce PC : Windows exécute donc tous les programmes du bureau avec des droits d’administrateur complets, y compris DeskCue. En mode administrateur, Windows limite certaines actions de glissement WinUI et les notifications natives de l’application. La modification des tâches, le sélecteur moderne de pièces jointes et la solution de rappel existante via la zone de notification restent disponibles.",
-+  "Startup.FullyElevatedNotice.BodyGeneric": "Tous les programmes de ce bureau s’exécutent avec des droits d’administrateur complets, y compris DeskCue. En mode administrateur, Windows limite certaines actions de glissement WinUI et les notifications natives de l’application. La modification des tâches, le sélecteur moderne de pièces jointes et la solution de rappel existante via la zone de notification restent disponibles.",
++  "Startup.FullyElevatedNotice.BodyGeneric": "DeskCue et le shell du bureau actuel s’exécutent avec le même niveau de privilèges administrateur. En mode administrateur, Windows limite certaines actions de glissement WinUI et les notifications natives de l’application. La modification des tâches, le sélecteur moderne de pièces jointes et la solution de rappel existante via la zone de notification restent disponibles.",
    "Startup.FullyElevatedNotice.DetailsHeader": "Revenir aux privilèges standard",
    "Startup.FullyElevatedNotice.DetailsHeaderUac": "Réactiver l’UAC",
    "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro et supérieures : appuyez sur Win+R, tapez secpol.msc et ouvrez « Stratégie de sécurité locale ». Sous Stratégies locales→Options de sécurité, double-cliquez sur « Contrôle de compte d’utilisateur : mode d’approbation Administrateur du compte Administrateur intégré », définissez-le sur Activé, puis redémarrez le PC.",
@@ -2382,7 +2382,7 @@ index 9b1c24dfd1b1cdad390f1371ce0e6819616a7606..51c14bbf3cdaedcf3823db6568e76594
    "Onboarding.WindowTitle": "Découverte de DeskCue",
    "Onboarding.Back": "Retour",
 diff --git a/src/DeskCue/Strings/hi-IN.json b/src/DeskCue/Strings/hi-IN.json
-index 18630e7240787a0664224b743add62e0c9dc9d22..73762d0aec064b34b182d3970271697718e985f1 100644
+index 18630e7240787a0664224b743add62e0c9dc9d22..2665efc2bb1cf1acbdd77e8a0ca150e98387b890 100644
 --- a/src/DeskCue/Strings/hi-IN.json
 +++ b/src/DeskCue/Strings/hi-IN.json
 @@ -1283,9 +1283,9 @@
@@ -2394,7 +2394,7 @@ index 18630e7240787a0664224b743add62e0c9dc9d22..73762d0aec064b34b182d39702716977
 -  "Startup.FullyElevatedNotice.BodyGeneric": "इस डेस्कटॉप के सभी प्रोग्राम पूर्ण व्यवस्थापक विशेषाधिकारों के साथ चल रहे हैं, DeskCue भी उन्हीं में है। Windows की सीमा के कारण विजेट से फ़ाइलें बाहर खींचना उपलब्ध नहीं है (अंदर खींचना प्रभावित नहीं होता); बाकी सब सामान्य रूप से काम करता है। मानक विशेषाधिकारों पर लौटने के लिए नीचे दिए तरीके देखें।",
 +  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "आप Windows के अंतर्निहित Administrator खाते से साइन इन हैं। Windows डिफ़ॉल्ट रूप से इस खाते के सभी प्रोग्राम को पूर्ण व्यवस्थापक विशेषाधिकारों के साथ चलाता है, DeskCue भी उन्हीं में है। व्यवस्थापक मोड में Windows कुछ WinUI ड्रैग क्रियाओं और मूल ऐप सूचनाओं को सीमित करता है। कार्य संपादन, आधुनिक अटैचमेंट पिकर और मौजूदा ट्रे रिमाइंडर का वैकल्पिक तरीका उपलब्ध रहते हैं।",
 +  "Startup.FullyElevatedNotice.BodyUacDisabled": "इस PC पर यूज़र अकाउंट कंट्रोल (UAC) बंद है, इसलिए Windows डेस्कटॉप के सभी प्रोग्राम को पूर्ण व्यवस्थापक विशेषाधिकारों के साथ चलाता है, DeskCue भी उन्हीं में है। व्यवस्थापक मोड में Windows कुछ WinUI ड्रैग क्रियाओं और मूल ऐप सूचनाओं को सीमित करता है। कार्य संपादन, आधुनिक अटैचमेंट पिकर और मौजूदा ट्रे रिमाइंडर का वैकल्पिक तरीका उपलब्ध रहते हैं।",
-+  "Startup.FullyElevatedNotice.BodyGeneric": "इस डेस्कटॉप के सभी प्रोग्राम पूर्ण व्यवस्थापक विशेषाधिकारों के साथ चल रहे हैं, DeskCue भी उन्हीं में है। व्यवस्थापक मोड में Windows कुछ WinUI ड्रैग क्रियाओं और मूल ऐप सूचनाओं को सीमित करता है। कार्य संपादन, आधुनिक अटैचमेंट पिकर और मौजूदा ट्रे रिमाइंडर का वैकल्पिक तरीका उपलब्ध रहते हैं।",
++  "Startup.FullyElevatedNotice.BodyGeneric": "DeskCue और वर्तमान डेस्कटॉप शेल समान व्यवस्थापक विशेषाधिकार स्तर पर चल रहे हैं। व्यवस्थापक मोड में Windows कुछ WinUI ड्रैग क्रियाओं और मूल ऐप सूचनाओं को सीमित करता है। कार्य संपादन, आधुनिक अटैचमेंट पिकर और मौजूदा ट्रे रिमाइंडर का वैकल्पिक तरीका उपलब्ध रहते हैं।",
    "Startup.FullyElevatedNotice.DetailsHeader": "मानक विशेषाधिकारों पर कैसे लौटें",
    "Startup.FullyElevatedNotice.DetailsHeaderUac": "UAC दोबारा कैसे चालू करें",
    "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro और ऊपर: Win+R दबाकर secpol.msc टाइप करें और \"लोकल सिक्योरिटी पॉलिसी\" खोलें। लोकल पॉलिसी→सिक्योरिटी ऑप्शन में \"यूज़र अकाउंट कंट्रोल: अंतर्निहित व्यवस्थापक खाते के लिए व्यवस्थापक स्वीकृति मोड\" पर डबल-क्लिक करें, इसे \"सक्षम\" पर सेट करें, फिर PC पुनरारंभ करें।",
@@ -2449,7 +2449,7 @@ index 18630e7240787a0664224b743add62e0c9dc9d22..73762d0aec064b34b182d39702716977
    "Onboarding.WindowTitle": "DeskCue परिचय",
    "Onboarding.Back": "वापस",
 diff --git a/src/DeskCue/Strings/ja-JP.json b/src/DeskCue/Strings/ja-JP.json
-index f8f863554d5a03d4b6e1a374494603c5b7328b38..a21498caceaa1492e84db7bad102cb2212fccc87 100644
+index f8f863554d5a03d4b6e1a374494603c5b7328b38..f2b9770fab765d74095c6fcd88f74c93fe09ba6e 100644
 --- a/src/DeskCue/Strings/ja-JP.json
 +++ b/src/DeskCue/Strings/ja-JP.json
 @@ -1280,9 +1280,9 @@
@@ -2461,7 +2461,7 @@ index f8f863554d5a03d4b6e1a374494603c5b7328b38..a21498caceaa1492e84db7bad102cb22
 -  "Startup.FullyElevatedNotice.BodyGeneric": "このデスクトップのすべてのプログラムが完全な管理者権限で実行されています。DeskCue もその一つです。Windows の制限により、格子から外へのファイル ドラッグは使用できません（ドラッグで取り込む機能には影響しません）。標準の権限モードに戻るには、下記の方法を参照してください。",
 +  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Windows 組み込み Administrator アカウントでサインインしています。Windows は既定で、このアカウントのすべてのプログラムを完全な管理者権限で実行します。DeskCue もその一つです。管理者モードでは、Windows により一部の WinUI ドラッグ操作とネイティブ アプリ通知が制限されます。タスクの編集、モダンな添付ファイル選択、および既存のトレイ通知による代替リマインダーは引き続き利用できます。",
 +  "Startup.FullyElevatedNotice.BodyUacDisabled": "この PC ではユーザーアカウント制御(UAC)が無効のため、Windows はデスクトップ上のすべてのプログラムを完全な管理者権限で実行します。DeskCue もその一つです。管理者モードでは、Windows により一部の WinUI ドラッグ操作とネイティブ アプリ通知が制限されます。タスクの編集、モダンな添付ファイル選択、および既存のトレイ通知による代替リマインダーは引き続き利用できます。",
-+  "Startup.FullyElevatedNotice.BodyGeneric": "このデスクトップのすべてのプログラムが完全な管理者権限で実行されています。DeskCue もその一つです。管理者モードでは、Windows により一部の WinUI ドラッグ操作とネイティブ アプリ通知が制限されます。タスクの編集、モダンな添付ファイル選択、および既存のトレイ通知による代替リマインダーは引き続き利用できます。",
++  "Startup.FullyElevatedNotice.BodyGeneric": "DeskCue と現在のデスクトップ シェルは、同じ管理者権限レベルで実行されています。管理者モードでは、Windows により一部の WinUI ドラッグ操作とネイティブ アプリ通知が制限されます。タスクの編集、モダンな添付ファイル選択、および既存のトレイ通知による代替リマインダーは引き続き利用できます。",
    "Startup.FullyElevatedNotice.DetailsHeader": "標準の権限モードに戻す方法",
    "Startup.FullyElevatedNotice.DetailsHeaderUac": "UAC を再度有効にする方法",
    "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro 以上: Win+R を押して secpol.msc と入力し「ローカル セキュリティ ポリシー」を開きます。ローカル ポリシー→セキュリティ オプションの「ユーザーアカウント制御: 組み込み管理者アカウントのための管理者承認モード」をダブルクリックし、「有効」に設定して PC を再起動します。",
@@ -2516,7 +2516,7 @@ index f8f863554d5a03d4b6e1a374494603c5b7328b38..a21498caceaa1492e84db7bad102cb22
    "Onboarding.WindowTitle": "DeskCue オンボーディング",
    "Onboarding.Back": "戻る",
 diff --git a/src/DeskCue/Strings/ko-KR.json b/src/DeskCue/Strings/ko-KR.json
-index 995c5a97881b83f8ad57c06e4710302fea51adf0..d0ccdffbba657ec256912ebaefadd058f966b703 100644
+index 995c5a97881b83f8ad57c06e4710302fea51adf0..375cb1f8f497a410c13c06f1fa1237fb6a04efcb 100644
 --- a/src/DeskCue/Strings/ko-KR.json
 +++ b/src/DeskCue/Strings/ko-KR.json
 @@ -1283,9 +1283,9 @@
@@ -2528,7 +2528,7 @@ index 995c5a97881b83f8ad57c06e4710302fea51adf0..d0ccdffbba657ec256912ebaefadd058
 -  "Startup.FullyElevatedNotice.BodyGeneric": "이 데스크톱의 모든 프로그램이 전체 관리자 권한으로 실행되고 있으며 DeskCue도 그중 하나입니다. Windows의 제한으로 위젯에서 바깥으로 파일을 끌어낼 수 없습니다(끌어서 가져오기는 영향을 받지 않음). 표준 권한 모드로 돌아가려면 아래 방법을 참고하세요.",
 +  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Windows 기본 제공 Administrator 계정으로 로그인되어 있습니다. Windows는 기본적으로 이 계정의 모든 프로그램을 전체 관리자 권한으로 실행하며 DeskCue도 그중 하나입니다. 관리자 모드에서는 Windows가 일부 WinUI 끌기 작업과 네이티브 앱 알림을 제한합니다. 작업 편집, 최신 첨부 파일 선택기, 기존 트레이 알림을 통한 대체 미리 알림은 계속 사용할 수 있습니다.",
 +  "Startup.FullyElevatedNotice.BodyUacDisabled": "이 PC에서 사용자 계정 컨트롤(UAC)이 꺼져 있어 Windows가 데스크톱의 모든 프로그램을 전체 관리자 권한으로 실행합니다. DeskCue도 그중 하나입니다. 관리자 모드에서는 Windows가 일부 WinUI 끌기 작업과 네이티브 앱 알림을 제한합니다. 작업 편집, 최신 첨부 파일 선택기, 기존 트레이 알림을 통한 대체 미리 알림은 계속 사용할 수 있습니다.",
-+  "Startup.FullyElevatedNotice.BodyGeneric": "이 데스크톱의 모든 프로그램이 전체 관리자 권한으로 실행되고 있으며 DeskCue도 그중 하나입니다. 관리자 모드에서는 Windows가 일부 WinUI 끌기 작업과 네이티브 앱 알림을 제한합니다. 작업 편집, 최신 첨부 파일 선택기, 기존 트레이 알림을 통한 대체 미리 알림은 계속 사용할 수 있습니다.",
++  "Startup.FullyElevatedNotice.BodyGeneric": "DeskCue와 현재 데스크톱 셸은 동일한 관리자 권한 수준으로 실행 중입니다. 관리자 모드에서는 Windows가 일부 WinUI 끌기 작업과 네이티브 앱 알림을 제한합니다. 작업 편집, 최신 첨부 파일 선택기, 기존 트레이 알림을 통한 대체 미리 알림은 계속 사용할 수 있습니다.",
    "Startup.FullyElevatedNotice.DetailsHeader": "표준 권한 모드로 복원하는 방법",
    "Startup.FullyElevatedNotice.DetailsHeaderUac": "UAC를 다시 켜는 방법",
    "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro 이상: Win+R을 눌러 secpol.msc를 입력해 \"로컬 보안 정책\"을 엽니다. 로컬 정책→보안 옵션에서 \"사용자 계정 컨트롤: 기본 제공 관리자 계정에 대한 관리자 승인 모드\"를 두 번 클릭해 \"사용\"으로 설정한 뒤 PC를 재시작합니다.",
@@ -2583,7 +2583,7 @@ index 995c5a97881b83f8ad57c06e4710302fea51adf0..d0ccdffbba657ec256912ebaefadd058
    "Onboarding.WindowTitle": "DeskCue 시작 가이드",
    "Onboarding.Back": "이전",
 diff --git a/src/DeskCue/Strings/pt-BR.json b/src/DeskCue/Strings/pt-BR.json
-index 00c72c30e680379c2733371b222932afc68a0797..a3dfcc6579c5f7e1d183e94909a587964078edd9 100644
+index 00c72c30e680379c2733371b222932afc68a0797..a0b9f0fa1bb0a7a4d62bb963feeaee0e73908e45 100644
 --- a/src/DeskCue/Strings/pt-BR.json
 +++ b/src/DeskCue/Strings/pt-BR.json
 @@ -1280,9 +1280,9 @@
@@ -2595,7 +2595,7 @@ index 00c72c30e680379c2733371b222932afc68a0797..a3dfcc6579c5f7e1d183e94909a58796
 -  "Startup.FullyElevatedNotice.BodyGeneric": "Todos os programas desta área de trabalho estão sendo executados com privilégios totais de administrador, incluindo o DeskCue. Devido a uma limitação do Windows, arrastar arquivos para fora dos widgets está indisponível (arrastar para dentro não é afetado); todo o resto funciona normalmente. Para voltar aos privilégios padrão, veja as etapas abaixo.",
 +  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Você entrou com a conta Administrator interna do Windows. Por padrão, o Windows executa todos os programas dessa conta com privilégios totais de administrador, incluindo o DeskCue. No modo de administrador, o Windows limita algumas ações de arrastar do WinUI e as notificações nativas do aplicativo. A edição de tarefas, o seletor moderno de anexos e a alternativa existente de lembretes pela bandeja continuam disponíveis.",
 +  "Startup.FullyElevatedNotice.BodyUacDisabled": "O Controle de Conta de Usuário (UAC) está desativado neste PC, então o Windows executa todos os programas da área de trabalho com privilégios totais de administrador, incluindo o DeskCue. No modo de administrador, o Windows limita algumas ações de arrastar do WinUI e as notificações nativas do aplicativo. A edição de tarefas, o seletor moderno de anexos e a alternativa existente de lembretes pela bandeja continuam disponíveis.",
-+  "Startup.FullyElevatedNotice.BodyGeneric": "Todos os programas desta área de trabalho estão sendo executados com privilégios totais de administrador, incluindo o DeskCue. No modo de administrador, o Windows limita algumas ações de arrastar do WinUI e as notificações nativas do aplicativo. A edição de tarefas, o seletor moderno de anexos e a alternativa existente de lembretes pela bandeja continuam disponíveis.",
++  "Startup.FullyElevatedNotice.BodyGeneric": "O DeskCue e o shell da área de trabalho atual estão sendo executados no mesmo nível de privilégios de administrador. No modo de administrador, o Windows limita algumas ações de arrastar do WinUI e as notificações nativas do aplicativo. A edição de tarefas, o seletor moderno de anexos e a alternativa existente de lembretes pela bandeja continuam disponíveis.",
    "Startup.FullyElevatedNotice.DetailsHeader": "Como voltar aos privilégios padrão",
    "Startup.FullyElevatedNotice.DetailsHeaderUac": "Como reativar o UAC",
    "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro e superiores: pressione Win+R, digite secpol.msc e abra \"Política de Segurança Local\". Em Políticas Locais→Opções de Segurança, dê um duplo clique em \"Controle de Conta de Usuário: modo de aprovação de administrador para a conta de Administrador interna\", defina como Habilitado e reinicie o PC.",
@@ -2650,7 +2650,7 @@ index 00c72c30e680379c2733371b222932afc68a0797..a3dfcc6579c5f7e1d183e94909a58796
    "Onboarding.WindowTitle": "Introdução ao DeskCue",
    "Onboarding.Back": "Voltar",
 diff --git a/src/DeskCue/Strings/ru-RU.json b/src/DeskCue/Strings/ru-RU.json
-index 2c8efbee08427d9dd3f19165546c5a83ee514fc7..f7e212f119719e564f8fe37305ed042baf86561c 100644
+index 2c8efbee08427d9dd3f19165546c5a83ee514fc7..cb141be50e4a35c9a6206e6dc17bbdc85407d1c4 100644
 --- a/src/DeskCue/Strings/ru-RU.json
 +++ b/src/DeskCue/Strings/ru-RU.json
 @@ -1283,9 +1283,9 @@
@@ -2662,7 +2662,7 @@ index 2c8efbee08427d9dd3f19165546c5a83ee514fc7..f7e212f119719e564f8fe37305ed042b
 -  "Startup.FullyElevatedNotice.BodyGeneric": "Все программы на этом рабочем столе запущены с полными правами администратора, включая DeskCue. Из-за ограничения Windows перетаскивание файлов из виджетов наружу недоступно (перетаскивание внутрь не затронуто); всё остальное работает нормально. Чтобы вернуться к стандартным правам, см. шаги ниже.",
 +  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "Вы вошли под встроенной учётной записью Windows Administrator. По умолчанию Windows запускает все программы этой учётной записи с полными правами администратора, включая DeskCue. В режиме администратора Windows ограничивает некоторые действия перетаскивания WinUI и собственные уведомления приложения. Редактирование задач, современный выбор вложений и существующий резервный способ напоминаний через системный трей остаются доступны.",
 +  "Startup.FullyElevatedNotice.BodyUacDisabled": "Контроль учётных записей (UAC) на этом компьютере отключён, поэтому Windows запускает все программы на рабочем столе с полными правами администратора, включая DeskCue. В режиме администратора Windows ограничивает некоторые действия перетаскивания WinUI и собственные уведомления приложения. Редактирование задач, современный выбор вложений и существующий резервный способ напоминаний через системный трей остаются доступны.",
-+  "Startup.FullyElevatedNotice.BodyGeneric": "Все программы на этом рабочем столе запущены с полными правами администратора, включая DeskCue. В режиме администратора Windows ограничивает некоторые действия перетаскивания WinUI и собственные уведомления приложения. Редактирование задач, современный выбор вложений и существующий резервный способ напоминаний через системный трей остаются доступны.",
++  "Startup.FullyElevatedNotice.BodyGeneric": "DeskCue и текущая оболочка рабочего стола работают с одинаковым уровнем прав администратора. В режиме администратора Windows ограничивает некоторые действия перетаскивания WinUI и собственные уведомления приложения. Редактирование задач, современный выбор вложений и существующий резервный способ напоминаний через системный трей остаются доступны.",
    "Startup.FullyElevatedNotice.DetailsHeader": "Как вернуть стандартные права",
    "Startup.FullyElevatedNotice.DetailsHeaderUac": "Как снова включить UAC",
    "Startup.FullyElevatedNotice.StepSecpol": "Windows Pro и выше: нажмите Win+R, введите secpol.msc и откройте «Локальная политика безопасности». В разделе Локальные политики→Параметры безопасности дважды щёлкните «Контроль учётных записей: режим утверждения администратором для встроенной учётной записи администратора», установите «Включено» и перезагрузите компьютер.",
@@ -2717,7 +2717,7 @@ index 2c8efbee08427d9dd3f19165546c5a83ee514fc7..f7e212f119719e564f8fe37305ed042b
    "Onboarding.WindowTitle": "Знакомство с DeskCue",
    "Onboarding.Back": "Назад",
 diff --git a/src/DeskCue/Strings/zh-CN.json b/src/DeskCue/Strings/zh-CN.json
-index 8fb59936f3e429a633e8bdef003aa929c264288e..c97d57698d2ddeeacfa26922cc8626f05a4b679b 100644
+index 8fb59936f3e429a633e8bdef003aa929c264288e..ce0e1b460157bbcfeac9da2818799011b6f87ec2 100644
 --- a/src/DeskCue/Strings/zh-CN.json
 +++ b/src/DeskCue/Strings/zh-CN.json
 @@ -190,7 +190,7 @@
@@ -2775,7 +2775,7 @@ index 8fb59936f3e429a633e8bdef003aa929c264288e..c97d57698d2ddeeacfa26922cc8626f0
 -  "Startup.FullyElevatedNotice.BodyGeneric": "当前桌面上的所有程序都以完整管理员权限运行，DeskCue 也在其中。受 Windows 限制，从格子向外拖动文件暂不可用，拖入不受影响，其余功能一切正常。若想回到标准的权限模式，可参考下方方法。",
 +  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "当前登录的是 Windows 内置的 Administrator 账户。Windows 默认让这个账户下的所有程序都以完整管理员权限运行，DeskCue 也在其中。管理员模式下，Windows 会限制部分 WinUI 拖拽操作和原生应用通知。任务编辑、现代附件选择器及现有的托盘提醒回退方式仍可使用。",
 +  "Startup.FullyElevatedNotice.BodyUacDisabled": "这台电脑关闭了用户账户控制(UAC)，Windows 会以完整管理员权限运行桌面上的所有程序，DeskCue 也在其中。管理员模式下，Windows 会限制部分 WinUI 拖拽操作和原生应用通知。任务编辑、现代附件选择器及现有的托盘提醒回退方式仍可使用。",
-+  "Startup.FullyElevatedNotice.BodyGeneric": "当前桌面上的所有程序都以完整管理员权限运行，DeskCue 也在其中。管理员模式下，Windows 会限制部分 WinUI 拖拽操作和原生应用通知。任务编辑、现代附件选择器及现有的托盘提醒回退方式仍可使用。",
++  "Startup.FullyElevatedNotice.BodyGeneric": "DeskCue 与当前桌面 Shell 正在以相同的管理员权限级别运行。管理员模式下，Windows 会限制部分 WinUI 拖拽操作和原生应用通知。任务编辑、现代附件选择器及现有的托盘提醒回退方式仍可使用。",
    "Startup.FullyElevatedNotice.DetailsHeader": "如何回到标准权限模式",
    "Startup.FullyElevatedNotice.DetailsHeaderUac": "如何重新开启 UAC",
    "Startup.FullyElevatedNotice.StepSecpol": "Windows 专业版及以上：按 Win+R 输入 secpol.msc 回车打开“本地安全策略”，进入 本地策略→安全选项，双击“用户帐户控制: 用于内置管理员帐户的管理员批准模式”，设为“已启用”，重启电脑。",
@@ -2802,7 +2802,7 @@ index 8fb59936f3e429a633e8bdef003aa929c264288e..c97d57698d2ddeeacfa26922cc8626f0
    "QuickCapture.DropTab.Records": "松开以保存到随记",
    "Settings.QuickCapture.ClipboardReason.Enabled": "等待复制内容",
 diff --git a/src/DeskCue/Strings/zh-TW.json b/src/DeskCue/Strings/zh-TW.json
-index 5c30a4405c8056c1546e470300da682527e05fbe..6444372256797a508b59b702f2a6ba187d740ec0 100644
+index 5c30a4405c8056c1546e470300da682527e05fbe..8a83119134825e0cc52e83813ae1b7e5ecea1e1a 100644
 --- a/src/DeskCue/Strings/zh-TW.json
 +++ b/src/DeskCue/Strings/zh-TW.json
 @@ -190,7 +190,7 @@
@@ -2860,7 +2860,7 @@ index 5c30a4405c8056c1546e470300da682527e05fbe..6444372256797a508b59b702f2a6ba18
 -  "Startup.FullyElevatedNotice.BodyGeneric": "目前桌面上的所有程式都以完整系統管理員權限執行，DeskCue 也在其中。受 Windows 限制，從格子向外拖曳檔案暫不可用，拖入不受影響，其餘功能一切正常。若想回到標準的權限模式，可參考下方方法。",
 +  "Startup.FullyElevatedNotice.BodyBuiltInAdmin": "目前登入的是 Windows 內建 Administrator 帳戶。Windows 預設讓這個帳戶下的所有程式以完整系統管理員權限執行，DeskCue 也在其中。系統管理員模式下，Windows 會限制部分 WinUI 拖曳操作與原生應用程式通知。工作編輯、現代附件選擇器及現有的系統匣提醒備援方式仍可使用。",
 +  "Startup.FullyElevatedNotice.BodyUacDisabled": "這台電腦關閉了使用者帳戶控制(UAC)，Windows 會以完整系統管理員權限執行桌面上的所有程式，DeskCue 也在其中。系統管理員模式下，Windows 會限制部分 WinUI 拖曳操作與原生應用程式通知。工作編輯、現代附件選擇器及現有的系統匣提醒備援方式仍可使用。",
-+  "Startup.FullyElevatedNotice.BodyGeneric": "目前桌面上的所有程式都以完整系統管理員權限執行，DeskCue 也在其中。系統管理員模式下，Windows 會限制部分 WinUI 拖曳操作與原生應用程式通知。工作編輯、現代附件選擇器及現有的系統匣提醒備援方式仍可使用。",
++  "Startup.FullyElevatedNotice.BodyGeneric": "DeskCue 與目前的桌面 Shell 正以相同的系統管理員權限等級執行。系統管理員模式下，Windows 會限制部分 WinUI 拖曳操作與原生應用程式通知。工作編輯、現代附件選擇器及現有的系統匣提醒備援方式仍可使用。",
    "Startup.FullyElevatedNotice.DetailsHeader": "如何回到標準權限模式",
    "Startup.FullyElevatedNotice.DetailsHeaderUac": "如何重新開啟 UAC",
    "Startup.FullyElevatedNotice.StepSecpol": "Windows 專業版及以上：按 Win+R 輸入 secpol.msc 開啟「本機安全性原則」，進入 本機原則→安全性選項，雙擊「使用者帳戶控制: 內建的 Administrator 帳戶的管理員核准模式」，設為「已啟用」，重新啟動電腦。",
